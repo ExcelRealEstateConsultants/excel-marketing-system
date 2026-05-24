@@ -1,0 +1,36 @@
+[
+  {
+    "id": 1778767834680,
+    "name": "Test 2",
+    "subject": "Test Email ",
+    "html": "<p>Test to see if this works now and shows coming from me, not the brevo marketing system.</p>",
+    "status": "Sent",
+    "createdAt": "2026-05-14T14:10:34.680Z",
+    "lastSentAt": "2026-05-14T14:28:06.868Z",
+    "lastSentCount": 1,
+    "lastFailedCount": 0
+  },
+  {
+    "id": 1778770568220,
+    "name": "Test 3",
+    "subject": "Test Email ",
+    "html": "<p>Test to see if unsubscribe link shows up.</p>",
+    "status": "Sent",
+    "createdAt": "2026-05-14T14:56:08.220Z",
+    "lastSentAt": "2026-05-14T14:56:08.220Z",
+    "lastSentCount": 1,
+    "lastFailedCount": 0,
+    "lastSkippedCount": 0
+  },
+  {
+    "id": 1778772007105,
+    "name": "Test",
+    "subject": "Test Email ",
+    "html": "<p>Test</p>",
+    "status": "Sent",
+    "createdAt": "2026-05-14T15:20:07.105Z",
+    "sentCount": 1,
+    "failedCount": 0,
+    "skippedCount": 0
+  }
+]

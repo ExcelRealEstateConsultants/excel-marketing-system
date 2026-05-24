@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Excel Marketing System</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+
+<style>
+:root {
+  --primary:#042C49;
+  --accent:#00A143;
+  --bg:#f4f6f8;
+  --card:#ffffff;
+  --border:#e6eaee;
+  --text:#1f2937;
+  --muted:#6b7280;
+}
+
+body {
+  background:var(--bg);
+  color:var(--text);
+}
+
+.header {
+  background:var(--primary);
+  color:white;
+  padding:15px 24px;
+  display:flex;
+  align-items:center;
+  gap:18px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.12);
+}
+
+.header img {
+  height:70px;
+  width:auto;
+  object-fit:contain;
+}
+
+.nav-tabs {
+  border-bottom:none;
+  gap:8px;
+}
+
+.nav-tabs .nav-link {
+  color:var(--primary);
+  border:none;
+  background:white;
+  border-radius:12px;
+  padding:10px 18px;
+  font-weight:600;
+  box-shadow:0 1px 4px rgba(0,0,0,0.05);
+}
+
+.nav-tabs .nav-link.active {
+  background:var(--accent)!important;
+  color:white!important;
+  border:none;
+}
+
+.btn-primary {
+  background:var(--primary);
+  border:none;
+  border-radius:10px;
+}
+
+.btn-success {
+  background:var(--accent);
+  border:none;
+  border-radius:10px;
+}
+
+.btn-outline-primary {
+  border-color:var(--primary);
+  color:var(--primary);
+  border-radius:10px;
+}
+
+.btn-outline-primary:hover {
+  background:var(--primary);
+  color:white;
+}
+
+.form-control,
+.form-select {
+  border-radius:10px;
+  border:1px solid var(--border);
+}
+
+.modern-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+
+#editor {
+  height:300px;
+  background:white;
+  border-radius:0 0 12px 12px;
+}
+
+/* DASHBOARD */
+.kpi-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  height:100%;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+
+.kpi-number {
+  color:var(--accent);
+  font-size:32px;
+  font-weight:800;
+}
+
+.kpi-label {
+  color:var(--muted);
+  font-size:14px;
+}
+
+.dashboard-section {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:20px;
+  margin-top:20px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+
+/* RECIPIENT BUILDER */
+.recipient-builder {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:18px;
+}
+
+.recipient-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:999px;
+  margin:4px;
+  cursor:pointer;
+  font-size:14px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+
+.recipient-pill input {
+  accent-color:var(--accent);
+}
+
+.recipient-count {
+  background:var(--primary);
+  color:white;
+  padding:10px 14px;
+  border-radius:12px;
+  font-weight:700;
+  display:inline-block;
+}
+
+.contact-select-list {
+  max-height:220px;
+  overflow:auto;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+}
+
+.contact-select-row {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:9px;
+  border-radius:10px;
+}
+
+.contact-select-row:hover {
+  background:#f3f4f6;
+}
+
+.contact-select-row input {
+  accent-color:var(--accent);
+}
+
+/* PHONEBOOK STYLE */
+.contact-letter {
+  background:#e9ecef;
+  padding:6px 10px;
+  font-weight:bold;
+  font-size:12px;
+  position:sticky;
+  top:0;
+  z-index:5;
+  border-radius:8px;
+}
+
+.contact-item {
+  background:white;
+  padding:12px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+  border-radius:10px;
+  margin-bottom:6px;
+}
+
+.contact-item:hover {
+  background:#f9f9f9;
+}
+
+.contact-name {
+  font-weight:700;
+}
+
+.unsubscribed-badge {
+  display:inline-block;
+  background:#fee2e2;
+  color:#991b1b;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:11px;
+  font-weight:700;
+  margin-left:6px;
+}
+
+.bounced-badge {
+  display:inline-block;
+  background:#ffedd5;
+  color:#9a3412;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:11px;
+  font-weight:700;
+  margin-left:6px;
+}
+
+.active-badge {
+  display:inline-block;
+  background:#dcfce7;
+  color:#166534;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:11px;
+  font-weight:700;
+  margin-left:6px;
+}
+
+#contactPanel {
+  position:fixed;
+  top:0;
+  right:-520px;
+  width:520px;
+  height:100%;
+  background:white;
+  box-shadow:-2px 0 20px rgba(0,0,0,0.20);
+  transition:0.3s;
+  z-index:9999;
+  padding:24px;
+  overflow:auto;
+}
+
+#contactPanel.open {
+  right:0;
+}
+
+/* CAMPAIGN ANALYTICS PANEL */
+#campaignPanel {
+  position:fixed;
+  top:0;
+  right:-720px;
+  width:720px;
+  height:100%;
+  background:white;
+  box-shadow:-2px 0 24px rgba(0,0,0,0.22);
+  transition:0.3s;
+  z-index:9998;
+  padding:24px;
+  overflow:auto;
+}
+
+#campaignPanel.open {
+  right:0;
+}
+
+.analytics-grid {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:12px;
+  margin:16px 0;
+}
+
+.analytics-card {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:14px;
+}
+
+.analytics-number {
+  color:var(--accent);
+  font-size:24px;
+  font-weight:800;
+}
+
+.analytics-label {
+  color:var(--muted);
+  font-size:12px;
+}
+
+.activity-row {
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+  margin-bottom:10px;
+  background:#ffffff;
+}
+
+.link-row {
+  border-bottom:1px solid var(--border);
+  padding:10px 0;
+}
+
+.panel-title {
+  font-weight:800;
+  color:var(--primary);
+}
+
+.section {
+  margin-top:15px;
+  padding-top:10px;
+  border-top:1px solid #eee;
+}
+
+.note {
+  font-size:13px;
+  background:#f8f9fa;
+  padding:8px;
+  border-radius:8px;
+  margin-bottom:5px;
+}
+
+.campaign-card {
+  border:1px solid var(--border);
+  padding:16px;
+  margin-bottom:12px;
+  background:white;
+  border-radius:16px;
+  box-shadow:0 4px 12px rgba(15,23,42,0.04);
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.campaign-card:hover {
+  transform:translateY(-2px);
+  box-shadow:0 8px 22px rgba(15,23,42,0.08);
+}
+
+.badge-opened {
+  background:var(--accent);
+  color:white;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+}
+
+.badge-closed {
+  background:gray;
+  color:white;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+}
+
+.status-badge {
+  display:inline-block;
+  padding:4px 9px;
+  border-radius:999px;
+  background:#eef2f7;
+  color:#334155;
+  font-size:12px;
+  font-weight:700;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+  <img src="logo.png">
+  <h4 class="m-0">Excel Marketing System</h4>
+</div>
+
+<div class="container mt-4">
+
+<ul class="nav nav-tabs">
+  <li class="nav-item">
+    <button class="nav-link active" id="tabDashboard" onclick="showTab('dashboard')">Dashboard</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" id="tabCampaigns" onclick="showTab('campaigns')">Campaigns</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" id="tabContacts" onclick="showTab('contacts')">Contacts</button>
+  </li>
+</ul>
+
+<!-- DASHBOARD -->
+<div id="dashboardTab" class="mt-4">
+
+  <h4>Dashboard</h4>
+
+  <div class="row g-3 mt-2">
+    <div class="col-md-3">
+      <div class="kpi-card">
+        <div id="dashTotalContacts" class="kpi-number">0</div>
+        <div class="kpi-label">Total Contacts</div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="kpi-card">
+        <div id="dashTotalCampaigns" class="kpi-number">0</div>
+        <div class="kpi-label">Campaigns Created</div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="kpi-card">
+        <div id="dashOpenRate" class="kpi-number">0%</div>
+        <div class="kpi-label">Open Rate</div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="kpi-card">
+        <div id="dashClickRate" class="kpi-number">0%</div>
+        <div class="kpi-label">Click Rate</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-4">
+      <div class="kpi-card">
+        <div id="dashTotalSent" class="kpi-number">0</div>
+        <div class="kpi-label">Total Emails Sent</div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="kpi-card">
+        <div id="dashTotalOpened" class="kpi-number">0</div>
+        <div class="kpi-label">Total Opens</div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="kpi-card">
+        <div id="dashTotalClicks" class="kpi-number">0</div>
+        <div class="kpi-label">Total Clicks</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mt-1">
+    <div class="col-md-6">
+      <div class="kpi-card">
+        <div id="dashTotalUnsubscribed" class="kpi-number">0</div>
+        <div class="kpi-label">Unsubscribed Contacts</div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="kpi-card">
+        <div id="dashTotalBounced" class="kpi-number">0</div>
+        <div class="kpi-label">Bounced / Invalid Contacts</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-section">
+    <h5>Recent Activity</h5>
+    <div id="recentActivityList"></div>
+  </div>
+
+  <div class="dashboard-section">
+    <h5>Top Links Clicked</h5>
+    <div id="topLinksList"></div>
+  </div>
+
+</div>
+
+<!-- CAMPAIGNS -->
+<div id="campaignsTab" class="mt-4" style="display:none;">
+
+  <h4>Campaign Builder</h4>
+
+  <div class="modern-card mb-3">
+    <input id="campaignName" class="form-control mb-3" placeholder="Campaign Name">
+    <input id="subject" class="form-control mb-3" placeholder="Subject">
+
+    <div class="recipient-builder mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-1">Recipients</h5>
+          <div class="text-muted small">Unsubscribed and bounced contacts are automatically skipped.</div>
+        </div>
+        <div id="recipientCount" class="recipient-count">0 selected</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Send to Contact Types</label>
+        <div id="recipientTypeList"></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-bold">Select Individual Contacts</label>
+        <input id="recipientSearch" class="form-control mb-2" placeholder="Search contacts for this campaign...">
+        <div id="recipientContactList" class="contact-select-list"></div>
+      </div>
+
+      <div>
+        <label class="form-label fw-bold">Additional Emails</label>
+        <textarea id="extraRecipients" class="form-control" rows="2" placeholder="Optional: email1@gmail.com, email2@gmail.com"></textarea>
+      </div>
+    </div>
+
+    <div id="editor"></div>
+
+    <div class="mt-3">
+      <button class="btn btn-success" onclick="saveCampaign()">Save Campaign</button>
+      <button class="btn btn-primary" onclick="sendCampaign()">Send Campaign</button>
+    </div>
+  </div>
+
+  <div class="modern-card">
+    <h5>Saved Campaigns</h5>
+    <div class="text-muted small mb-3">Click any campaign to view detailed analytics.</div>
+    <div id="campaignList"></div>
+  </div>
+
+</div>
+
+<!-- CONTACTS -->
+<div id="contactsTab" class="mt-4" style="display:none;">
+
+  <h4>Contacts</h4>
+
+  <div class="modern-card mb-3">
+
+    <input id="firstName" class="form-control mb-2" placeholder="First Name">
+    <input id="lastName" class="form-control mb-2" placeholder="Last Name">
+    <input id="email" class="form-control mb-2" placeholder="Email">
+    <input id="phone" class="form-control mb-2" placeholder="Phone">
+
+    <div class="input-group mb-2">
+      <select id="contactType" class="form-control"></select>
+      <input id="newContactType" class="form-control" placeholder="New contact type">
+      <button class="btn btn-outline-primary" onclick="addContactType()">Add Type</button>
+    </div>
+
+    <button class="btn btn-success" onclick="addContact()">Add Contact</button>
+
+  </div>
+
+  <input id="contactSearch" class="form-control mb-2" placeholder="Search by name, email, phone, type, unsubscribed, or bounced...">
+
+  <div id="contactList"></div>
+
+</div>
+
+</div>
+
+<!-- CONTACT PANEL -->
+<div id="contactPanel">
+
+  <button class="btn btn-sm btn-secondary mb-3" onclick="closePanel()">Close</button>
+
+  <h4>Edit Contact</h4>
+  <div id="contactUnsubscribeStatus" class="mb-2"></div>
+  <div id="contactBounceStatus" class="mb-3"></div>
+
+  <input id="editFirst" class="form-control mb-2">
+  <input id="editLast" class="form-control mb-2">
+  <input id="editEmail" class="form-control mb-2">
+  <input id="editPhone" class="form-control mb-2">
+
+  <select id="editType" class="form-control mb-2"></select>
+
+  <button class="btn btn-primary mb-3" onclick="saveContact()">Save Changes</button>
+
+  <div class="section">
+    <h6>Notes</h6>
+    <textarea id="noteInput" class="form-control mb-2"></textarea>
+    <button class="btn btn-sm btn-primary mb-2" onclick="addNote()">Add Note</button>
+    <div id="notesList"></div>
+  </div>
+
+  <div class="section">
+    <h6>Campaign History</h6>
+    <div id="panelCampaigns"></div>
+  </div>
+
+</div>
+
+<!-- CAMPAIGN ANALYTICS PANEL -->
+<div id="campaignPanel">
+
+  <button class="btn btn-sm btn-secondary mb-3" onclick="closeCampaignPanel()">Close</button>
+
+  <h4 id="campaignPanelTitle" class="panel-title">Campaign Analytics</h4>
+  <div id="campaignPanelSubject" class="text-muted"></div>
+  <div id="campaignPanelStatus" class="mt-2"></div>
+
+  <div class="analytics-grid">
+    <div class="analytics-card">
+      <div id="panelSent" class="analytics-number">0</div>
+      <div class="analytics-label">Sent</div>
+    </div>
+    <div class="analytics-card">
+      <div id="panelOpened" class="analytics-number">0</div>
+      <div class="analytics-label">Opened</div>
+    </div>
+    <div class="analytics-card">
+      <div id="panelOpenRate" class="analytics-number">0%</div>
+      <div class="analytics-label">Open Rate</div>
+    </div>
+    <div class="analytics-card">
+      <div id="panelClicks" class="analytics-number">0</div>
+      <div class="analytics-label">Clicks</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h5>Recipient Activity</h5>
+    <div id="campaignRecipientActivity"></div>
+  </div>
+
+  <div class="section">
+    <h5>Links Clicked</h5>
+    <div id="campaignLinksClicked"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+
+<script>
+
+const quill = new Quill('#editor', { theme:'snow' });
+
+let contactsCache = [];
+let campaignsCache = [];
+let activityCache = [];
+let currentContact = null;
+
+/* CONTACT TYPES */
+let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA"]');
+
+function saveTypes(){
+  localStorage.setItem('contactTypes', JSON.stringify(contactTypes));
+  renderTypes();
+  renderRecipientTypes();
+}
+
+function renderTypes(){
+  contactType.innerHTML = '';
+  editType.innerHTML = '';
+
+  contactTypes.sort().forEach(t=>{
+    contactType.innerHTML += `<option>${t}</option>`;
+    editType.innerHTML += `<option>${t}</option>`;
+  });
+}
+
+function addContactType(){
+  const v = newContactType.value.trim();
+  if(!v) return;
+  if(!contactTypes.includes(v)) contactTypes.push(v);
+  newContactType.value='';
+  saveTypes();
+}
+
+renderTypes();
+
+/* TAB */
+function showTab(t){
+  dashboardTab.style.display = t==='dashboard'?'block':'none';
+  campaignsTab.style.display = t==='campaigns'?'block':'none';
+  contactsTab.style.display = t==='contacts'?'block':'none';
+
+  tabDashboard.classList.remove('active');
+  tabCampaigns.classList.remove('active');
+  tabContacts.classList.remove('active');
+
+  if(t === 'dashboard'){
+    tabDashboard.classList.add('active');
+    loadDashboard();
+  }
+
+  if(t === 'campaigns'){
+    tabCampaigns.classList.add('active');
+    loadCampaigns();
+    renderRecipientBuilder();
+  }
+
+  if(t === 'contacts'){
+    tabContacts.classList.add('active');
+  }
+}
+
+/* DASHBOARD */
+async function loadDashboard(){
+  const res = await fetch('/api/dashboard-stats');
+  const data = await res.json();
+
+  dashTotalContacts.innerText = data.totalContacts || 0;
+  dashTotalCampaigns.innerText = data.totalCampaigns || 0;
+  dashTotalSent.innerText = data.totalSent || 0;
+  dashTotalOpened.innerText = data.totalOpened || 0;
+  dashTotalClicks.innerText = data.totalClicks || 0;
+  dashTotalUnsubscribed.innerText = data.totalUnsubscribed || 0;
+  dashTotalBounced.innerText = data.totalBounced || 0;
+  dashOpenRate.innerText = (data.openRate || 0) + '%';
+  dashClickRate.innerText = (data.clickRate || 0) + '%';
+
+  recentActivityList.innerHTML = '';
+
+  if(!data.recentActivity || data.recentActivity.length === 0){
+    recentActivityList.innerHTML = '<div class="text-muted">No activity yet.</div>';
+  } else {
+    data.recentActivity.forEach(a=>{
+      recentActivityList.innerHTML += `
+        <div class="border-bottom py-2">
+          <b>${a.email || ''}</b> ${(a.type || a.status || 'activity').toLowerCase()} <b>${a.campaignName || ''}</b>
+          ${a.url ? `<br><small>Link: ${a.url}</small>` : ''}
+          ${a.error ? `<br><small class="text-danger">Error: ${a.error}</small>` : ''}
+          <br><small>${a.date || a.sentAt ? new Date(a.date || a.sentAt).toLocaleString() : ''}</small>
+        </div>
+      `;
+    });
+  }
+
+  topLinksList.innerHTML = '';
+
+  if(!data.topLinks || data.topLinks.length === 0){
+    topLinksList.innerHTML = '<div class="text-muted">No link clicks yet.</div>';
+  } else {
+    data.topLinks.forEach(link=>{
+      topLinksList.innerHTML += `
+        <div class="border-bottom py-2">
+          <b>${link.clicks}</b> clicks<br>
+          <small>${link.url}</small>
+        </div>
+      `;
+    });
+  }
+}
+
+/* RECIPIENT BUILDER */
+function renderRecipientBuilder(){
+  renderRecipientTypes();
+  renderRecipientContacts();
+  updateRecipientCount();
+}
+
+function renderRecipientTypes(){
+  recipientTypeList.innerHTML = '';
+
+  contactTypes.sort().forEach(type=>{
+    const count = contactsCache.filter(c => (c.type || '') === type && c.email && !c.unsubscribed && !c.bounced).length;
+
+    recipientTypeList.innerHTML += `
+      <label class="recipient-pill">
+        <input type="checkbox" class="recipient-type-checkbox" value="${type}" onchange="updateRecipientCount()">
+        ${type}
+        <span class="text-muted small">(${count})</span>
+      </label>
+    `;
+  });
+}
+
+function renderRecipientContacts(){
+  const search = (recipientSearch.value || '').toLowerCase();
+  recipientContactList.innerHTML = '';
+
+  const filtered = contactsCache.filter(c=>{
+    const text = `${c.firstName || ''} ${c.lastName || ''} ${c.email || ''} ${c.phone || ''} ${c.type || ''} ${c.unsubscribed ? 'unsubscribed' : 'subscribed'} ${c.bounced ? 'bounced invalid' : 'valid'}`.toLowerCase();
+    return text.includes(search);
+  });
+
+  if(filtered.length === 0){
+    recipientContactList.innerHTML = '<div class="text-muted p-2">No contacts found.</div>';
+    return;
+  }
+
+  filtered.forEach(c=>{
+    if(!c.email) return;
+
+    const blocked = c.unsubscribed || c.bounced;
+
+    recipientContactList.innerHTML += `
+      <label class="contact-select-row" style="${blocked ? 'opacity:0.55;' : ''}">
+        <input type="checkbox" class="recipient-contact-checkbox" value="${c.email}" onchange="updateRecipientCount()" ${blocked ? 'disabled' : ''}>
+        <div>
+          <div>
+            <b>${c.firstName || ''} ${c.lastName || ''}</b>
+            ${c.unsubscribed ? '<span class="unsubscribed-badge">Unsubscribed</span>' : ''}
+            ${c.bounced ? '<span class="bounced-badge">Bounced</span>' : ''}
+          </div>
+          <small class="text-muted">${c.email} | ${c.type || ''}</small>
+        </div>
+      </label>
+    `;
+  });
+}
+
+function getSelectedRecipients(){
+  const selectedEmails = new Set();
+
+  document.querySelectorAll('.recipient-type-checkbox:checked').forEach(box=>{
+    contactsCache
+      .filter(c => (c.type || '') === box.value && c.email && !c.unsubscribed && !c.bounced)
+      .forEach(c => selectedEmails.add(c.email.trim()));
+  });
+
+  document.querySelectorAll('.recipient-contact-checkbox:checked').forEach(box=>{
+    if(box.value) selectedEmails.add(box.value.trim());
+  });
+
+  const extra = (extraRecipients.value || '')
+    .split(',')
+    .map(e=>e.trim())
+    .filter(e=>e.length > 0);
+
+  extra.forEach(e=>selectedEmails.add(e));
+
+  return Array.from(selectedEmails);
+}
+
+function updateRecipientCount(){
+  const count = getSelectedRecipients().length;
+  recipientCount.innerText = count === 1 ? '1 selected' : `${count} selected`;
+}
+
+/* CAMPAIGNS */
+async function saveCampaign(){
+  const payload = {
+    name: campaignName.value,
+    subject: subject.value,
+    html: quill.root.innerHTML
+  };
+
+  const res = await fetch('/api/campaigns',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert('Campaign saved.');
+    loadCampaigns();
+    loadDashboard();
+  }
+}
+
+async function sendCampaign(){
+  const selectedRecipients = getSelectedRecipients();
+
+  const payload = {
+    name: campaignName.value,
+    recipients: selectedRecipients,
+    subject: subject.value,
+    html: quill.root.innerHTML
+  };
+
+  if(payload.recipients.length === 0){
+    alert('Please select at least one recipient.');
+    return;
+  }
+
+  if(!payload.subject.trim()){
+    alert('Please enter a subject.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/send-campaign',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+      alert(data.message || 'Campaign sent.');
+    } else {
+      alert(data.message || data.error || 'Campaign failed. Check the server terminal for details.');
+      console.log('Send campaign response:', data);
+    }
+
+    loadCampaigns();
+    loadDashboard();
+    loadContacts();
+
+  } catch(error) {
+    alert('Campaign could not be sent. Check the browser console and server terminal.');
+    console.error('Send campaign error:', error);
+  }
+}
+
+async function loadCampaigns(){
+  const campaignsRes = await fetch('/api/campaigns');
+  campaignsCache = await campaignsRes.json();
+
+  const activityRes = await fetch('/api/activity');
+  activityCache = await activityRes.json();
+
+  campaignList.innerHTML = '';
+
+  if(campaignsCache.length === 0){
+    campaignList.innerHTML = '<div class="text-muted">No campaigns saved yet.</div>';
+    return;
+  }
+
+  campaignsCache.forEach(c=>{
+    const matching = activityCache.filter(a => a.campaignName === c.name || a.campaignName === c.subject);
+
+    const sent = matching.filter(a => a.status === 'sent' || !a.status).length;
+    const failed = matching.filter(a => a.status === 'failed').length;
+    const opened = matching.filter(a => a.opened).length;
+    const clicks = matching.reduce((sum, a) => sum + ((a.clicks || []).length), 0);
+
+    const openRate = sent ? Math.round((opened / sent) * 100) : 0;
+    const clickRate = sent ? Math.round((clicks / sent) * 100) : 0;
+
+    campaignList.innerHTML += `
+      <div class="campaign-card" onclick="openCampaignPanel(${c.id})">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <b>${c.name || 'Untitled Campaign'}</b><br>
+            <small>Subject: ${c.subject || ''}</small><br>
+            <small>Created: ${c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</small>
+          </div>
+          <span class="status-badge">${c.status || 'Draft'}</span>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-3"><b style="color:#00A143;">${sent}</b><br><small>Sent</small></div>
+          <div class="col-md-3"><b style="color:#9a3412;">${failed}</b><br><small>Failed</small></div>
+          <div class="col-md-3"><b style="color:#00A143;">${openRate}%</b><br><small>Open Rate</small></div>
+          <div class="col-md-3"><b style="color:#00A143;">${clickRate}%</b><br><small>Click Rate</small></div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+/* CAMPAIGN ANALYTICS PANEL */
+function openCampaignPanel(campaignId){
+  const campaign = campaignsCache.find(c => c.id == campaignId);
+  if(!campaign) return;
+
+  const matching = activityCache.filter(a => a.campaignName === campaign.name || a.campaignName === campaign.subject);
+
+  const sent = matching.filter(a => a.status === 'sent' || !a.status).length;
+  const opened = matching.filter(a => a.opened).length;
+  const clicks = matching.reduce((sum, a) => sum + ((a.clicks || []).length), 0);
+  const openRate = sent ? Math.round((opened / sent) * 100) : 0;
+
+  campaignPanelTitle.innerText = campaign.name || 'Untitled Campaign';
+  campaignPanelSubject.innerText = 'Subject: ' + (campaign.subject || '');
+  campaignPanelStatus.innerHTML = `<span class="status-badge">${campaign.status || 'Draft'}</span>`;
+
+  panelSent.innerText = sent;
+  panelOpened.innerText = opened;
+  panelOpenRate.innerText = openRate + '%';
+  panelClicks.innerText = clicks;
+
+  campaignRecipientActivity.innerHTML = '';
+
+  if(matching.length === 0){
+    campaignRecipientActivity.innerHTML = '<div class="text-muted">No recipient activity yet.</div>';
+  } else {
+    matching.forEach(a=>{
+      const clickedCount = (a.clicks || []).length;
+      const isFailed = a.status === 'failed';
+
+      const clickDetails = clickedCount
+        ? (a.clicks || []).map(click => `
+            <div class="mt-1">
+              <small><b>Clicked:</b> ${click.url}<br>${new Date(click.clickedAt).toLocaleString()}</small>
+            </div>
+          `).join('')
+        : '<small class="text-muted">No clicks yet.</small>';
+
+      campaignRecipientActivity.innerHTML += `
+        <div class="activity-row">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <b>${a.email}</b><br>
+              <small>Sent: ${a.sentAt ? new Date(a.sentAt).toLocaleString() : a.sentDate || ''}</small><br>
+              <small>Opened: ${a.opened ? new Date(a.openedAt).toLocaleString() : 'No'}</small>
+              ${isFailed ? `<br><small class="text-danger">Failed: ${a.error || 'Unknown error'}</small>` : ''}
+            </div>
+            <div>
+              ${isFailed
+                ? '<span class="bounced-badge">Failed</span>'
+                : `<span class="${a.opened ? 'badge-opened' : 'badge-closed'}">${a.opened ? 'Opened' : 'Not Opened'}</span>`
+              }
+            </div>
+          </div>
+          <div class="mt-2">
+            <b style="color:#00A143;">${clickedCount}</b> <small>clicks</small>
+            ${clickDetails}
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  const linkMap = {};
+
+  matching.forEach(a=>{
+    (a.clicks || []).forEach(click=>{
+      if(!linkMap[click.url]) linkMap[click.url] = {
+        url: click.url,
+        clicks: 0,
+        people: []
+      };
+
+      linkMap[click.url].clicks++;
+      linkMap[click.url].people.push({
+        email: a.email,
+        clickedAt: click.clickedAt
+      });
+    });
+  });
+
+  const links = Object.values(linkMap).sort((a,b)=>b.clicks-a.clicks);
+
+  campaignLinksClicked.innerHTML = '';
+
+  if(links.length === 0){
+    campaignLinksClicked.innerHTML = '<div class="text-muted">No links clicked yet.</div>';
+  } else {
+    links.forEach(link=>{
+      const peopleHtml = link.people.map(p=>`
+        <div><small>${p.email} — ${new Date(p.clickedAt).toLocaleString()}</small></div>
+      `).join('');
+
+      campaignLinksClicked.innerHTML += `
+        <div class="link-row">
+          <b style="color:#00A143;">${link.clicks}</b> clicks<br>
+          <small>${link.url}</small>
+          <div class="mt-2">${peopleHtml}</div>
+        </div>
+      `;
+    });
+  }
+
+  campaignPanel.classList.add('open');
+}
+
+function closeCampaignPanel(){
+  campaignPanel.classList.remove('open');
+}
+
+/* ADD CONTACT */
+async function addContact(){
+  await fetch('/api/contacts',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      firstName:firstName.value,
+      lastName:lastName.value,
+      email:email.value,
+      phone:phone.value,
+      type:contactType.value
+    })
+  });
+
+  firstName.value = '';
+  lastName.value = '';
+  email.value = '';
+  phone.value = '';
+
+  loadContacts();
+  loadDashboard();
+}
+
+/* OPEN CONTACT */
+function openContact(id){
+  currentContact = contactsCache.find(c=>c.id===id);
+  contactPanel.classList.add('open');
+
+  editFirst.value=currentContact.firstName || '';
+  editLast.value=currentContact.lastName || '';
+  editEmail.value=currentContact.email || '';
+  editPhone.value=currentContact.phone || '';
+  editType.value=currentContact.type || '';
+
+  contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
+    ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${currentContact.unsubscribedAt ? new Date(currentContact.unsubscribedAt).toLocaleString() : ''}</small>`
+    : `<span class="active-badge">Subscribed</span>`;
+
+  contactBounceStatus.innerHTML = currentContact.bounced
+    ? `<span class="bounced-badge">Bounced / Invalid Email</span><br><small class="text-muted">Bounced: ${currentContact.bouncedAt ? new Date(currentContact.bouncedAt).toLocaleString() : ''}</small>${currentContact.bounceReason ? `<br><small class="text-danger">${currentContact.bounceReason}</small>` : ''}`
+    : `<span class="active-badge">Valid Email</span>`;
+
+  notesList.innerHTML = (currentContact.notes||[])
+    .map(n=>`<div class="note">${n.text}<br><small>${n.date}</small></div>`)
+    .join('');
+
+  loadActivity(currentContact.email);
+}
+
+/* SAVE */
+async function saveContact(){
+  await fetch('/api/contacts/'+currentContact.id,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      firstName:editFirst.value,
+      lastName:editLast.value,
+      email:editEmail.value,
+      phone:editPhone.value,
+      type:editType.value
+    })
+  });
+
+  loadContacts();
+  loadDashboard();
+}
+
+/* CLOSE */
+function closePanel(){
+  contactPanel.classList.remove('open');
+}
+
+/* NOTES */
+async function addNote(){
+  await fetch(`/api/contacts/${currentContact.id}/note`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:noteInput.value})
+  });
+
+  noteInput.value='';
+  loadContacts();
+  openContact(currentContact.id);
+}
+
+/* ACTIVITY */
+async function loadActivity(email){
+  const res = await fetch('/api/contact-activity?email='+email);
+  const data = await res.json();
+
+  panelCampaigns.innerHTML='';
+
+  if(data.length === 0){
+    panelCampaigns.innerHTML = '<div class="text-muted">No campaign activity yet.</div>';
+    return;
+  }
+
+  data.forEach(c=>{
+    const clickList = (c.clicks || [])
+      .map(click => `<div><small>Clicked: ${click.url}<br>${new Date(click.clickedAt).toLocaleString()}</small></div>`)
+      .join('');
+
+    const failedHtml = c.status === 'failed'
+      ? `<br><span class="bounced-badge">Failed</span><br><small class="text-danger">${c.error || ''}</small>`
+      : '';
+
+    panelCampaigns.innerHTML += `
+      <div class="campaign-card">
+        <b>${c.campaignName}</b><br>
+        <small>${c.sentDate || c.sentAt || ''}</small><br>
+        ${failedHtml || `
+          <span class="${c.opened?'badge-opened':'badge-closed'}">
+            ${c.opened?'Opened':'Not opened'}
+          </span>
+        `}
+        ${clickList ? `<div class="mt-2">${clickList}</div>` : ''}
+      </div>
+    `;
+  });
+}
+
+/* CONTACTS */
+async function loadContacts(){
+  const res = await fetch('/api/contacts');
+  const data = await res.json();
+
+  contactsCache = data;
+
+  const s = (contactSearch.value||'').toLowerCase();
+
+  let filtered = data.filter(c=>
+    ((c.firstName||'')+(c.lastName||'')+(c.email||'')+(c.phone||'')+(c.type||'')+(c.unsubscribed ? 'unsubscribed' : 'subscribed')+(c.bounced ? 'bounced invalid' : 'valid'))
+    .toLowerCase().includes(s)
+  );
+
+  const grouped = {};
+
+  filtered.forEach(c=>{
+    const letter = (c.lastName||'#')[0].toUpperCase();
+    if(!grouped[letter]) grouped[letter]=[];
+    grouped[letter].push(c);
+  });
+
+  contactList.innerHTML='';
+
+  Object.keys(grouped).sort().forEach(l=>{
+    contactList.innerHTML += `<div class="contact-letter">${l}</div>`;
+
+    grouped[l].forEach(c=>{
+      contactList.innerHTML += `
+        <div class="contact-item" onclick="openContact(${c.id})">
+          <div class="contact-name">
+            ${c.firstName || ''} ${c.lastName || ''}
+            ${c.unsubscribed ? '<span class="unsubscribed-badge">Unsubscribed</span>' : ''}
+            ${c.bounced ? '<span class="bounced-badge">Bounced</span>' : ''}
+          </div>
+          <div style="font-size:12px;color:#777;">
+            ${c.email || ''} | ${c.phone||''} | ${c.type||''}
+          </div>
+        </div>
+      `;
+    });
+  });
+
+  renderRecipientBuilder();
+}
+
+contactSearch.addEventListener('input', loadContacts);
+recipientSearch.addEventListener('input', renderRecipientContacts);
+extraRecipients.addEventListener('input', updateRecipientCount);
+
+loadContacts();
+loadDashboard();
+loadCampaigns();
+
+</script>
+
+</body>
+</html>
