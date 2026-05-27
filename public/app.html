@@ -114,7 +114,6 @@ body {
   border-radius:0 0 12px 12px;
 }
 
-/* DASHBOARD */
 .dashboard-header-row {
   display:flex;
   align-items:center;
@@ -143,10 +142,6 @@ body {
   box-shadow:0 8px 22px rgba(15,23,42,0.06);
   min-height:130px;
   cursor:grab;
-}
-
-.dashboard-widget:active {
-  cursor:grabbing;
 }
 
 .dashboard-widget-small {
@@ -198,23 +193,6 @@ body {
   position:relative;
 }
 
-.dashboard-section {
-  background:white;
-  border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px;
-  margin-top:20px;
-  box-shadow:0 6px 18px rgba(15,23,42,0.05);
-}
-
-.sortable-ghost {
-  opacity:0.35;
-}
-
-.sortable-chosen {
-  box-shadow:0 14px 30px rgba(15,23,42,0.14);
-}
-
 @media (max-width: 992px) {
   .dashboard-widget-small,
   .dashboard-widget-medium,
@@ -223,7 +201,6 @@ body {
   }
 }
 
-/* NEW MODULES */
 .feature-card {
   background:#f9fafb;
   border:1px solid var(--border);
@@ -238,7 +215,9 @@ body {
 }
 
 .tag-pill,
-.segment-pill {
+.segment-pill,
+.stage-pill,
+.priority-pill {
   display:inline-flex;
   align-items:center;
   gap:6px;
@@ -251,9 +230,30 @@ body {
   margin:3px;
 }
 
+.stage-pill {
+  background:#e0f2fe;
+  color:#075985;
+}
+
+.priority-high {
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.priority-normal {
+  background:#e0f2fe;
+  color:#075985;
+}
+
+.priority-low {
+  background:#dcfce7;
+  color:#166534;
+}
+
 .template-card,
 .segment-card,
-.scheduled-card {
+.scheduled-card,
+.task-card {
   border:1px solid var(--border);
   border-radius:14px;
   padding:14px;
@@ -262,12 +262,20 @@ body {
   box-shadow:0 3px 10px rgba(15,23,42,0.04);
 }
 
+.task-overdue {
+  border-color:#dc2626;
+  background:#fff7f7;
+}
+
+.task-done {
+  opacity:.6;
+}
+
 .small-muted {
   color:var(--muted);
   font-size:12px;
 }
 
-/* RECIPIENT BUILDER */
 .recipient-builder {
   background:#f9fafb;
   border:1px solid var(--border);
@@ -327,7 +335,6 @@ body {
   accent-color:var(--accent);
 }
 
-/* PHONEBOOK STYLE */
 .contact-letter {
   background:#e9ecef;
   padding:6px 10px;
@@ -392,8 +399,8 @@ body {
 #contactPanel {
   position:fixed;
   top:0;
-  right:-520px;
-  width:520px;
+  right:-560px;
+  width:560px;
   height:100%;
   background:white;
   box-shadow:-2px 0 20px rgba(0,0,0,0.20);
@@ -407,7 +414,6 @@ body {
   right:0;
 }
 
-/* CAMPAIGN ANALYTICS PANEL */
 #campaignPanel {
   position:fixed;
   top:0;
@@ -535,8 +541,6 @@ body {
   font-weight:700;
 }
 
-
-/* CRM PIPELINE / TASKS / CALENDAR */
 .pipeline-board {
   display:flex;
   gap:14px;
@@ -581,64 +585,6 @@ body {
   margin-bottom:10px;
   box-shadow:0 4px 12px rgba(15,23,42,0.05);
   cursor:grab;
-}
-
-.pipeline-card:active {
-  cursor:grabbing;
-}
-
-.stage-pill {
-  display:inline-block;
-  border-radius:999px;
-  background:#e0f2fe;
-  color:#075985;
-  padding:4px 9px;
-  font-size:11px;
-  font-weight:800;
-}
-
-.task-card {
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:12px;
-  background:white;
-  margin-bottom:10px;
-  box-shadow:0 3px 10px rgba(15,23,42,0.04);
-}
-
-.task-overdue {
-  border-color:#dc2626;
-  background:#fff7f7;
-}
-
-.task-done {
-  opacity:0.65;
-  text-decoration:none;
-}
-
-.priority-pill {
-  display:inline-block;
-  border-radius:999px;
-  padding:3px 8px;
-  font-size:11px;
-  font-weight:800;
-  background:#eef2f7;
-  color:#334155;
-}
-
-.priority-high {
-  background:#fee2e2;
-  color:#991b1b;
-}
-
-.priority-normal {
-  background:#e0f2fe;
-  color:#075985;
-}
-
-.priority-low {
-  background:#dcfce7;
-  color:#166534;
 }
 
 .calendar-wrap {
@@ -706,250 +652,1995 @@ body {
   background:#ede9fe;
   color:#5b21b6;
 }
-
 </style>
 </head>
 
 <body>
 
 <div class="header">
-  <img src="logo.png" alt="Logo">
-  <div>
-    <h2 class="m-0">Excel Marketing System</h2>
-    <div style="opacity:0.85;font-size:14px;">
-      CRM + Marketing Automation Platform
-    </div>
-  </div>
+  <img src="logo.png">
+  <h4 class="m-0">Excel Marketing System</h4>
 </div>
 
-<div class="container-fluid mt-4">
+<div class="container mt-4">
 
-<ul class="nav nav-tabs mb-4">
-  <li class="nav-item">
-    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#dashboardTab">
-      Dashboard
-    </button>
-  </li>
-
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#campaignsTab">
-      Campaigns
-    </button>
-  </li>
-
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#contactsTab">
-      Contacts
-    </button>
-  </li>
-
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#pipelineTab">
-      Pipeline
-    </button>
-  </li>
-
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tasksTab">
-      Tasks
-    </button>
-  </li>
-
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#calendarTab">
-      Calendar
-    </button>
-  </li>
+<ul class="nav nav-tabs">
+  <li class="nav-item"><button class="nav-link active" id="tabDashboard" onclick="showTab('dashboard')">Dashboard</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabCampaigns" onclick="showTab('campaigns')">Campaigns</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabContacts" onclick="showTab('contacts')">Contacts</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabPipeline" onclick="showTab('pipeline')">Pipeline</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabTasks" onclick="showTab('tasks')">Tasks</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabCalendar" onclick="showTab('calendar')">Calendar</button></li>
 </ul>
 
-<div class="tab-content">
-
 <!-- DASHBOARD -->
-<div class="tab-pane fade show active" id="dashboardTab">
+<div id="dashboardTab" class="mt-4">
 
   <div class="dashboard-header-row">
     <div>
-      <h3 class="m-0">Dashboard</h3>
-      <div class="dashboard-help">
-        Drag widgets to rearrange your dashboard.
-      </div>
+      <h4 class="mb-1">Dashboard</h4>
+      <div class="dashboard-help">Drag cards to rearrange your dashboard. Your layout saves automatically.</div>
     </div>
+    <button class="btn btn-sm btn-outline-primary" onclick="resetDashboardLayout()">Reset Layout</button>
   </div>
 
-  <div id="dashboardGrid" class="dashboard-grid">
+  <div id="dashboardWidgetGrid" class="dashboard-grid">
 
-    <div class="dashboard-widget dashboard-widget-small">
-      <div class="widget-title-row">
-        <div class="widget-title">Contacts</div>
-      </div>
-
-      <div class="kpi-number" id="dashboardContacts">0</div>
-      <div class="kpi-label">Total Contacts</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalContacts">
+      <div class="widget-title-row"><h6 class="widget-title">Total Contacts</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalContacts" class="kpi-number">0</div>
+      <div class="kpi-label">Contacts in database</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-small">
-      <div class="widget-title-row">
-        <div class="widget-title">Campaigns</div>
-      </div>
-
-      <div class="kpi-number" id="dashboardCampaigns">0</div>
-      <div class="kpi-label">Total Campaigns</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalCampaigns">
+      <div class="widget-title-row"><h6 class="widget-title">Campaigns</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalCampaigns" class="kpi-number">0</div>
+      <div class="kpi-label">Campaigns created</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-small">
-      <div class="widget-title-row">
-        <div class="widget-title">Open Rate</div>
-      </div>
-
-      <div class="kpi-number" id="dashboardOpenRate">0%</div>
-      <div class="kpi-label">Campaign Opens</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="openRate">
+      <div class="widget-title-row"><h6 class="widget-title">Open Rate</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashOpenRate" class="kpi-number">0%</div>
+      <div class="kpi-label">Overall open performance</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-small">
-      <div class="widget-title-row">
-        <div class="widget-title">Click Rate</div>
-      </div>
-
-      <div class="kpi-number" id="dashboardClickRate">0%</div>
-      <div class="kpi-label">Link Clicks</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="clickRate">
+      <div class="widget-title-row"><h6 class="widget-title">Click Rate</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashClickRate" class="kpi-number">0%</div>
+      <div class="kpi-label">Overall click performance</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-small">
-      <div class="widget-title-row">
-        <div class="widget-title">Due Today</div>
-      </div>
-
-      <div class="kpi-number" id="dashboardDueToday">0</div>
-      <div class="kpi-label">Tasks Due Today</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalSent">
+      <div class="widget-title-row"><h6 class="widget-title">Emails Sent</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalSent" class="kpi-number">0</div>
+      <div class="kpi-label">Total emails sent</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-small">
-      <div class="widget-title-row">
-        <div class="widget-title">Overdue</div>
-      </div>
-
-      <div class="kpi-number" id="dashboardOverdue">0</div>
-      <div class="kpi-label">Overdue Tasks</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalOpened">
+      <div class="widget-title-row"><h6 class="widget-title">Total Opens</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalOpened" class="kpi-number">0</div>
+      <div class="kpi-label">Tracked opens</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-medium">
-      <div class="widget-title-row">
-        <div class="widget-title">Campaign Performance</div>
-      </div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalClicks">
+      <div class="widget-title-row"><h6 class="widget-title">Total Clicks</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalClicks" class="kpi-number">0</div>
+      <div class="kpi-label">Tracked link clicks</div>
+    </div>
 
-      <div class="chart-wrap">
-        <canvas id="campaignChart"></canvas>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="listHealth">
+      <div class="widget-title-row"><h6 class="widget-title">List Health</h6><span class="drag-handle">⋮⋮</span></div>
+      <div class="row">
+        <div class="col-6"><div id="dashTotalUnsubscribed" class="kpi-number">0</div><div class="kpi-label">Unsubscribed</div></div>
+        <div class="col-6"><div id="dashTotalBounced" class="kpi-number">0</div><div class="kpi-label">Bounced</div></div>
       </div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-medium">
-      <div class="widget-title-row">
-        <div class="widget-title">Pipeline Distribution</div>
-      </div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="dueToday">
+      <div class="widget-title-row"><h6 class="widget-title">Due Today</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashDueToday" class="kpi-number">0</div>
+      <div class="kpi-label">Follow-ups due today</div>
+    </div>
 
-      <div class="chart-wrap">
-        <canvas id="pipelineChart"></canvas>
-      </div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="overdue">
+      <div class="widget-title-row"><h6 class="widget-title">Overdue</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashOverdue" class="kpi-number">0</div>
+      <div class="kpi-label">Overdue follow-ups</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-large" data-widget-id="activityTrend">
+      <div class="widget-title-row"><h6 class="widget-title">Email Activity Trend</h6><span class="drag-handle">⋮⋮</span></div>
+      <div class="chart-wrap"><canvas id="activityTrendChart"></canvas></div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="campaignPerformance">
+      <div class="widget-title-row"><h6 class="widget-title">Campaign Performance</h6><span class="drag-handle">⋮⋮</span></div>
+      <div class="chart-wrap"><canvas id="campaignPerformanceChart"></canvas></div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="engagementBreakdown">
+      <div class="widget-title-row"><h6 class="widget-title">Engagement Breakdown</h6><span class="drag-handle">⋮⋮</span></div>
+      <div class="chart-wrap"><canvas id="engagementBreakdownChart"></canvas></div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="recentActivity">
+      <div class="widget-title-row"><h6 class="widget-title">Recent Activity</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="recentActivityList"></div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="topLinks">
+      <div class="widget-title-row"><h6 class="widget-title">Top Links Clicked</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="topLinksList"></div>
     </div>
 
   </div>
-
 </div>
 
 <!-- CAMPAIGNS -->
-<div class="tab-pane fade" id="campaignsTab">
+<div id="campaignsTab" class="mt-4" style="display:none;">
 
-<div class="row">
+  <h4>Campaign Builder</h4>
 
-<div class="col-lg-8">
+  <div class="modern-card mb-3">
+    <div id="editingCampaignNotice" class="mb-3" style="display:none;">
+      <span class="editing-badge">Editing Existing Campaign</span>
+      <button class="btn btn-sm btn-outline-primary ms-2" onclick="cancelCampaignEdit()">Cancel Edit</button>
+    </div>
 
-<div class="modern-card mb-4">
+    <input id="campaignName" class="form-control mb-3" placeholder="Campaign Name">
+    <input id="subject" class="form-control mb-3" placeholder="Subject">
 
-<h4>Campaign Builder</h4>
+    <div class="recipient-builder mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="mb-1">Recipients</h5>
+          <div class="text-muted small">Unsubscribed and bounced contacts are automatically skipped.</div>
+        </div>
+        <div id="recipientCount" class="recipient-count">0 selected</div>
+      </div>
 
-<div class="mb-3">
-<label class="form-label">Campaign Name</label>
-<input type="text" class="form-control" id="campaignName">
-</div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Send to Segments</label>
+        <div id="recipientSegmentList"></div>
+      </div>
 
-<div class="mb-3">
-<label class="form-label">Subject</label>
-<input type="text" class="form-control" id="campaignSubject">
-</div>
+      <div class="mb-3">
+        <label class="form-label fw-bold">Send to Contact Types</label>
+        <div id="recipientTypeList"></div>
+      </div>
 
-<div class="recipient-builder mb-4">
+      <div class="mb-3">
+        <label class="form-label fw-bold">Send to Tags</label>
+        <div id="recipientTagList"></div>
+      </div>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <div>
-    <strong>Recipients</strong>
-    <div class="small-muted">
-      Unsubscribed and bounced contacts are automatically skipped.
+      <div class="mb-3">
+        <label class="form-label fw-bold">Select Individual Contacts</label>
+        <input id="recipientSearch" class="form-control mb-2" placeholder="Search contacts for this campaign...">
+        <div id="recipientContactList" class="contact-select-list"></div>
+      </div>
+
+      <div>
+        <label class="form-label fw-bold">Additional Emails</label>
+        <textarea id="extraRecipients" class="form-control" rows="2" placeholder="Optional: email1@gmail.com, email2@gmail.com"></textarea>
+      </div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-title mb-2">Templates</div>
+      <div class="row g-2">
+        <div class="col-md-4"><input id="templateName" class="form-control" placeholder="Template name"></div>
+        <div class="col-md-3"><input id="templateCategory" class="form-control" placeholder="Category"></div>
+        <div class="col-md-5">
+          <button class="btn btn-sm btn-success" onclick="saveTemplateFromCampaign()">Save Current as Template</button>
+          <button class="btn btn-sm btn-outline-primary" onclick="loadTemplates()">Refresh Templates</button>
+        </div>
+      </div>
+      <div id="templateList" class="mt-3"></div>
+    </div>
+
+    <div id="editor"></div>
+
+    <div class="feature-card mt-3">
+      <div class="feature-title mb-2">Scheduling</div>
+      <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small">Schedule date/time</label>
+          <input id="scheduleDateTime" type="datetime-local" class="form-control">
+        </div>
+        <div class="col-md-7">
+          <button class="btn btn-sm btn-outline-primary" onclick="scheduleCampaign()">Schedule Campaign</button>
+          <span class="small-muted ms-2">Uses the selected recipients, subject, and email content above.</span>
+        </div>
+      </div>
+      <div id="scheduledCampaignList" class="mt-3"></div>
+    </div>
+
+    <div class="mt-3">
+      <button id="saveCampaignButton" class="btn btn-success" onclick="saveCampaign()">Save Campaign</button>
+      <button class="btn btn-primary" onclick="sendCampaign()">Send Campaign</button>
     </div>
   </div>
 
-  <div class="recipient-count">
-    <span id="recipientCount">0</span> selected
+  <div class="modern-card mb-3">
+    <h5>Segments</h5>
+    <div class="text-muted small mb-3">Build reusable groups based on contact type and tags.</div>
+
+    <div class="row g-2">
+      <div class="col-md-4"><input id="segmentName" class="form-control" placeholder="Segment name"></div>
+      <div class="col-md-4"><input id="segmentTags" class="form-control" placeholder="Tags, comma separated"></div>
+      <div class="col-md-4"><input id="segmentTypes" class="form-control" placeholder="Types, comma separated"></div>
+      <div class="col-md-12">
+        <button class="btn btn-sm btn-success" onclick="saveSegment()">Save Segment</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="loadSegments()">Refresh Segments</button>
+      </div>
+    </div>
+
+    <div id="segmentList" class="mt-3"></div>
+  </div>
+
+  <div class="modern-card">
+    <h5>Saved Campaigns</h5>
+    <div class="text-muted small mb-3">Click any campaign to view detailed analytics.</div>
+    <div id="campaignList"></div>
   </div>
 </div>
 
-<div class="mb-3">
-  <label class="form-label">Send to Segments</label>
-  <div id="segmentRecipientContainer"></div>
+<!-- CONTACTS -->
+<div id="contactsTab" class="mt-4" style="display:none;">
+
+  <h4>Contacts</h4>
+
+  <div class="modern-card mb-3">
+    <input id="firstName" class="form-control mb-2" placeholder="First Name">
+    <input id="lastName" class="form-control mb-2" placeholder="Last Name">
+    <input id="email" class="form-control mb-2" placeholder="Email">
+    <input id="phone" class="form-control mb-2" placeholder="Phone">
+
+    <div class="input-group mb-2">
+      <select id="contactType" class="form-control"></select>
+      <input id="newContactType" class="form-control" placeholder="New contact type">
+      <button class="btn btn-outline-primary" onclick="addContactType()">Add Type</button>
+    </div>
+
+    <select id="contactStage" class="form-control mb-2"></select>
+    <input id="contactTags" class="form-control mb-2" placeholder="Tags, comma separated. Example: Investor, Reno, Hot Lead">
+
+    <button class="btn btn-success" onclick="addContact()">Add Contact</button>
+  </div>
+
+  <input id="contactSearch" class="form-control mb-2" placeholder="Search by name, email, phone, type, stage, tag, unsubscribed, or bounced...">
+
+  <div id="contactList"></div>
 </div>
 
-<div class="mb-3">
-  <label class="form-label">Send to Contact Types</label>
+<!-- PIPELINE -->
+<div id="pipelineTab" class="mt-4" style="display:none;">
+  <div class="dashboard-header-row mb-3">
+    <div>
+      <h4 class="mb-1">Pipeline Board</h4>
+      <div class="dashboard-help">Drag contacts between stages to update their deal stage.</div>
+    </div>
+    <button class="btn btn-sm btn-outline-primary" onclick="loadPipeline()">Refresh Pipeline</button>
+  </div>
 
-  <div id="typeRecipientContainer"></div>
+  <div id="pipelineBoard" class="pipeline-board"></div>
 </div>
 
-<div class="mb-3">
-  <label class="form-label">Send to Tags</label>
+<!-- TASKS -->
+<div id="tasksTab" class="mt-4" style="display:none;">
+  <div class="dashboard-header-row mb-3">
+    <div>
+      <h4 class="mb-1">Tasks & Follow-Up Reminders</h4>
+      <div class="dashboard-help">Tasks are connected to contacts and appear on the calendar.</div>
+    </div>
+    <button class="btn btn-sm btn-outline-primary" onclick="loadTasks()">Refresh Tasks</button>
+  </div>
 
-  <div id="tagRecipientContainer"></div>
+  <div id="taskList"></div>
 </div>
 
-<div class="mb-3">
-  <label class="form-label">Select Individual Contacts</label>
+<!-- CALENDAR -->
+<div id="calendarTab" class="mt-4" style="display:none;">
+  <div class="calendar-wrap">
+    <div class="calendar-header">
+      <button class="btn btn-sm btn-outline-primary" onclick="changeCalendarMonth(-1)">Previous</button>
+      <h4 id="calendarMonthTitle" class="m-0"></h4>
+      <button class="btn btn-sm btn-outline-primary" onclick="changeCalendarMonth(1)">Next</button>
+    </div>
 
-  <input
-    type="text"
-    class="form-control mb-2"
-    id="contactSearchInput"
-    placeholder="Search contacts for this campaign..."
-  >
-
-  <div class="contact-select-list" id="contactRecipientContainer"></div>
-</div>
-
-<div>
-  <label class="form-label">Additional Emails</label>
-
-  <textarea
-    class="form-control"
-    id="additionalEmails"
-    rows="2"
-    placeholder="Optional: email1@gmail.com, email2@gmail.com"
-  ></textarea>
-</div>
-
-</div>
-
-<div id="editor"></div>
-
-<div class="mt-3 d-flex gap-2 flex-wrap">
-<button class="btn btn-primary" onclick="sendCampaign()">
-Send Campaign
-</button>
-
-<button class="btn btn-success" onclick="saveTemplate()">
-Save As Template
-</button>
-
-<button class="btn btn-outline-primary" onclick="scheduleCampaign()">
-Schedule Campaign
-</button>
+    <div class="calendar-grid" id="calendarGrid"></div>
+  </div>
 </div>
 
 </div>
 
+<!-- CONTACT PANEL -->
+<div id="contactPanel">
+  <button class="btn btn-sm btn-secondary mb-3" onclick="closePanel()">Close</button>
+
+  <h4>Edit Contact</h4>
+  <div id="contactUnsubscribeStatus" class="mb-2"></div>
+  <div id="contactBounceStatus" class="mb-3"></div>
+
+  <input id="editFirst" class="form-control mb-2">
+  <input id="editLast" class="form-control mb-2">
+  <input id="editEmail" class="form-control mb-2">
+  <input id="editPhone" class="form-control mb-2">
+
+  <select id="editType" class="form-control mb-2"></select>
+  <select id="editStage" class="form-control mb-2"></select>
+  <input id="editTags" class="form-control mb-2" placeholder="Tags, comma separated">
+
+  <button class="btn btn-primary mb-3" onclick="saveContact()">Save Changes</button>
+
+  <div class="section">
+    <h6>Tasks / Follow-Ups</h6>
+    <input id="taskTitle" class="form-control mb-2" placeholder="Task title">
+    <div class="row g-2 mb-2">
+      <div class="col-md-6"><input id="taskDue" type="date" class="form-control"></div>
+      <div class="col-md-6">
+        <select id="taskPriority" class="form-control">
+          <option>Normal</option>
+          <option>High</option>
+          <option>Low</option>
+        </select>
+      </div>
+    </div>
+    <textarea id="taskNotes" class="form-control mb-2" placeholder="Task notes"></textarea>
+    <button class="btn btn-sm btn-primary mb-2" onclick="addTask()">Add Task</button>
+    <div id="contactTasksList"></div>
+  </div>
+
+  <div class="section">
+    <h6>Notes</h6>
+    <textarea id="noteInput" class="form-control mb-2"></textarea>
+    <button class="btn btn-sm btn-primary mb-2" onclick="addNote()">Add Note</button>
+    <div id="notesList"></div>
+  </div>
+
+  <div class="section">
+    <h6>Campaign History</h6>
+    <div id="panelCampaigns"></div>
+  </div>
+</div>
+
+<!-- CAMPAIGN ANALYTICS PANEL -->
+<div id="campaignPanel">
+  <button class="btn btn-sm btn-secondary mb-3" onclick="closeCampaignPanel()">Close</button>
+
+  <h4 id="campaignPanelTitle" class="panel-title">Campaign Analytics</h4>
+  <div id="campaignPanelSubject" class="text-muted"></div>
+  <div id="campaignPanelStatus" class="mt-2"></div>
+
+  <div class="analytics-grid">
+    <div class="analytics-card"><div id="panelSent" class="analytics-number">0</div><div class="analytics-label">Sent</div></div>
+    <div class="analytics-card"><div id="panelOpened" class="analytics-number">0</div><div class="analytics-label">Opened</div></div>
+    <div class="analytics-card"><div id="panelOpenRate" class="analytics-number">0%</div><div class="analytics-label">Open Rate</div></div>
+    <div class="analytics-card"><div id="panelClicks" class="analytics-number">0</div><div class="analytics-label">Clicks</div></div>
+  </div>
+
+  <div class="section">
+    <h5>Recipient Activity</h5>
+    <div id="campaignRecipientActivity"></div>
+  </div>
+
+  <div class="section">
+    <h5>Links Clicked</h5>
+    <div id="campaignLinksClicked"></div>
+  </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<script>
+const quill = new Quill('#editor', { theme:'snow' });
+
+let contactsCache = [];
+let campaignsCache = [];
+let activityCache = [];
+let templatesCache = [];
+let segmentsCache = [];
+let scheduledCampaignsCache = [];
+let allTagsCache = [];
+let pipelineStagesCache = [];
+let allTasksCache = [];
+let calendarEventsCache = [];
+let currentContact = null;
+let editingCampaignId = null;
+let dashboardSortable = null;
+let dashboardCharts = {};
+let pipelineSortables = [];
+let calendarDate = new Date();
+
+let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA","Agent","Prospect"]');
+
+function formatDate(value){
+  if(!value) return '';
+  const date = new Date(value);
+  if(isNaN(date.getTime())) return value;
+  return date.toLocaleString([], { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function formatShortDate(value){
+  if(!value) return '';
+  const date = new Date(value);
+  if(isNaN(date.getTime())) return value;
+  return date.toLocaleDateString([], { year:'numeric', month:'short', day:'numeric' });
+}
+
+function formatPhone(value){
+  const digits = String(value || '').replace(/\D/g,'').slice(0,10);
+  if(digits.length === 10) return `(${digits.slice(0,3)})${digits.slice(3,6)}-${digits.slice(6)}`;
+  return value || '';
+}
+
+function normalizePhoneInput(input){
+  input.value = formatPhone(input.value);
+}
+
+function parseCommaList(value){
+  return (value || '').split(',').map(item => item.trim()).filter(item => item.length > 0);
+}
+
+function renderTags(tags){
+  const safeTags = Array.isArray(tags) ? tags : [];
+  if(safeTags.length === 0) return '';
+  return `<div class="mt-1">${safeTags.map(tag=>`<span class="tag-pill">${tag}</span>`).join('')}</div>`;
+}
+
+function contactName(contact){
+  return `${contact.firstName || ''} ${contact.lastName || ''}`.trim() || 'Unnamed Contact';
+}
+
+function todayKey(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function taskIsOverdue(task){
+  return task && !task.done && task.due && String(task.due).slice(0,10) < todayKey();
+}
+
+function priorityClass(priority){
+  const p = String(priority || 'Normal').toLowerCase();
+  if(p === 'high') return 'priority-high';
+  if(p === 'low') return 'priority-low';
+  return 'priority-normal';
+}
+
+function saveTypes(){
+  localStorage.setItem('contactTypes', JSON.stringify(contactTypes));
+  renderTypes();
+  renderRecipientTypes();
+}
+
+function renderTypes(){
+  contactType.innerHTML = '';
+  editType.innerHTML = '';
+
+  contactTypes.sort().forEach(t=>{
+    contactType.innerHTML += `<option>${t}</option>`;
+    editType.innerHTML += `<option>${t}</option>`;
+  });
+}
+
+async function loadPipelineStages(){
+  try {
+    const res = await fetch('/api/pipeline-stages');
+    pipelineStagesCache = await res.json();
+  } catch(e) {
+    pipelineStagesCache = ['New Lead','Contacted','Appointment Set','Active Prospect','Under Contract','Pending','Closed','Past Client'];
+  }
+
+  renderStageSelects();
+}
+
+function renderStageSelects(){
+  contactStage.innerHTML = '';
+  editStage.innerHTML = '';
+
+  pipelineStagesCache.forEach(stage=>{
+    contactStage.innerHTML += `<option>${stage}</option>`;
+    editStage.innerHTML += `<option>${stage}</option>`;
+  });
+}
+
+function addContactType(){
+  const v = newContactType.value.trim();
+  if(!v) return;
+  if(!contactTypes.includes(v)) contactTypes.push(v);
+  newContactType.value='';
+  saveTypes();
+}
+
+function showTab(t){
+  dashboardTab.style.display = t==='dashboard'?'block':'none';
+  campaignsTab.style.display = t==='campaigns'?'block':'none';
+  contactsTab.style.display = t==='contacts'?'block':'none';
+  pipelineTab.style.display = t==='pipeline'?'block':'none';
+  tasksTab.style.display = t==='tasks'?'block':'none';
+  calendarTab.style.display = t==='calendar'?'block':'none';
+
+  [tabDashboard, tabCampaigns, tabContacts, tabPipeline, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
+
+  if(t === 'dashboard'){
+    tabDashboard.classList.add('active');
+    loadDashboard();
+    setTimeout(()=>Object.values(dashboardCharts).forEach(chart=>chart.resize()), 150);
+  }
+
+  if(t === 'campaigns'){
+    tabCampaigns.classList.add('active');
+    loadCampaigns();
+    loadTemplates();
+    loadSegments();
+    loadScheduledCampaigns();
+    loadTags();
+    renderRecipientBuilder();
+  }
+
+  if(t === 'contacts'){
+    tabContacts.classList.add('active');
+    loadContacts();
+    loadTags();
+  }
+
+  if(t === 'pipeline'){
+    tabPipeline.classList.add('active');
+    loadPipeline();
+  }
+
+  if(t === 'tasks'){
+    tabTasks.classList.add('active');
+    loadTasks();
+  }
+
+  if(t === 'calendar'){
+    tabCalendar.classList.add('active');
+    loadCalendar();
+  }
+}
+
+/* DASHBOARD */
+function initDashboardDrag(){
+  if(dashboardSortable) return;
+  applyDashboardLayout();
+
+  dashboardSortable = Sortable.create(dashboardWidgetGrid, {
+    animation: 160,
+    handle: '.drag-handle',
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    onEnd: saveDashboardLayout
+  });
+}
+
+function saveDashboardLayout(){
+  const order = Array.from(dashboardWidgetGrid.children).map(widget => widget.dataset.widgetId).filter(Boolean);
+  localStorage.setItem('excelMarketingDashboardLayout', JSON.stringify(order));
+}
+
+function applyDashboardLayout(){
+  const saved = JSON.parse(localStorage.getItem('excelMarketingDashboardLayout') || '[]');
+  if(!saved.length) return;
+
+  saved.forEach(widgetId=>{
+    const widget = dashboardWidgetGrid.querySelector(`[data-widget-id="${widgetId}"]`);
+    if(widget) dashboardWidgetGrid.appendChild(widget);
+  });
+}
+
+function resetDashboardLayout(){
+  localStorage.removeItem('excelMarketingDashboardLayout');
+  location.reload();
+}
+
+function getDayKey(value){
+  const date = new Date(value);
+  if(isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0,10);
+}
+
+function getLastDays(count){
+  const days = [];
+  const today = new Date();
+
+  for(let i = count - 1; i >= 0; i--){
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  return days;
+}
+
+function shortDayLabel(dayKey){
+  const date = new Date(dayKey + 'T00:00:00');
+  return date.toLocaleDateString([], { month:'short', day:'numeric' });
+}
+
+function destroyChart(name){
+  if(dashboardCharts[name]){
+    dashboardCharts[name].destroy();
+    delete dashboardCharts[name];
+  }
+}
+
+function renderActivityTrendChart(activity){
+  destroyChart('activityTrend');
+
+  const days = getLastDays(14);
+  const sentMap = {};
+  const openMap = {};
+  const clickMap = {};
+
+  days.forEach(day=>{
+    sentMap[day] = 0;
+    openMap[day] = 0;
+    clickMap[day] = 0;
+  });
+
+  activity.forEach(a=>{
+    const sentDay = getDayKey(a.sentAt || a.sentDate);
+    if(sentDay && sentMap[sentDay] !== undefined && a.status !== 'failed') sentMap[sentDay]++;
+
+    const openDay = getDayKey(a.openedAt);
+    if(a.opened && openDay && openMap[openDay] !== undefined) openMap[openDay]++;
+
+    (a.clicks || []).forEach(click=>{
+      const clickDay = getDayKey(click.clickedAt);
+      if(clickDay && clickMap[clickDay] !== undefined) clickMap[clickDay]++;
+    });
+  });
+
+  dashboardCharts.activityTrend = new Chart(activityTrendChart, {
+    type:'line',
+    data:{
+      labels:days.map(shortDayLabel),
+      datasets:[
+        { label:'Sent', data:days.map(day=>sentMap[day]), tension:0.35 },
+        { label:'Opened', data:days.map(day=>openMap[day]), tension:0.35 },
+        { label:'Clicked', data:days.map(day=>clickMap[day]), tension:0.35 }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom' } },
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+    }
+  });
+}
+
+function renderCampaignPerformanceChart(campaigns, activity){
+  destroyChart('campaignPerformance');
+
+  const rows = campaigns
+    .slice()
+    .sort((a,b)=>new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
+    .slice(0,8)
+    .map(c=>{
+      const matching = activity.filter(a => a.campaignName === c.name || a.campaignName === c.subject);
+      const sent = matching.filter(a => a.status === 'sent' || !a.status).length;
+      const opened = matching.filter(a => a.opened).length;
+      const clicks = matching.reduce((sum, a) => sum + ((a.clicks || []).length), 0);
+
+      return {
+        name:c.name || c.subject || 'Untitled',
+        sent,
+        opened,
+        clicks
+      };
+    });
+
+  dashboardCharts.campaignPerformance = new Chart(campaignPerformanceChart, {
+    type:'bar',
+    data:{
+      labels:rows.map(r=>r.name.length > 18 ? r.name.slice(0,18) + '…' : r.name),
+      datasets:[
+        { label:'Sent', data:rows.map(r=>r.sent) },
+        { label:'Opened', data:rows.map(r=>r.opened) },
+        { label:'Clicks', data:rows.map(r=>r.clicks) }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom' } },
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+    }
+  });
+}
+
+function renderEngagementBreakdownChart(data){
+  destroyChart('engagementBreakdown');
+
+  dashboardCharts.engagementBreakdown = new Chart(engagementBreakdownChart, {
+    type:'doughnut',
+    data:{
+      labels:['Opened', 'Clicked', 'Unsubscribed', 'Bounced'],
+      datasets:[{
+        data:[
+          data.totalOpened || 0,
+          data.totalClicks || 0,
+          data.totalUnsubscribed || 0,
+          data.totalBounced || 0
+        ]
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom' } }
+    }
+  });
+}
+
+async function loadDashboard(){
+  const [statsRes, campaignsRes, activityRes, taskStatsRes] = await Promise.all([
+    fetch('/api/dashboard-stats'),
+    fetch('/api/campaigns'),
+    fetch('/api/activity'),
+    fetch('/api/task-stats').catch(()=>null)
+  ]);
+
+  const data = await statsRes.json();
+  const campaigns = await campaignsRes.json();
+  const activity = await activityRes.json();
+  const taskStats = taskStatsRes ? await taskStatsRes.json() : { dueToday:0, overdue:0 };
+
+  dashTotalContacts.innerText = data.totalContacts || 0;
+  dashTotalCampaigns.innerText = data.totalCampaigns || 0;
+  dashTotalSent.innerText = data.totalSent || 0;
+  dashTotalOpened.innerText = data.totalOpened || 0;
+  dashTotalClicks.innerText = data.totalClicks || 0;
+  dashTotalUnsubscribed.innerText = data.totalUnsubscribed || 0;
+  dashTotalBounced.innerText = data.totalBounced || 0;
+  dashOpenRate.innerText = (data.openRate || 0) + '%';
+  dashClickRate.innerText = (data.clickRate || 0) + '%';
+  dashDueToday.innerText = taskStats.dueToday || 0;
+  dashOverdue.innerText = taskStats.overdue || 0;
+
+  recentActivityList.innerHTML = '';
+
+  if(!data.recentActivity || data.recentActivity.length === 0){
+    recentActivityList.innerHTML = '<div class="text-muted">No activity yet.</div>';
+  } else {
+    data.recentActivity.forEach(a=>{
+      recentActivityList.innerHTML += `
+        <div class="border-bottom py-2">
+          <b>${a.email || ''}</b> ${(a.type || a.status || 'activity').toLowerCase()} <b>${a.campaignName || ''}</b>
+          ${a.url ? `<br><small>Link: ${a.url}</small>` : ''}
+          ${a.error ? `<br><small class="text-danger">Error: ${a.error}</small>` : ''}
+          <br><small>${formatDate(a.date || a.sentAt)}</small>
+        </div>
+      `;
+    });
+  }
+
+  topLinksList.innerHTML = '';
+
+  if(!data.topLinks || data.topLinks.length === 0){
+    topLinksList.innerHTML = '<div class="text-muted">No link clicks yet.</div>';
+  } else {
+    data.topLinks.forEach(link=>{
+      topLinksList.innerHTML += `
+        <div class="border-bottom py-2">
+          <b>${link.clicks}</b> clicks<br>
+          <small>${link.url}</small>
+        </div>
+      `;
+    });
+  }
+
+  renderActivityTrendChart(activity);
+  renderCampaignPerformanceChart(campaigns, activity);
+  renderEngagementBreakdownChart(data);
+  initDashboardDrag();
+}
+
+/* TEMPLATES */
+async function loadTemplates(){
+  const res = await fetch('/api/templates');
+  templatesCache = await res.json();
+
+  templateList.innerHTML = '';
+
+  if(!templatesCache.length){
+    templateList.innerHTML = '<div class="text-muted small">No templates saved yet.</div>';
+    return;
+  }
+
+  templatesCache
+    .slice()
+    .sort((a,b)=>new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
+    .forEach(t=>{
+      templateList.innerHTML += `
+        <div class="template-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <b>${t.name || 'Untitled Template'}</b><br>
+              <small>Subject: ${t.subject || ''}</small><br>
+              <small>Category: ${t.category || 'General'}</small>
+            </div>
+            <div>
+              <button class="btn btn-sm btn-outline-primary" onclick="loadTemplateIntoCampaign(${t.id})">Use</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteTemplate(${t.id})">Delete</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+}
+
+async function saveTemplateFromCampaign(){
+  const payload = {
+    name: templateName.value.trim() || campaignName.value.trim() || 'Untitled Template',
+    category: templateCategory.value.trim() || 'General',
+    subject: subject.value,
+    html: quill.root.innerHTML
+  };
+
+  if(!payload.subject.trim()){
+    alert('Please enter a subject before saving a template.');
+    return;
+  }
+
+  const res = await fetch('/api/templates', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert('Template saved.');
+    templateName.value = '';
+    templateCategory.value = '';
+    loadTemplates();
+  } else {
+    alert(data.error || 'Template could not be saved.');
+  }
+}
+
+function loadTemplateIntoCampaign(id){
+  const template = templatesCache.find(t=>t.id == id);
+  if(!template) return;
+
+  subject.value = template.subject || '';
+  quill.root.innerHTML = template.html || '';
+
+  if(!campaignName.value.trim()){
+    campaignName.value = template.name || '';
+  }
+
+  alert('Template loaded into Campaign Builder.');
+}
+
+async function deleteTemplate(id){
+  if(!confirm('Delete this template?')) return;
+
+  const res = await fetch('/api/templates/' + id, { method:'DELETE' });
+  const data = await res.json();
+
+  if(data.success){
+    loadTemplates();
+  } else {
+    alert(data.error || 'Template could not be deleted.');
+  }
+}
+
+/* TAGS */
+async function loadTags(){
+  const res = await fetch('/api/tags');
+  allTagsCache = await res.json();
+  renderRecipientTags();
+}
+
+/* SEGMENTS */
+async function loadSegments(){
+  const res = await fetch('/api/segments');
+  segmentsCache = await res.json();
+
+  renderSegmentList();
+  renderRecipientSegments();
+}
+
+function renderSegmentList(){
+  segmentList.innerHTML = '';
+
+  if(!segmentsCache.length){
+    segmentList.innerHTML = '<div class="text-muted small">No segments saved yet.</div>';
+    return;
+  }
+
+  segmentsCache.forEach(s=>{
+    segmentList.innerHTML += `
+      <div class="segment-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <b>${s.name || 'Untitled Segment'}</b><br>
+            <small>Tags: ${(s.tags || []).join(', ') || 'Any'}</small><br>
+            <small>Types: ${(s.types || []).join(', ') || 'Any'}</small>
+          </div>
+          <button class="btn btn-sm btn-outline-danger" onclick="deleteSegment(${s.id})">Delete</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+async function saveSegment(){
+  const payload = {
+    name: segmentName.value.trim(),
+    tags: parseCommaList(segmentTags.value),
+    types: parseCommaList(segmentTypes.value)
+  };
+
+  if(!payload.name){
+    alert('Please enter a segment name.');
+    return;
+  }
+
+  const res = await fetch('/api/segments', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert('Segment saved.');
+    segmentName.value = '';
+    segmentTags.value = '';
+    segmentTypes.value = '';
+    loadSegments();
+  } else {
+    alert(data.error || 'Segment could not be saved.');
+  }
+}
+
+async function deleteSegment(id){
+  if(!confirm('Delete this segment?')) return;
+
+  const res = await fetch('/api/segments/' + id, { method:'DELETE' });
+  const data = await res.json();
+
+  if(data.success){
+    loadSegments();
+  } else {
+    alert(data.error || 'Segment could not be deleted.');
+  }
+}
+
+/* SCHEDULING */
+async function loadScheduledCampaigns(){
+  const res = await fetch('/api/scheduled-campaigns');
+  scheduledCampaignsCache = await res.json();
+
+  scheduledCampaignList.innerHTML = '';
+
+  if(!scheduledCampaignsCache.length){
+    scheduledCampaignList.innerHTML = '<div class="text-muted small">No scheduled campaigns yet.</div>';
+    return;
+  }
+
+  scheduledCampaignsCache
+    .slice()
+    .sort((a,b)=>new Date(b.scheduledAt || 0) - new Date(a.scheduledAt || 0))
+    .forEach(c=>{
+      scheduledCampaignList.innerHTML += `
+        <div class="scheduled-card">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <b>${c.name || 'Untitled Scheduled Campaign'}</b><br>
+              <small>Subject: ${c.subject || ''}</small><br>
+              <small>Scheduled: ${formatDate(c.scheduledAt)}</small><br>
+              <small>Status: ${c.status || 'Scheduled'}</small>
+            </div>
+            ${c.status === 'Scheduled'
+              ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteScheduledCampaign(${c.id})">Cancel</button>`
+              : ''
+            }
+          </div>
+        </div>
+      `;
+    });
+}
+
+async function scheduleCampaign(){
+  const selectedRecipients = getSelectedRecipients();
+
+  const payload = {
+    name: campaignName.value,
+    recipients: selectedRecipients,
+    subject: subject.value,
+    html: quill.root.innerHTML,
+    scheduledAt: scheduleDateTime.value
+  };
+
+  if(!payload.scheduledAt){
+    alert('Please choose a scheduled date/time.');
+    return;
+  }
+
+  if(payload.recipients.length === 0){
+    alert('Please select at least one recipient.');
+    return;
+  }
+
+  if(!payload.subject.trim()){
+    alert('Please enter a subject.');
+    return;
+  }
+
+  const res = await fetch('/api/scheduled-campaigns', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert('Campaign scheduled.');
+    scheduleDateTime.value = '';
+    loadScheduledCampaigns();
+    loadCalendar();
+  } else {
+    alert(data.error || 'Campaign could not be scheduled.');
+  }
+}
+
+async function deleteScheduledCampaign(id){
+  if(!confirm('Cancel this scheduled campaign?')) return;
+
+  const res = await fetch('/api/scheduled-campaigns/' + id, { method:'DELETE' });
+  const data = await res.json();
+
+  if(data.success){
+    loadScheduledCampaigns();
+    loadCalendar();
+  } else {
+    alert(data.error || 'Scheduled campaign could not be cancelled.');
+  }
+}
+
+/* RECIPIENT BUILDER */
+function renderRecipientBuilder(){
+  renderRecipientSegments();
+  renderRecipientTypes();
+  renderRecipientTags();
+  renderRecipientContacts();
+  updateRecipientCount();
+}
+
+function renderRecipientSegments(){
+  if(!recipientSegmentList) return;
+
+  recipientSegmentList.innerHTML = '';
+
+  if(!segmentsCache.length){
+    recipientSegmentList.innerHTML = '<div class="text-muted small">No segments saved yet.</div>';
+    return;
+  }
+
+  segmentsCache.forEach(segment=>{
+    recipientSegmentList.innerHTML += `
+      <label class="recipient-pill">
+        <input type="checkbox" class="recipient-segment-checkbox" value="${segment.id}" onchange="updateRecipientCount()">
+        ${segment.name}
+      </label>
+    `;
+  });
+}
+
+function renderRecipientTypes(){
+  recipientTypeList.innerHTML = '';
+
+  contactTypes.sort().forEach(type=>{
+    const count = contactsCache.filter(c => (c.type || '') === type && c.email && !c.unsubscribed && !c.bounced).length;
+
+    recipientTypeList.innerHTML += `
+      <label class="recipient-pill">
+        <input type="checkbox" class="recipient-type-checkbox" value="${type}" onchange="updateRecipientCount()">
+        ${type}
+        <span class="text-muted small">(${count})</span>
+      </label>
+    `;
+  });
+}
+
+function renderRecipientTags(){
+  if(!recipientTagList) return;
+
+  recipientTagList.innerHTML = '';
+
+  if(!allTagsCache.length){
+    recipientTagList.innerHTML = '<div class="text-muted small">No tags created yet.</div>';
+    return;
+  }
+
+  allTagsCache.forEach(tag=>{
+    const count = contactsCache.filter(c =>
+      Array.isArray(c.tags) &&
+      c.tags.includes(tag) &&
+      c.email &&
+      !c.unsubscribed &&
+      !c.bounced
+    ).length;
+
+    recipientTagList.innerHTML += `
+      <label class="recipient-pill">
+        <input type="checkbox" class="recipient-tag-checkbox" value="${tag}" onchange="updateRecipientCount()">
+        ${tag}
+        <span class="text-muted small">(${count})</span>
+      </label>
+    `;
+  });
+}
+
+function renderRecipientContacts(){
+  const search = (recipientSearch.value || '').toLowerCase();
+  recipientContactList.innerHTML = '';
+
+  const filtered = contactsCache.filter(c=>{
+    const tagText = Array.isArray(c.tags) ? c.tags.join(' ') : '';
+    const text = `${c.firstName || ''} ${c.lastName || ''} ${c.email || ''} ${formatPhone(c.phone)} ${c.type || ''} ${c.stage || ''} ${tagText} ${c.unsubscribed ? 'unsubscribed' : 'subscribed'} ${c.bounced ? 'bounced invalid' : 'valid'}`.toLowerCase();
+    return text.includes(search);
+  });
+
+  if(filtered.length === 0){
+    recipientContactList.innerHTML = '<div class="text-muted p-2">No contacts found.</div>';
+    return;
+  }
+
+  filtered.forEach(c=>{
+    if(!c.email) return;
+
+    const blocked = c.unsubscribed || c.bounced;
+
+    recipientContactList.innerHTML += `
+      <label class="contact-select-row" style="${blocked ? 'opacity:0.55;' : ''}">
+        <input type="checkbox" class="recipient-contact-checkbox" value="${c.email}" onchange="updateRecipientCount()" ${blocked ? 'disabled' : ''}>
+        <div>
+          <div>
+            <b>${c.firstName || ''} ${c.lastName || ''}</b>
+            ${c.unsubscribed ? '<span class="unsubscribed-badge">Unsubscribed</span>' : ''}
+            ${c.bounced ? '<span class="bounced-badge">Bounced</span>' : ''}
+          </div>
+          <small class="text-muted">${c.email} | ${formatPhone(c.phone)} | ${c.type || ''} | ${c.stage || 'New Lead'}</small>
+          ${renderTags(c.tags)}
+        </div>
+      </label>
+    `;
+  });
+}
+
+function segmentMatchesContact(segment, contact){
+  const contactTags = Array.isArray(contact.tags) ? contact.tags : [];
+  const segmentTags = Array.isArray(segment.tags) ? segment.tags : [];
+  const segmentTypes = Array.isArray(segment.types) ? segment.types : [];
+
+  const tagMatch = segmentTags.length === 0 || segmentTags.some(tag => contactTags.includes(tag));
+  const typeMatch = segmentTypes.length === 0 || segmentTypes.includes(contact.type || '');
+
+  return contact.email && !contact.unsubscribed && !contact.bounced && tagMatch && typeMatch;
+}
+
+function getSelectedRecipients(){
+  const selectedEmails = new Set();
+
+  document.querySelectorAll('.recipient-segment-checkbox:checked').forEach(box=>{
+    const segment = segmentsCache.find(s => String(s.id) === String(box.value));
+    if(segment){
+      contactsCache
+        .filter(contact => segmentMatchesContact(segment, contact))
+        .forEach(contact => selectedEmails.add(contact.email.trim()));
+    }
+  });
+
+  document.querySelectorAll('.recipient-type-checkbox:checked').forEach(box=>{
+    contactsCache
+      .filter(c => (c.type || '') === box.value && c.email && !c.unsubscribed && !c.bounced)
+      .forEach(c => selectedEmails.add(c.email.trim()));
+  });
+
+  document.querySelectorAll('.recipient-tag-checkbox:checked').forEach(box=>{
+    contactsCache
+      .filter(c => Array.isArray(c.tags) && c.tags.includes(box.value) && c.email && !c.unsubscribed && !c.bounced)
+      .forEach(c => selectedEmails.add(c.email.trim()));
+  });
+
+  document.querySelectorAll('.recipient-contact-checkbox:checked').forEach(box=>{
+    if(box.value) selectedEmails.add(box.value.trim());
+  });
+
+  const extra = (extraRecipients.value || '')
+    .split(',')
+    .map(e=>e.trim())
+    .filter(e=>e.length > 0);
+
+  extra.forEach(e=>selectedEmails.add(e));
+
+  return Array.from(selectedEmails);
+}
+
+function updateRecipientCount(){
+  const count = getSelectedRecipients().length;
+  recipientCount.innerText = count === 1 ? '1 selected' : `${count} selected`;
+}
+
+/* CAMPAIGNS */
+async function saveCampaign(){
+  const payload = {
+    name: campaignName.value,
+    subject: subject.value,
+    html: quill.root.innerHTML
+  };
+
+  let url = '/api/campaigns';
+  let method = 'POST';
+
+  if(editingCampaignId){
+    url = '/api/campaigns/' + editingCampaignId;
+    method = 'PUT';
+  }
+
+  const res = await fetch(url,{
+    method,
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert(editingCampaignId ? 'Campaign updated.' : 'Campaign saved.');
+    cancelCampaignEdit();
+    loadCampaigns();
+    loadDashboard();
+  } else {
+    alert(data.error || 'Campaign could not be saved.');
+  }
+}
+
+async function editCampaign(id){
+  const res = await fetch('/api/campaigns/' + id);
+  const campaign = await res.json();
+
+  if(!campaign || campaign.error){
+    alert('Campaign could not be loaded.');
+    return;
+  }
+
+  editingCampaignId = campaign.id;
+
+  campaignName.value = campaign.name || '';
+  subject.value = campaign.subject || '';
+  quill.root.innerHTML = campaign.html || '';
+
+  editingCampaignNotice.style.display = 'block';
+  saveCampaignButton.innerText = 'Update Campaign';
+
+  showTab('campaigns');
+
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+function cancelCampaignEdit(){
+  editingCampaignId = null;
+  campaignName.value = '';
+  subject.value = '';
+  quill.root.innerHTML = '';
+  editingCampaignNotice.style.display = 'none';
+  saveCampaignButton.innerText = 'Save Campaign';
+}
+
+async function deleteCampaign(id){
+  const confirmed = confirm('Delete this campaign? This cannot be undone.');
+  if(!confirmed) return;
+
+  const res = await fetch('/api/campaigns/' + id,{ method:'DELETE' });
+  const data = await res.json();
+
+  if(data.success){
+    alert('Campaign deleted.');
+    if(editingCampaignId == id) cancelCampaignEdit();
+    loadCampaigns();
+    loadDashboard();
+  } else {
+    alert(data.error || 'Campaign could not be deleted.');
+  }
+}
+
+async function sendCampaign(){
+  const selectedRecipients = getSelectedRecipients();
+
+  const payload = {
+    name: campaignName.value,
+    recipients: selectedRecipients,
+    subject: subject.value,
+    html: quill.root.innerHTML
+  };
+
+  if(payload.recipients.length === 0){
+    alert('Please select at least one recipient.');
+    return;
+  }
+
+  if(!payload.subject.trim()){
+    alert('Please enter a subject.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/send-campaign',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+      alert(data.message || 'Campaign sent.');
+    } else {
+      alert(data.message || data.error || 'Campaign failed. Check the server terminal for details.');
+      console.log('Send campaign response:', data);
+    }
+
+    loadCampaigns();
+    loadDashboard();
+    loadContacts();
+
+  } catch(error) {
+    alert('Campaign could not be sent. Check the browser console and server terminal.');
+    console.error('Send campaign error:', error);
+  }
+}
+
+async function loadCampaigns(){
+  const campaignsRes = await fetch('/api/campaigns');
+  campaignsCache = await campaignsRes.json();
+
+  campaignsCache.sort((a,b)=>new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
+
+  const activityRes = await fetch('/api/activity');
+  activityCache = await activityRes.json();
+
+  campaignList.innerHTML = '';
+
+  if(campaignsCache.length === 0){
+    campaignList.innerHTML = '<div class="text-muted">No campaigns saved yet.</div>';
+    return;
+  }
+
+  campaignsCache.forEach(c=>{
+    const matching = activityCache.filter(a => a.campaignName === c.name || a.campaignName === c.subject);
+
+    const sent = matching.filter(a => a.status === 'sent' || !a.status).length;
+    const failed = matching.filter(a => a.status === 'failed').length;
+    const opened = matching.filter(a => a.opened).length;
+    const clicks = matching.reduce((sum, a) => sum + ((a.clicks || []).length), 0);
+
+    const openRate = sent ? Math.round((opened / sent) * 100) : 0;
+    const clickRate = sent ? Math.round((clicks / sent) * 100) : 0;
+
+    campaignList.innerHTML += `
+      <div class="campaign-card" onclick="openCampaignPanel(${c.id})">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <b>${c.name || 'Untitled Campaign'}</b><br>
+            <small>Subject: ${c.subject || ''}</small><br>
+            <small>Created: ${formatDate(c.createdAt)}</small>
+            ${c.updatedAt ? `<br><small>Updated: ${formatDate(c.updatedAt)}</small>` : ''}
+          </div>
+
+          <div class="text-end">
+            <span class="status-badge">${c.status || 'Draft'}</span>
+
+            <div class="mt-2">
+              <button class="btn btn-sm btn-outline-primary me-1" onclick="event.stopPropagation(); editCampaign(${c.id})">Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteCampaign(${c.id})">Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-3">
+          <div class="col-md-3"><b style="color:#00A143;">${sent}</b><br><small>Sent</small></div>
+          <div class="col-md-3"><b style="color:#9a3412;">${failed}</b><br><small>Failed</small></div>
+          <div class="col-md-3"><b style="color:#00A143;">${openRate}%</b><br><small>Open Rate</small></div>
+          <div class="col-md-3"><b style="color:#00A143;">${clickRate}%</b><br><small>Click Rate</small></div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+/* CAMPAIGN ANALYTICS PANEL */
+function openCampaignPanel(campaignId){
+  const campaign = campaignsCache.find(c => c.id == campaignId);
+  if(!campaign) return;
+
+  const matching = activityCache.filter(a => a.campaignName === campaign.name || a.campaignName === campaign.subject);
+
+  const sent = matching.filter(a => a.status === 'sent' || !a.status).length;
+  const opened = matching.filter(a => a.opened).length;
+  const clicks = matching.reduce((sum, a) => sum + ((a.clicks || []).length), 0);
+  const openRate = sent ? Math.round((opened / sent) * 100) : 0;
+
+  campaignPanelTitle.innerText = campaign.name || 'Untitled Campaign';
+  campaignPanelSubject.innerText = 'Subject: ' + (campaign.subject || '');
+  campaignPanelStatus.innerHTML = `<span class="status-badge">${campaign.status || 'Draft'}</span>`;
+
+  panelSent.innerText = sent;
+  panelOpened.innerText = opened;
+  panelOpenRate.innerText = openRate + '%';
+  panelClicks.innerText = clicks;
+
+  campaignRecipientActivity.innerHTML = '';
+
+  if(matching.length === 0){
+    campaignRecipientActivity.innerHTML = '<div class="text-muted">No recipient activity yet.</div>';
+  } else {
+    matching.forEach(a=>{
+      const clickedCount = (a.clicks || []).length;
+      const isFailed = a.status === 'failed';
+
+      const clickDetails = clickedCount
+        ? (a.clicks || []).map(click => `
+            <div class="mt-1">
+              <small><b>Clicked:</b> ${click.url}<br>${formatDate(click.clickedAt)}</small>
+            </div>
+          `).join('')
+        : '<small class="text-muted">No clicks yet.</small>';
+
+      campaignRecipientActivity.innerHTML += `
+        <div class="activity-row">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <b>${a.email}</b><br>
+              <small>Sent: ${a.sentAt ? formatDate(a.sentAt) : formatDate(a.sentDate)}</small><br>
+              <small>Opened: ${a.opened ? formatDate(a.openedAt) : 'No'}</small>
+              ${isFailed ? `<br><small class="text-danger">Failed: ${a.error || 'Unknown error'}</small>` : ''}
+            </div>
+            <div>
+              ${isFailed
+                ? '<span class="bounced-badge">Failed</span>'
+                : `<span class="${a.opened ? 'badge-opened' : 'badge-closed'}">${a.opened ? 'Opened' : 'Not Opened'}</span>`
+              }
+            </div>
+          </div>
+          <div class="mt-2">
+            <b style="color:#00A143;">${clickedCount}</b> <small>clicks</small>
+            ${clickDetails}
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  const linkMap = {};
+
+  matching.forEach(a=>{
+    (a.clicks || []).forEach(click=>{
+      if(!linkMap[click.url]) linkMap[click.url] = { url: click.url, clicks: 0, people: [] };
+      linkMap[click.url].clicks++;
+      linkMap[click.url].people.push({ email: a.email, clickedAt: click.clickedAt });
+    });
+  });
+
+  const links = Object.values(linkMap).sort((a,b)=>b.clicks-a.clicks);
+
+  campaignLinksClicked.innerHTML = '';
+
+  if(links.length === 0){
+    campaignLinksClicked.innerHTML = '<div class="text-muted">No links clicked yet.</div>';
+  } else {
+    links.forEach(link=>{
+      const peopleHtml = link.people.map(p=>`
+        <div><small>${p.email} — ${formatDate(p.clickedAt)}</small></div>
+      `).join('');
+
+      campaignLinksClicked.innerHTML += `
+        <div class="link-row">
+          <b style="color:#00A143;">${link.clicks}</b> clicks<br>
+          <small>${link.url}</small>
+          <div class="mt-2">${peopleHtml}</div>
+        </div>
+      `;
+    });
+  }
+
+  campaignPanel.classList.add('open');
+}
+
+function closeCampaignPanel(){
+  campaignPanel.classList.remove('open');
+}
+
+/* CONTACTS */
+async function addContact(){
+  await fetch('/api/contacts',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      firstName:firstName.value,
+      lastName:lastName.value,
+      email:email.value,
+      phone:phone.value,
+      type:contactType.value,
+      stage:contactStage.value,
+      tags:parseCommaList(contactTags.value)
+    })
+  });
+
+  firstName.value = '';
+  lastName.value = '';
+  email.value = '';
+  phone.value = '';
+  contactTags.value = '';
+
+  loadContacts();
+  loadTags();
+  loadDashboard();
+  loadPipeline();
+}
+
+function openContact(id){
+  currentContact = contactsCache.find(c=>c.id==id);
+  contactPanel.classList.add('open');
+
+  editFirst.value=currentContact.firstName || '';
+  editLast.value=currentContact.lastName || '';
+  editEmail.value=currentContact.email || '';
+  editPhone.value=formatPhone(currentContact.phone || '');
+  editType.value=currentContact.type || '';
+  editStage.value=currentContact.stage || 'New Lead';
+  editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
+
+  contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
+    ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${formatDate(currentContact.unsubscribedAt)}</small>`
+    : `<span class="active-badge">Subscribed</span>`;
+
+  contactBounceStatus.innerHTML = currentContact.bounced
+    ? `<span class="bounced-badge">Bounced / Invalid Email</span><br><small class="text-muted">Bounced: ${formatDate(currentContact.bouncedAt)}</small>${currentContact.bounceReason ? `<br><small class="text-danger">${currentContact.bounceReason}</small>` : ''}`
+    : `<span class="active-badge">Valid Email</span>`;
+
+  notesList.innerHTML = (currentContact.notes||[])
+    .map(n=>`<div class="note">${n.text}<br><small>${formatDate(n.date)}</small></div>`)
+    .join('');
+
+  renderContactTasks();
+  loadActivity(currentContact.email);
+}
+
+async function saveContact(){
+  await fetch('/api/contacts/'+currentContact.id,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      firstName:editFirst.value,
+      lastName:editLast.value,
+      email:editEmail.value,
+      phone:editPhone.value,
+      type:editType.value,
+      stage:editStage.value,
+      tags:parseCommaList(editTags.value)
+    })
+  });
+
+  await loadContacts();
+  await loadTags();
+  await loadDashboard();
+  await loadPipeline();
+  await loadTasks();
+  await loadCalendar();
+
+  currentContact = contactsCache.find(c=>c.id==currentContact.id);
+  openContact(currentContact.id);
+}
+
+function closePanel(){
+  contactPanel.classList.remove('open');
+}
+
+async function addNote(){
+  await fetch(`/api/contacts/${currentContact.id}/note`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:noteInput.value})
+  });
+
+  noteInput.value='';
+  await loadContacts();
+  currentContact = contactsCache.find(c=>c.id==currentContact.id);
+  openContact(currentContact.id);
+  loadCalendar();
+}
+
+async function addTask(){
+  if(!taskTitle.value.trim()){
+    alert('Please enter a task title.');
+    return;
+  }
+
+  await fetch(`/api/contacts/${currentContact.id}/task`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      title:taskTitle.value,
+      due:taskDue.value,
+      priority:taskPriority.value,
+      notes:taskNotes.value
+    })
+  });
+
+  taskTitle.value='';
+  taskDue.value='';
+  taskPriority.value='Normal';
+  taskNotes.value='';
+
+  await loadContacts();
+  currentContact = contactsCache.find(c=>c.id==currentContact.id);
+  renderContactTasks();
+  loadTasks();
+  loadDashboard();
+  loadCalendar();
+}
+
+async function toggleTask(contactId, taskId){
+  await fetch(`/api/contacts/${contactId}/task/${taskId}`,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({toggleDone:true})
+  });
+
+  await loadContacts();
+
+  if(currentContact && currentContact.id == contactId){
+    currentContact = contactsCache.find(c=>c.id==contactId);
+    renderContactTasks();
+  }
+
+  loadTasks();
+  loadDashboard();
+  loadCalendar();
+}
+
+async function deleteTask(contactId, taskId){
+  if(!confirm('Delete this task?')) return;
+
+  await fetch(`/api/contacts/${contactId}/task/${taskId}`,{method:'DELETE'});
+  await loadContacts();
+
+  if(currentContact && currentContact.id == contactId){
+    currentContact = contactsCache.find(c=>c.id==contactId);
+    renderContactTasks();
+  }
+
+  loadTasks();
+  loadDashboard();
+  loadCalendar();
+}
+
+function renderContactTasks(){
+  contactTasksList.innerHTML = '';
+
+  const tasks = currentContact.tasks || [];
+
+  if(!tasks.length){
+    contactTasksList.innerHTML = '<div class="text-muted small">No tasks yet.</div>';
+    return;
+  }
+
+  tasks
+    .slice()
+    .sort((a,b)=>new Date(a.due || '9999-12-31') - new Date(b.due || '9999-12-31'))
+    .forEach(task=>{
+      contactTasksList.innerHTML += `
+        <div class="task-card ${taskIsOverdue(task) ? 'task-overdue' : ''} ${task.done ? 'task-done' : ''}">
+          <div class="d-flex justify-content-between">
+            <div>
+              <b>${task.title || 'Untitled Task'}</b><br>
+              <small>Due: ${task.due ? formatShortDate(task.due) : 'No due date'}</small>
+              ${task.notes ? `<br><small>${task.notes}</small>` : ''}
+            </div>
+            <div class="text-end">
+              <span class="priority-pill ${priorityClass(task.priority)}">${task.priority || 'Normal'}</span><br>
+              <button class="btn btn-sm btn-outline-primary mt-2" onclick="toggleTask(${currentContact.id}, ${task.id})">${task.done ? 'Reopen' : 'Done'}</button>
+              <button class="btn btn-sm btn-outline-danger mt-2" onclick="deleteTask(${currentContact.id}, ${task.id})">Delete</button>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+}
+
+async function loadActivity(email){
+  const res = await fetch('/api/contact-activity?email='+email);
+  const data = await res.json();
+
+  panelCampaigns.innerHTML='';
+
+  if(data.length === 0){
+    panelCampaigns.innerHTML = '<div class="text-muted">No campaign activity yet.</div>';
+    return;
+  }
+
+  data.sort((a,b)=>new Date(b.sentAt || b.sentDate || 0) - new Date(a.sentAt || a.sentDate || 0));
+
+  data.forEach(c=>{
+    const clickList = (c.clicks || [])
+      .map(click => `<div><small>Clicked: ${click.url}<br>${formatDate(click.clickedAt)}</small></div>`)
+      .join('');
+
+    const failedHtml = c.status === 'failed'
+      ? `<br><span class="bounced-badge">Failed</span><br><small class="text-danger">${c.error || ''}</small>`
+      : '';
+
+    panelCampaigns.innerHTML += `
+      <div class="campaign-card">
+        <b>${c.campaignName}</b><br>
+        <small>${formatDate(c.sentDate || c.sentAt)}</small><br>
+        ${failedHtml || `
+          <span class="${c.opened?'badge-opened':'badge-closed'}">
+            ${c.opened?'Opened':'Not opened'}
+          </span>
+        `}
+        ${clickList ? `<div class="mt-2">${clickList}</div>` : ''}
+      </div>
+    `;
+  });
+}
+
+async function loadContacts(){
+  const res = await fetch('/api/contacts');
+  const data = await res.json();
+
+  contactsCache = data;
+
+  const s = (contactSearch.value||'').toLowerCase();
+
+  let filtered = data.filter(c=>{
+    const tagText = Array.isArray(c.tags) ? c.tags.join(' ') : '';
+
+    return (
+      (c.firstName||'')+
+      (c.lastName||'')+
+      (c.email||'')+
+      formatPhone(c.phone||'')+
+      (c.type||'')+
+      (c.stage||'')+
+      tagText+
+      (c.unsubscribed ? 'unsubscribed' : 'subscribed')+
+      (c.bounced ? 'bounced invalid' : 'valid')
+    ).toLowerCase().includes(s);
+  });
+
+  const grouped = {};
+
+  filtered.forEach(c=>{
+    const letter = (c.lastName||'#')[0].toUpperCase();
+    if(!grouped[letter]) grouped[letter]=[];
+    grouped[letter].push(c);
+  });
+
+  contactList.innerHTML='';
+
+  Object.keys(grouped).sort().forEach(l=>{
+    contactList.innerHTML += `<div class="contact-letter">${l}</div>`;
+
+    grouped[l].forEach(c=>{
+      contactList.innerHTML += `
+        <div class="contact-item" onclick="openContact(${c.id})">
+          <div class="contact-name">
+            ${c.firstName || ''} ${c.lastName || ''}
+            ${c.unsubscribed ? '<span class="unsubscribed-badge">Unsubscribed</span>' : ''}
+            ${c.bounced ? '<span class="bounced-badge">Bounced</span>' : ''}
+          </div>
+          <div style="font-size:12px;color:#777;">
+            ${c.email || ''} | ${formatPhone(c.phone||'')} | ${c.type||''} | ${c.stage || 'New Lead'}
+          </div>
+          ${renderTags(c.tags)}
+        </div>
+      `;
+    });
+  });
+
+  renderRecipientBuilder();
+}
+
+/* PIPELINE */
+async function loadPipeline(){
+  await loadContacts();
+  await loadPipelineStages();
+
+  pipelineBoard.innerHTML = '';
+  pipelineSortables.forEach(s=>s.destroy && s.destroy());
+  pipelineSortables = [];
+
+  pipelineStagesCache.forEach(stage=>{
+    const contacts = contactsCache.filter(c=>(c.stage || 'New Lead') === stage);
+
+    const column = document.createElement('div');
+    column.className = 'pipeline-column';
+    column.innerHTML = `
+      <div class="pipeline-column-header">
+        <span>${stage}</span>
+        <span class="pipeline-count">${contacts.length}</span>
+      </div>
+      <div class="pipeline-dropzone" data-stage="${stage}"></div>
+    `;
+
+    const dropzone = column.querySelector('.pipeline-dropzone');
+
+    contacts.forEach(c=>{
+      const card = document.createElement('div');
+      card.className = 'pipeline-card';
+      card.dataset.contactId = c.id;
+      card.innerHTML = `
+        <b>${contactName(c)}</b><br>
+        <small>${c.email || ''}</small><br>
+        <small>${formatPhone(c.phone || '')}</small><br>
+        <span class="stage-pill">${c.type || 'Unassigned'}</span>
+        ${renderTags(c.tags)}
+        <div class="mt-2">
+          <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openContact(${c.id})">Open</button>
+        </div>
+      `;
+      dropzone.appendChild(card);
+    });
+
+    pipelineBoard.appendChild(column);
+
+    if(window.Sortable){
+      const sortable = Sortable.create(dropzone, {
+        group:'pipeline',
+        animation:150,
+        onAdd: async function(evt){
+          const contactId = evt.item.dataset.contactId;
+          const newStage = evt.to.dataset.stage;
+
+          await fetch(`/api/contacts/${contactId}/stage`, {
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({stage:newStage})
+          });
+
+          await loadContacts();
+          await loadDashboard();
+          await loadCalendar();
+          loadPipeline();
+        }
+      });
+
+      pipelineSortables.push(sortable);
+    }
+  });
+}
+
+/* TASKS */
+async function loadTasks(){
+  const res = await fetch('/api/tasks');
+  allTasksCache = await res.json();
+
+  taskList.innerHTML = '';
+
+  if(!allTasksCache.length){
+    taskList.innerHTML = '<div class="modern-card text-muted">No tasks yet.</div>';
+    return;
+  }
+
+  allTasksCache.forEach(task=>{
+    taskList.innerHTML += `
+      <div class="task-card ${taskIsOverdue(task) ? 'task-overdue' : ''} ${task.done ? 'task-done' : ''}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <b>${task.title || 'Untitled Task'}</b><br>
+            <small>Contact: ${task.contactName || ''}</small><br>
+            <small>Due: ${task.due ? formatShortDate(task.due) : 'No due date'}</small><br>
+            <small>Stage: ${task.stage || 'New Lead'}</small>
+            ${task.notes ? `<br><small>${task.notes}</small>` : ''}
+          </div>
+          <div class="text-end">
+            <span class="priority-pill ${priorityClass(task.priority)}">${task.priority || 'Normal'}</span><br>
+            <button class="btn btn-sm btn-outline-primary mt-2" onclick="openContact(${task.contactId})">Open Contact</button>
+            <button class="btn btn-sm btn-outline-primary mt-2" onclick="toggleTask(${task.contactId}, ${task.id})">${task.done ? 'Reopen' : 'Done'}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+/* CALENDAR */
+async function loadCalendar(){
+  const res = await fetch('/api/calendar-events');
+  calendarEventsCache = await res.json();
+  renderCalendar();
+}
+
+function changeCalendarMonth(delta){
+  calendarDate.setMonth(calendarDate.getMonth() + delta);
+  renderCalendar();
+}
+
+function renderCalendar(){
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+
+  calendarMonthTitle.innerText = calendarDate.toLocaleDateString([], { month:'long', year:'numeric' });
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDay = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+
+  const dayHeaders = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  calendarGrid.innerHTML = '';
+
+  dayHeaders.forEach(day=>{
+    calendarGrid.innerHTML += `<div class="calendar-day-header">${day}</div>`;
+  });
+
+  for(let i=0; i<startDay; i++){
+    calendarGrid.innerHTML += `<div class="calendar-day"></div>`;
+  }
+
+  for(let day=1; day<=totalDays; day++){
+    const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const events = calendarEventsCache.filter(event=>event.date === dateKey);
+
+    const eventsHtml = events.map(event=>{
+      let cls = '';
+      if(event.type === 'Task') cls = event.done ? 'task' : (event.date < todayKey() ? 'overdue' : 'task');
+      if(event.type === 'Scheduled Campaign') cls = 'campaign';
+
+      return `
+        <div class="calendar-event ${cls}" onclick="${event.contactId ? `openContact(${event.contactId})` : ''}">
+          <b>${event.type}</b><br>${event.title || ''}
+          ${event.contactName ? `<br><small>${event.contactName}</small>` : ''}
+        </div>
+      `;
+    }).join('');
+
+    calendarGrid.innerHTML += `
+      <div class="calendar-day">
+        <div class="calendar-day-number">${day}</div>
+        ${eventsHtml}
+      </div>
+    `;
+  }
+}
+
+/* INIT */
+contactSearch.addEventListener('input', loadContacts);
+recipientSearch.addEventListener('input', renderRecipientContacts);
+extraRecipients.addEventListener('input', updateRecipientCount);
+
+phone.addEventListener('input', () => normalizePhoneInput(phone));
+editPhone.addEventListener('input', () => normalizePhoneInput(editPhone));
+
+renderTypes();
+
+loadPipelineStages().then(()=>{
+  loadContacts();
+  loadDashboard();
+  loadCampaigns();
+  loadTemplates();
+  loadSegments();
+  loadScheduledCampaigns();
+  loadTags();
+  loadTasks();
+  loadCalendar();
+});
+</script>
+
+</body>
+</html>
