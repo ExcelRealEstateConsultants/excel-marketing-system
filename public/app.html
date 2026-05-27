@@ -664,6 +664,19 @@ let campaignsCache = [];
 let activityCache = [];
 let currentContact = null;
 
+function formatDate(value){
+  if(!value) return '';
+  const date = new Date(value);
+  if(isNaN(date.getTime())) return value;
+  return date.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+}
+
 /* CONTACT TYPES */
 let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA"]');
 
@@ -745,7 +758,7 @@ async function loadDashboard(){
           <b>${a.email || ''}</b> ${(a.type || a.status || 'activity').toLowerCase()} <b>${a.campaignName || ''}</b>
           ${a.url ? `<br><small>Link: ${a.url}</small>` : ''}
           ${a.error ? `<br><small class="text-danger">Error: ${a.error}</small>` : ''}
-          <br><small>${a.date || a.sentAt ? new Date(a.date || a.sentAt).toLocaleString() : ''}</small>
+          <br><small>${a.date || a.sentAt ? formatDate(a.date || a.sentAt) : ''}</small>
         </div>
       `;
     });
@@ -936,6 +949,8 @@ async function loadCampaigns(){
     return;
   }
 
+  campaignsCache.sort((a,b)=>new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
   campaignsCache.forEach(c=>{
     const matching = activityCache.filter(a => a.campaignName === c.name || a.campaignName === c.subject);
 
@@ -953,7 +968,7 @@ async function loadCampaigns(){
           <div>
             <b>${c.name || 'Untitled Campaign'}</b><br>
             <small>Subject: ${c.subject || ''}</small><br>
-            <small>Created: ${c.createdAt ? new Date(c.createdAt).toLocaleString() : ''}</small>
+            <small>Created: ${c.createdAt ? formatDate(c.createdAt) : ''}</small>
           </div>
           <span class="status-badge">${c.status || 'Draft'}</span>
         </div>
@@ -1002,7 +1017,7 @@ function openCampaignPanel(campaignId){
       const clickDetails = clickedCount
         ? (a.clicks || []).map(click => `
             <div class="mt-1">
-              <small><b>Clicked:</b> ${click.url}<br>${new Date(click.clickedAt).toLocaleString()}</small>
+              <small><b>Clicked:</b> ${click.url}<br>${formatDate(click.clickedAt)}</small>
             </div>
           `).join('')
         : '<small class="text-muted">No clicks yet.</small>';
@@ -1012,8 +1027,8 @@ function openCampaignPanel(campaignId){
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <b>${a.email}</b><br>
-              <small>Sent: ${a.sentAt ? new Date(a.sentAt).toLocaleString() : a.sentDate || ''}</small><br>
-              <small>Opened: ${a.opened ? new Date(a.openedAt).toLocaleString() : 'No'}</small>
+              <small>Sent: ${a.sentAt ? formatDate(a.sentAt) : a.sentDate || ''}</small><br>
+              <small>Opened: ${a.opened ? formatDate(a.openedAt) : 'No'}</small>
               ${isFailed ? `<br><small class="text-danger">Failed: ${a.error || 'Unknown error'}</small>` : ''}
             </div>
             <div>
@@ -1059,7 +1074,7 @@ function openCampaignPanel(campaignId){
   } else {
     links.forEach(link=>{
       const peopleHtml = link.people.map(p=>`
-        <div><small>${p.email} — ${new Date(p.clickedAt).toLocaleString()}</small></div>
+        <div><small>${p.email} — ${formatDate(p.clickedAt)}</small></div>
       `).join('');
 
       campaignLinksClicked.innerHTML += `
@@ -1114,15 +1129,15 @@ function openContact(id){
   editType.value=currentContact.type || '';
 
   contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
-    ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${currentContact.unsubscribedAt ? new Date(currentContact.unsubscribedAt).toLocaleString() : ''}</small>`
+    ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${currentContact.unsubscribedAt ? formatDate(currentContact.unsubscribedAt) : ''}</small>`
     : `<span class="active-badge">Subscribed</span>`;
 
   contactBounceStatus.innerHTML = currentContact.bounced
-    ? `<span class="bounced-badge">Bounced / Invalid Email</span><br><small class="text-muted">Bounced: ${currentContact.bouncedAt ? new Date(currentContact.bouncedAt).toLocaleString() : ''}</small>${currentContact.bounceReason ? `<br><small class="text-danger">${currentContact.bounceReason}</small>` : ''}`
+    ? `<span class="bounced-badge">Bounced / Invalid Email</span><br><small class="text-muted">Bounced: ${currentContact.bouncedAt ? formatDate(currentContact.bouncedAt) : ''}</small>${currentContact.bounceReason ? `<br><small class="text-danger">${currentContact.bounceReason}</small>` : ''}`
     : `<span class="active-badge">Valid Email</span>`;
 
   notesList.innerHTML = (currentContact.notes||[])
-    .map(n=>`<div class="note">${n.text}<br><small>${n.date}</small></div>`)
+    .map(n=>`<div class="note">${n.text}<br><small>${formatDate(n.date)}</small></div>`)
     .join('');
 
   loadActivity(currentContact.email);
@@ -1178,7 +1193,7 @@ async function loadActivity(email){
 
   data.forEach(c=>{
     const clickList = (c.clicks || [])
-      .map(click => `<div><small>Clicked: ${click.url}<br>${new Date(click.clickedAt).toLocaleString()}</small></div>`)
+      .map(click => `<div><small>Clicked: ${click.url}<br>${formatDate(click.clickedAt)}</small></div>`)
       .join('');
 
     const failedHtml = c.status === 'failed'
@@ -1188,7 +1203,7 @@ async function loadActivity(email){
     panelCampaigns.innerHTML += `
       <div class="campaign-card">
         <b>${c.campaignName}</b><br>
-        <small>${c.sentDate || c.sentAt || ''}</small><br>
+        <small>${formatDate(c.sentAt || c.sentDate)}</small><br>
         ${failedHtml || `
           <span class="${c.opened?'badge-opened':'badge-closed'}">
             ${c.opened?'Opened':'Not opened'}
