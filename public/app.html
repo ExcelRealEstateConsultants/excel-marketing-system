@@ -973,6 +973,10 @@ body {
 
   <select id="editType" class="form-control mb-2"></select>
   <select id="editStage" class="form-control mb-2"></select>
+  <div class="feature-card">
+  <div class="feature-title mb-2">Pipeline Quick Move</div>
+  <div id="quickStageButtons"></div>
+</div>
   <input id="editTags" class="form-control mb-2" placeholder="Tags, comma separated">
 
   <button class="btn btn-primary mb-3" onclick="saveContact()">Save Changes</button>
@@ -2205,6 +2209,7 @@ function openContact(id){
   editPhone.value=formatPhone(currentContact.phone || '');
   editType.value=currentContact.type || '';
   editStage.value=currentContact.stage || 'New Lead';
+  renderQuickStageButtons();
   editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
 
   contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
@@ -2521,6 +2526,40 @@ async function loadPipeline(){
           await loadCalendar();
           loadPipeline();
         }
+        function renderQuickStageButtons(){
+  quickStageButtons.innerHTML = '';
+
+  pipelineStagesCache.forEach(stage=>{
+    const active = (currentContact.stage || 'New Lead') === stage;
+
+    quickStageButtons.innerHTML += `
+      <button
+        class="btn btn-sm ${active ? 'btn-success' : 'btn-outline-primary'} me-1 mb-1"
+        onclick="quickMoveStage('${stage}')"
+      >
+        ${stage}
+      </button>
+    `;
+  });
+}
+
+async function quickMoveStage(stage){
+  editStage.value = stage;
+
+  await fetch('/api/contacts/'+currentContact.id+'/stage',{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ stage })
+  });
+
+  await loadContacts();
+  await loadPipeline();
+  await loadDashboard();
+  await loadCalendar();
+
+  currentContact = contactsCache.find(c=>c.id==currentContact.id);
+  openContact(currentContact.id);
+}
       });
 
       pipelineSortables.push(sortable);
