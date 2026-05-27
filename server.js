@@ -31,6 +31,9 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 const DATA_FILE = path.join(__dirname, 'contacts.json');
 const ACTIVITY_FILE = path.join(__dirname, 'activity.json');
 const CAMPAIGN_FILE = path.join(__dirname, 'campaigns.json');
+const TEMPLATE_FILE = path.join(__dirname, 'templates.json');
+const SEGMENT_FILE = path.join(__dirname, 'segments.json');
+const SCHEDULED_CAMPAIGN_FILE = path.join(__dirname, 'scheduled-campaigns.json');
 
 /* ================= HELPERS ================= */
 function readJsonFile(filePath, fallback) {
@@ -102,6 +105,30 @@ function saveCampaigns(data) {
   writeJsonFile(CAMPAIGN_FILE, data);
 }
 
+function loadTemplates() {
+  return readJsonFile(TEMPLATE_FILE, []);
+}
+
+function saveTemplates(data) {
+  writeJsonFile(TEMPLATE_FILE, data);
+}
+
+function loadSegments() {
+  return readJsonFile(SEGMENT_FILE, []);
+}
+
+function saveSegments(data) {
+  writeJsonFile(SEGMENT_FILE, data);
+}
+
+function loadScheduledCampaigns() {
+  return readJsonFile(SCHEDULED_CAMPAIGN_FILE, []);
+}
+
+function saveScheduledCampaigns(data) {
+  writeJsonFile(SCHEDULED_CAMPAIGN_FILE, data);
+}
+
 /* ================= EMAIL FOOTER ================= */
 function addUnsubscribeFooter(html, email) {
   const unsubscribeUrl = `${BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
@@ -165,6 +192,7 @@ app.post('/api/contacts', (req, res) => {
     email: req.body.email || '',
     phone: req.body.phone || '',
     type: req.body.type || 'Unassigned',
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
     unsubscribed: false,
     unsubscribedAt: null,
     bounced: false,
@@ -193,7 +221,8 @@ app.put('/api/contacts/:id', (req, res) => {
     lastName: req.body.lastName,
     email: req.body.email,
     phone: req.body.phone,
-    type: req.body.type
+    type: req.body.type,
+    tags: Array.isArray(req.body.tags) ? req.body.tags : []
   };
 
   saveContacts(contacts);
@@ -461,29 +490,271 @@ app.delete('/api/campaigns/:id', (req, res) => {
   res.json({ success: true });
 });
 
-/* ================= SEND CAMPAIGN ================= */
-app.post('/api/send-campaign', async (req, res) => {
-  const { name, recipients, subject, html } = req.body;
+/* ================= TEMPLATES ================= */
+app.get('/api/templates', (req, res) => {
+  res.json(loadTemplates());
+});
 
+app.post('/api/templates', (req, res) => {
+  const templates = loadTemplates();
+
+  const newTemplate = {
+    id: Date.now(),
+    name: req.body.name || 'Untitled Template',
+    subject: req.body.subject || '',
+    html: req.body.html || '',
+    category: req.body.category || 'General',
+    createdAt: new Date().toISOString(),
+    updatedAt: null
+  };
+
+  templates.push(newTemplate);
+  saveTemplates(templates);
+
+  res.json({ success: true, template: newTemplate });
+});
+
+app.put('/api/templates/:id', (req, res) => {
+  const templates = loadTemplates();
+  const index = templates.findIndex(t => t.id == req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, error: 'Template not found' });
+  }
+
+  templates[index] = {
+    ...templates[index],
+    name: req.body.name || templates[index].name || 'Untitled Template',
+    subject: req.body.subject || '',
+    html: req.body.html || '',
+    category: req.body.category || templates[index].category || 'General',
+    updatedAt: new Date().toISOString()
+  };
+
+  saveTemplates(templates);
+
+  res.json({ success: true, template: templates[index] });
+});
+
+app.delete('/api/templates/:id', (req, res) => {
+  let templates = loadTemplates();
+  const existingTemplate = templates.find(t => t.id == req.params.id);
+
+  if (!existingTemplate) {
+    return res.status(404).json({ success: false, error: 'Template not found' });
+  }
+
+  templates = templates.filter(t => t.id != req.params.id);
+  saveTemplates(templates);
+
+  res.json({ success: true });
+});
+
+/* ================= TAGS ================= */
+app.get('/api/tags', (req, res) => {
+  const contacts = loadContacts();
+
+  const tags = [
+    ...new Set(
+      contacts.flatMap(contact => Array.isArray(contact.tags) ? contact.tags : [])
+        .map(tag => String(tag || '').trim())
+        .filter(Boolean)
+    )
+  ].sort();
+
+  res.json(tags);
+});
+
+app.post('/api/contacts/:id/tags', (req, res) => {
+  const contacts = loadContacts();
+  const contact = contacts.find(c => c.id == req.params.id);
+
+  if (!contact) {
+    return res.status(404).json({ success: false, error: 'Contact not found' });
+  }
+
+  const newTags = Array.isArray(req.body.tags)
+    ? req.body.tags.map(tag => String(tag || '').trim()).filter(Boolean)
+    : [];
+
+  contact.tags = [...new Set(newTags)];
+
+  saveContacts(contacts);
+
+  res.json({ success: true, contact });
+});
+
+/* ================= SEGMENTS ================= */
+function contactMatchesSegment(contact, segment) {
+  const contactTags = Array.isArray(contact.tags) ? contact.tags : [];
+  const segmentTags = Array.isArray(segment.tags) ? segment.tags : [];
+  const segmentTypes = Array.isArray(segment.types) ? segment.types : [];
+
+  const tagMatch =
+    segmentTags.length === 0 ||
+    segmentTags.some(tag => contactTags.includes(tag));
+
+  const typeMatch =
+    segmentTypes.length === 0 ||
+    segmentTypes.includes(contact.type || '');
+
+  const hasEmail = Boolean(contact.email);
+  const canReceive = !contact.unsubscribed && !contact.bounced;
+
+  return hasEmail && canReceive && tagMatch && typeMatch;
+}
+
+app.get('/api/segments', (req, res) => {
+  res.json(loadSegments());
+});
+
+app.post('/api/segments', (req, res) => {
+  const segments = loadSegments();
+
+  const newSegment = {
+    id: Date.now(),
+    name: req.body.name || 'Untitled Segment',
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    types: Array.isArray(req.body.types) ? req.body.types : [],
+    createdAt: new Date().toISOString(),
+    updatedAt: null
+  };
+
+  segments.push(newSegment);
+  saveSegments(segments);
+
+  res.json({ success: true, segment: newSegment });
+});
+
+app.put('/api/segments/:id', (req, res) => {
+  const segments = loadSegments();
+  const index = segments.findIndex(s => s.id == req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, error: 'Segment not found' });
+  }
+
+  segments[index] = {
+    ...segments[index],
+    name: req.body.name || segments[index].name || 'Untitled Segment',
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    types: Array.isArray(req.body.types) ? req.body.types : [],
+    updatedAt: new Date().toISOString()
+  };
+
+  saveSegments(segments);
+
+  res.json({ success: true, segment: segments[index] });
+});
+
+app.delete('/api/segments/:id', (req, res) => {
+  let segments = loadSegments();
+  const existingSegment = segments.find(s => s.id == req.params.id);
+
+  if (!existingSegment) {
+    return res.status(404).json({ success: false, error: 'Segment not found' });
+  }
+
+  segments = segments.filter(s => s.id != req.params.id);
+  saveSegments(segments);
+
+  res.json({ success: true });
+});
+
+app.get('/api/segments/:id/contacts', (req, res) => {
+  const contacts = loadContacts();
+  const segments = loadSegments();
+
+  const segment = segments.find(s => s.id == req.params.id);
+
+  if (!segment) {
+    return res.status(404).json({ success: false, error: 'Segment not found' });
+  }
+
+  const matchingContacts = contacts.filter(contact => contactMatchesSegment(contact, segment));
+
+  res.json(matchingContacts);
+});
+
+/* ================= SCHEDULED CAMPAIGNS ================= */
+app.get('/api/scheduled-campaigns', (req, res) => {
+  res.json(loadScheduledCampaigns());
+});
+
+app.post('/api/scheduled-campaigns', (req, res) => {
+  const scheduledCampaigns = loadScheduledCampaigns();
+
+  const recipients = Array.isArray(req.body.recipients)
+    ? req.body.recipients.map(normalizeEmail).filter(email => email.includes('@'))
+    : [];
+
+  if (!req.body.scheduledAt) {
+    return res.status(400).json({ success: false, error: 'Scheduled date/time is required.' });
+  }
+
+  if (recipients.length === 0) {
+    return res.status(400).json({ success: false, error: 'At least one recipient is required.' });
+  }
+
+  if (!req.body.subject || !req.body.html) {
+    return res.status(400).json({ success: false, error: 'Subject and content are required.' });
+  }
+
+  const scheduledDate = new Date(req.body.scheduledAt);
+
+  if (Number.isNaN(scheduledDate.getTime())) {
+    return res.status(400).json({ success: false, error: 'Scheduled date/time is invalid.' });
+  }
+
+  const newScheduledCampaign = {
+    id: Date.now(),
+    name: req.body.name || req.body.subject || 'Untitled Scheduled Campaign',
+    subject: req.body.subject || '',
+    html: req.body.html || '',
+    recipients,
+    scheduledAt: scheduledDate.toISOString(),
+    status: 'Scheduled',
+    createdAt: new Date().toISOString(),
+    sentAt: null,
+    resultSummary: null
+  };
+
+  scheduledCampaigns.push(newScheduledCampaign);
+  saveScheduledCampaigns(scheduledCampaigns);
+
+  res.json({ success: true, scheduledCampaign: newScheduledCampaign });
+});
+
+app.delete('/api/scheduled-campaigns/:id', (req, res) => {
+  let scheduledCampaigns = loadScheduledCampaigns();
+  const existingScheduledCampaign = scheduledCampaigns.find(c => c.id == req.params.id);
+
+  if (!existingScheduledCampaign) {
+    return res.status(404).json({ success: false, error: 'Scheduled campaign not found' });
+  }
+
+  if (existingScheduledCampaign.status === 'Sent') {
+    return res.status(400).json({ success: false, error: 'Sent scheduled campaigns cannot be deleted.' });
+  }
+
+  scheduledCampaigns = scheduledCampaigns.filter(c => c.id != req.params.id);
+  saveScheduledCampaigns(scheduledCampaigns);
+
+  res.json({ success: true });
+});
+
+/* ================= SEND CAMPAIGN ================= */
+async function sendCampaignCore({ name, recipients, subject, html, saveCampaignRecord = true, scheduledCampaignId = null }) {
   if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
-    return res.status(500).json({
-      success: false,
-      error: 'Brevo is not configured. Please check BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.'
-    });
+    throw new Error('Brevo is not configured. Please check BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.');
   }
 
   if (!Array.isArray(recipients) || recipients.length === 0) {
-    return res.status(400).json({
-      success: false,
-      error: 'No recipients were provided.'
-    });
+    throw new Error('No recipients were provided.');
   }
 
   if (!subject || !html) {
-    return res.status(400).json({
-      success: false,
-      error: 'Subject and email content are required.'
-    });
+    throw new Error('Subject and email content are required.');
   }
 
   const contacts = loadContacts();
@@ -565,7 +836,8 @@ app.post('/api/send-campaign', async (req, res) => {
         clicks: [],
         status: 'sent',
         provider: 'Brevo',
-        brevoMessageId: brevoResult.messageId || null
+        brevoMessageId: brevoResult.messageId || null,
+        scheduledCampaignId
       });
 
       results.sent.push(email);
@@ -581,7 +853,8 @@ app.post('/api/send-campaign', async (req, res) => {
         opened: false,
         clicks: [],
         status: 'failed',
-        error: errorMessage
+        error: errorMessage,
+        scheduledCampaignId
       });
 
       const matchingContact = contacts.find(
@@ -604,29 +877,108 @@ app.post('/api/send-campaign', async (req, res) => {
   saveContacts(contacts);
   saveActivity(activity);
 
-  campaigns.push({
-    id: Date.now(),
-    name: campaignName,
-    subject,
-    html,
-    status: results.failed.length ? 'Sent with Errors' : 'Sent',
-    createdAt: new Date().toISOString(),
-    sentCount: results.sent.length,
-    failedCount: results.failed.length,
-    skippedCount: results.skipped.length
-  });
+  if (saveCampaignRecord) {
+    campaigns.push({
+      id: Date.now(),
+      name: campaignName,
+      subject,
+      html,
+      status: results.failed.length ? 'Sent with Errors' : 'Sent',
+      createdAt: new Date().toISOString(),
+      sentCount: results.sent.length,
+      failedCount: results.failed.length,
+      skippedCount: results.skipped.length,
+      scheduledCampaignId
+    });
 
-  saveCampaigns(campaigns);
+    saveCampaigns(campaigns);
+  }
 
-  res.json({
+  return {
     success: results.failed.length === 0,
     message:
       results.failed.length === 0
         ? `Campaign sent successfully to ${results.sent.length} recipient(s).`
         : `Campaign sent to ${results.sent.length} recipient(s), but ${results.failed.length} failed.`,
     results
-  });
+  };
+}
+
+app.post('/api/send-campaign', async (req, res) => {
+  try {
+    const result = await sendCampaignCore({
+      name: req.body.name,
+      recipients: req.body.recipients,
+      subject: req.body.subject,
+      html: req.body.html,
+      saveCampaignRecord: true
+    });
+
+    res.json(result);
+  } catch (error) {
+    const statusCode = error.message.includes('Brevo is not configured') ? 500 : 400;
+
+    res.status(statusCode).json({
+      success: false,
+      error: error.message
+    });
+  }
 });
+
+async function processDueScheduledCampaigns() {
+  const scheduledCampaigns = loadScheduledCampaigns();
+  const now = new Date();
+  let changed = false;
+
+  for (const scheduled of scheduledCampaigns) {
+    if (scheduled.status !== 'Scheduled') continue;
+
+    const scheduledDate = new Date(scheduled.scheduledAt);
+
+    if (Number.isNaN(scheduledDate.getTime()) || scheduledDate > now) continue;
+
+    scheduled.status = 'Sending';
+    scheduled.lastAttemptAt = new Date().toISOString();
+    changed = true;
+    saveScheduledCampaigns(scheduledCampaigns);
+
+    try {
+      const result = await sendCampaignCore({
+        name: scheduled.name,
+        recipients: scheduled.recipients,
+        subject: scheduled.subject,
+        html: scheduled.html,
+        saveCampaignRecord: true,
+        scheduledCampaignId: scheduled.id
+      });
+
+      scheduled.status = result.success ? 'Sent' : 'Sent with Errors';
+      scheduled.sentAt = new Date().toISOString();
+      scheduled.resultSummary = {
+        sent: result.results.sent.length,
+        failed: result.results.failed.length,
+        skipped: result.results.skipped.length
+      };
+    } catch (error) {
+      scheduled.status = 'Failed';
+      scheduled.error = error.message || 'Scheduled send failed.';
+      scheduled.lastAttemptAt = new Date().toISOString();
+    }
+
+    changed = true;
+    saveScheduledCampaigns(scheduledCampaigns);
+  }
+
+  if (changed) {
+    saveScheduledCampaigns(scheduledCampaigns);
+  }
+}
+
+setInterval(() => {
+  processDueScheduledCampaigns().catch(error => {
+    console.error('Scheduled campaign processor error:', error);
+  });
+}, 60000);
 
 /* ================= OPEN TRACKING ================= */
 app.get('/track-open', (req, res) => {
