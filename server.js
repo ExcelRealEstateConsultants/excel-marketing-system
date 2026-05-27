@@ -35,6 +35,17 @@ const TEMPLATE_FILE = path.join(__dirname, 'templates.json');
 const SEGMENT_FILE = path.join(__dirname, 'segments.json');
 const SCHEDULED_CAMPAIGN_FILE = path.join(__dirname, 'scheduled-campaigns.json');
 
+const PIPELINE_STAGES = [
+  'New Lead',
+  'Contacted',
+  'Appointment Set',
+  'Active Prospect',
+  'Under Contract',
+  'Pending',
+  'Closed',
+  'Past Client'
+];
+
 /* ================= HELPERS ================= */
 function readJsonFile(filePath, fallback) {
   if (!fs.existsSync(filePath)) {
@@ -54,6 +65,10 @@ function writeJsonFile(filePath, data) {
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
+}
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\D/g, '').slice(0, 10);
 }
 
 function escapeHtml(value) {
@@ -78,6 +93,20 @@ function isBounceError(message = '') {
     m.includes('unknown user') ||
     m.includes('mailbox')
   );
+}
+
+function getTodayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isOverdueTask(task) {
+  if (!task || task.done || !task.due) return false;
+  return String(task.due).slice(0, 10) < getTodayDateString();
+}
+
+function isDueTodayTask(task) {
+  if (!task || task.done || !task.due) return false;
+  return String(task.due).slice(0, 10) === getTodayDateString();
 }
 
 /* ================= DATA LOAD/SAVE ================= */
@@ -190,8 +219,13 @@ app.post('/api/contacts', (req, res) => {
     firstName: req.body.firstName || '',
     lastName: req.body.lastName || '',
     email: req.body.email || '',
-    phone: req.body.phone || '',
+    phone: normalizePhone(req.body.phone),
     type: req.body.type || 'Unassigned',
+    stage: req.body.stage || 'New Lead',
+    stageUpdatedAt: new Date().toISOString(),
+    stageHistory: [
+      { stage: req.body.stage || 'New Lead', date: new Date().toISOString() }
+    ],
     tags: Array.isArray(req.body.tags) ? req.body.tags : [],
     unsubscribed: false,
     unsubscribedAt: null,
@@ -215,19 +249,30 @@ app.put('/api/contacts/:id', (req, res) => {
 
   if (i === -1) return res.status(404).json({ error: 'Not found' });
 
+  const oldStage = contacts[i].stage || 'New Lead';
+  const newStage = req.body.stage || oldStage;
+
   contacts[i] = {
     ...contacts[i],
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     email: req.body.email,
-    phone: req.body.phone,
+    phone: normalizePhone(req.body.phone),
     type: req.body.type,
+    stage: newStage,
+    stageUpdatedAt: oldStage !== newStage ? new Date().toISOString() : contacts[i].stageUpdatedAt,
+    stageHistory: oldStage !== newStage
+      ? [
+          ...(Array.isArray(contacts[i].stageHistory) ? contacts[i].stageHistory : []),
+          { stage: newStage, date: new Date().toISOString() }
+        ]
+      : (Array.isArray(contacts[i].stageHistory) ? contacts[i].stageHistory : []),
     tags: Array.isArray(req.body.tags) ? req.body.tags : []
   };
 
   saveContacts(contacts);
 
-  res.json({ success: true });
+  res.json({ success: true, contact: contacts[i] });
 });
 
 app.delete('/api/contacts/:id', (req, res) => {
@@ -236,6 +281,43 @@ app.delete('/api/contacts/:id', (req, res) => {
   saveContacts(contacts);
 
   res.json({ success: true });
+});
+
+/* ================= PIPELINE ================= */
+app.get('/api/pipeline-stages', (req, res) => {
+  res.json(PIPELINE_STAGES);
+});
+
+app.put('/api/contacts/:id/stage', (req, res) => {
+  const contacts = loadContacts();
+  const contact = contacts.find(c => c.id == req.params.id);
+
+  if (!contact) return res.status(404).json({ success: false, error: 'Contact not found' });
+
+  const newStage = req.body.stage || 'New Lead';
+
+  if (!PIPELINE_STAGES.includes(newStage)) {
+    return res.status(400).json({ success: false, error: 'Invalid stage' });
+  }
+
+  const oldStage = contact.stage || 'New Lead';
+  contact.stage = newStage;
+
+  if (oldStage !== newStage) {
+    contact.stageUpdatedAt = new Date().toISOString();
+
+    if (!Array.isArray(contact.stageHistory)) contact.stageHistory = [];
+
+    contact.stageHistory.push({
+      from: oldStage,
+      stage: newStage,
+      date: new Date().toISOString()
+    });
+  }
+
+  saveContacts(contacts);
+
+  res.json({ success: true, contact });
 });
 
 /* ================= NOTES ================= */
@@ -257,7 +339,7 @@ app.post('/api/contacts/:id/note', (req, res) => {
   res.json({ success: true });
 });
 
-/* ================= TASKS ================= */
+/* ================= TASKS / FOLLOW-UPS ================= */
 app.post('/api/contacts/:id/task', (req, res) => {
   const contacts = loadContacts();
 
@@ -270,12 +352,16 @@ app.post('/api/contacts/:id/task', (req, res) => {
     id: Date.now(),
     title: req.body.title || '',
     due: req.body.due || '',
-    done: false
+    priority: req.body.priority || 'Normal',
+    notes: req.body.notes || '',
+    done: false,
+    createdAt: new Date().toISOString(),
+    completedAt: null
   });
 
   saveContacts(contacts);
 
-  res.json({ success: true });
+  res.json({ success: true, contact: c });
 });
 
 app.put('/api/contacts/:id/task/:taskId', (req, res) => {
@@ -287,11 +373,147 @@ app.put('/api/contacts/:id/task/:taskId', (req, res) => {
   if (!c.tasks) c.tasks = [];
 
   const t = c.tasks.find(t => t.id == req.params.taskId);
-  if (t) t.done = !t.done;
+  if (!t) return res.status(404).json({ success: false, error: 'Task not found' });
+
+  if (req.body.toggleDone) {
+    t.done = !t.done;
+    t.completedAt = t.done ? new Date().toISOString() : null;
+  } else {
+    t.title = req.body.title || t.title;
+    t.due = req.body.due || t.due;
+    t.priority = req.body.priority || t.priority || 'Normal';
+    t.notes = req.body.notes || t.notes || '';
+  }
 
   saveContacts(contacts);
 
-  res.json({ success: true });
+  res.json({ success: true, contact: c, task: t });
+});
+
+app.delete('/api/contacts/:id/task/:taskId', (req, res) => {
+  const contacts = loadContacts();
+
+  const c = contacts.find(x => x.id == req.params.id);
+  if (!c) return res.status(404).json({ error: 'Not found' });
+
+  if (!Array.isArray(c.tasks)) c.tasks = [];
+
+  c.tasks = c.tasks.filter(t => t.id != req.params.taskId);
+
+  saveContacts(contacts);
+
+  res.json({ success: true, contact: c });
+});
+
+app.get('/api/tasks', (req, res) => {
+  const contacts = loadContacts();
+  const tasks = [];
+
+  contacts.forEach(contact => {
+    (contact.tasks || []).forEach(task => {
+      tasks.push({
+        ...task,
+        contactId: contact.id,
+        contactName: `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+        email: contact.email || '',
+        phone: contact.phone || '',
+        stage: contact.stage || 'New Lead'
+      });
+    });
+  });
+
+  tasks.sort((a, b) => new Date(a.due || '9999-12-31') - new Date(b.due || '9999-12-31'));
+
+  res.json(tasks);
+});
+
+app.get('/api/task-stats', (req, res) => {
+  const contacts = loadContacts();
+  let dueToday = 0;
+  let overdue = 0;
+  let upcoming = 0;
+  let open = 0;
+
+  contacts.forEach(contact => {
+    (contact.tasks || []).forEach(task => {
+      if (task.done) return;
+
+      open++;
+
+      if (isDueTodayTask(task)) dueToday++;
+      else if (isOverdueTask(task)) overdue++;
+      else if (task.due) upcoming++;
+    });
+  });
+
+  res.json({ dueToday, overdue, upcoming, open });
+});
+
+/* ================= CALENDAR ================= */
+app.get('/api/calendar-events', (req, res) => {
+  const contacts = loadContacts();
+  const scheduledCampaigns = loadScheduledCampaigns();
+  const events = [];
+
+  contacts.forEach(contact => {
+    (contact.tasks || []).forEach(task => {
+      if (!task.due) return;
+
+      events.push({
+        id: `task-${contact.id}-${task.id}`,
+        type: task.done ? 'Completed Task' : 'Task',
+        title: task.title || 'Untitled Task',
+        date: String(task.due).slice(0, 10),
+        contactId: contact.id,
+        contactName: `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+        priority: task.priority || 'Normal',
+        done: !!task.done
+      });
+    });
+
+    (contact.notes || []).forEach((note, index) => {
+      if (!note.date) return;
+
+      events.push({
+        id: `note-${contact.id}-${index}`,
+        type: 'Note',
+        title: note.text || 'Note',
+        date: String(note.date).slice(0, 10),
+        contactId: contact.id,
+        contactName: `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
+      });
+    });
+
+    (contact.stageHistory || []).forEach((stageItem, index) => {
+      if (!stageItem.date) return;
+
+      events.push({
+        id: `stage-${contact.id}-${index}`,
+        type: 'Pipeline Stage',
+        title: stageItem.stage || 'Stage Change',
+        date: String(stageItem.date).slice(0, 10),
+        contactId: contact.id,
+        contactName: `${contact.firstName || ''} ${contact.lastName || ''}`.trim()
+      });
+    });
+  });
+
+  scheduledCampaigns.forEach(campaign => {
+    if (!campaign.scheduledAt) return;
+
+    events.push({
+      id: `scheduled-${campaign.id}`,
+      type: 'Scheduled Campaign',
+      title: campaign.name || campaign.subject || 'Scheduled Campaign',
+      date: String(campaign.scheduledAt).slice(0, 10),
+      campaignId: campaign.id,
+      status: campaign.status || 'Scheduled'
+    });
+  });
+
+  events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  res.json(events);
 });
 
 /* ================= UNSUBSCRIBE ================= */
@@ -473,7 +695,8 @@ app.put('/api/campaigns/:id', (req, res) => {
   saveCampaigns(campaigns);
 
   res.json({ success: true, campaign: campaigns[index] });
-});
+}
+);
 
 app.delete('/api/campaigns/:id', (req, res) => {
   let campaigns = loadCampaigns();
@@ -743,7 +966,7 @@ app.delete('/api/scheduled-campaigns/:id', (req, res) => {
   res.json({ success: true });
 });
 
-/* ================= SEND CAMPAIGN ================= */
+/* ================= SEND CAMPAIGN CORE ================= */
 async function sendCampaignCore({ name, recipients, subject, html, saveCampaignRecord = true, scheduledCampaignId = null }) {
   if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
     throw new Error('Brevo is not configured. Please check BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.');
