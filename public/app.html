@@ -2526,7 +2526,14 @@ async function loadPipeline(){
           await loadCalendar();
           loadPipeline();
         }
-        function renderQuickStageButtons(){
+        });
+
+      pipelineSortables.push(sortable);
+    }
+  });
+}
+
+function renderQuickStageButtons(){
   quickStageButtons.innerHTML = '';
 
   pipelineStagesCache.forEach(stage=>{
