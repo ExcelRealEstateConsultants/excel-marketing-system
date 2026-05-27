@@ -424,6 +424,43 @@ app.get('/api/campaigns/:id', (req, res) => {
   res.json(c);
 });
 
+app.put('/api/campaigns/:id', (req, res) => {
+  const campaigns = loadCampaigns();
+
+  const index = campaigns.findIndex(c => c.id == req.params.id);
+
+  if (index === -1) {
+    return res.status(404).json({ success: false, error: 'Campaign not found' });
+  }
+
+  campaigns[index] = {
+    ...campaigns[index],
+    name: req.body.name || campaigns[index].name || 'Untitled',
+    subject: req.body.subject || '',
+    html: req.body.html || '',
+    updatedAt: new Date().toISOString()
+  };
+
+  saveCampaigns(campaigns);
+
+  res.json({ success: true, campaign: campaigns[index] });
+});
+
+app.delete('/api/campaigns/:id', (req, res) => {
+  let campaigns = loadCampaigns();
+
+  const existingCampaign = campaigns.find(c => c.id == req.params.id);
+
+  if (!existingCampaign) {
+    return res.status(404).json({ success: false, error: 'Campaign not found' });
+  }
+
+  campaigns = campaigns.filter(c => c.id != req.params.id);
+  saveCampaigns(campaigns);
+
+  res.json({ success: true });
+});
+
 /* ================= SEND CAMPAIGN ================= */
 app.post('/api/send-campaign', async (req, res) => {
   const { name, recipients, subject, html } = req.body;
