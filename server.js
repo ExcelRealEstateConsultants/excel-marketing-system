@@ -71,6 +71,22 @@ function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '').slice(0, 10);
 }
 
+function defaultStage(stage) {
+  return PIPELINE_STAGES.includes(stage) ? stage : 'New Lead';
+}
+
+function todayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isOverdueTask(task) {
+  return task && !task.done && task.due && String(task.due).slice(0, 10) < todayDateString();
+}
+
+function isDueTodayTask(task) {
+  return task && !task.done && task.due && String(task.due).slice(0, 10) === todayDateString();
+}
+
 function escapeHtml(value) {
   return String(value || '')
     .replaceAll('&', '&amp;')
@@ -93,20 +109,6 @@ function isBounceError(message = '') {
     m.includes('unknown user') ||
     m.includes('mailbox')
   );
-}
-
-function getTodayDateString() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isOverdueTask(task) {
-  if (!task || task.done || !task.due) return false;
-  return String(task.due).slice(0, 10) < getTodayDateString();
-}
-
-function isDueTodayTask(task) {
-  if (!task || task.done || !task.due) return false;
-  return String(task.due).slice(0, 10) === getTodayDateString();
 }
 
 /* ================= DATA LOAD/SAVE ================= */
@@ -213,6 +215,7 @@ app.get('/api/contacts', (req, res) => {
 
 app.post('/api/contacts', (req, res) => {
   const contacts = loadContacts();
+  const stage = defaultStage(req.body.stage || 'New Lead');
 
   const newContact = {
     id: Date.now(),
@@ -221,11 +224,9 @@ app.post('/api/contacts', (req, res) => {
     email: req.body.email || '',
     phone: normalizePhone(req.body.phone),
     type: req.body.type || 'Unassigned',
-    stage: req.body.stage || 'New Lead',
+    stage,
     stageUpdatedAt: new Date().toISOString(),
-    stageHistory: [
-      { stage: req.body.stage || 'New Lead', date: new Date().toISOString() }
-    ],
+    stageHistory: [{ stage, date: new Date().toISOString() }],
     tags: Array.isArray(req.body.tags) ? req.body.tags : [],
     unsubscribed: false,
     unsubscribedAt: null,
@@ -249,8 +250,9 @@ app.put('/api/contacts/:id', (req, res) => {
 
   if (i === -1) return res.status(404).json({ error: 'Not found' });
 
-  const oldStage = contacts[i].stage || 'New Lead';
-  const newStage = req.body.stage || oldStage;
+  const oldStage = defaultStage(contacts[i].stage || 'New Lead');
+  const newStage = defaultStage(req.body.stage || oldStage);
+  const stageChanged = oldStage !== newStage;
 
   contacts[i] = {
     ...contacts[i],
@@ -260,11 +262,11 @@ app.put('/api/contacts/:id', (req, res) => {
     phone: normalizePhone(req.body.phone),
     type: req.body.type,
     stage: newStage,
-    stageUpdatedAt: oldStage !== newStage ? new Date().toISOString() : contacts[i].stageUpdatedAt,
-    stageHistory: oldStage !== newStage
+    stageUpdatedAt: stageChanged ? new Date().toISOString() : (contacts[i].stageUpdatedAt || new Date().toISOString()),
+    stageHistory: stageChanged
       ? [
           ...(Array.isArray(contacts[i].stageHistory) ? contacts[i].stageHistory : []),
-          { stage: newStage, date: new Date().toISOString() }
+          { from: oldStage, stage: newStage, date: new Date().toISOString() }
         ]
       : (Array.isArray(contacts[i].stageHistory) ? contacts[i].stageHistory : []),
     tags: Array.isArray(req.body.tags) ? req.body.tags : []
@@ -294,29 +296,18 @@ app.put('/api/contacts/:id/stage', (req, res) => {
 
   if (!contact) return res.status(404).json({ success: false, error: 'Contact not found' });
 
-  const newStage = req.body.stage || 'New Lead';
+  const oldStage = defaultStage(contact.stage || 'New Lead');
+  const newStage = defaultStage(req.body.stage || 'New Lead');
 
-  if (!PIPELINE_STAGES.includes(newStage)) {
-    return res.status(400).json({ success: false, error: 'Invalid stage' });
-  }
-
-  const oldStage = contact.stage || 'New Lead';
   contact.stage = newStage;
 
   if (oldStage !== newStage) {
     contact.stageUpdatedAt = new Date().toISOString();
-
     if (!Array.isArray(contact.stageHistory)) contact.stageHistory = [];
-
-    contact.stageHistory.push({
-      from: oldStage,
-      stage: newStage,
-      date: new Date().toISOString()
-    });
+    contact.stageHistory.push({ from: oldStage, stage: newStage, date: new Date().toISOString() });
   }
 
   saveContacts(contacts);
-
   res.json({ success: true, contact });
 });
 
@@ -397,7 +388,6 @@ app.delete('/api/contacts/:id/task/:taskId', (req, res) => {
   if (!c) return res.status(404).json({ error: 'Not found' });
 
   if (!Array.isArray(c.tasks)) c.tasks = [];
-
   c.tasks = c.tasks.filter(t => t.id != req.params.taskId);
 
   saveContacts(contacts);
@@ -437,9 +427,7 @@ app.get('/api/task-stats', (req, res) => {
   contacts.forEach(contact => {
     (contact.tasks || []).forEach(task => {
       if (task.done) return;
-
       open++;
-
       if (isDueTodayTask(task)) dueToday++;
       else if (isOverdueTask(task)) overdue++;
       else if (task.due) upcoming++;
@@ -449,7 +437,6 @@ app.get('/api/task-stats', (req, res) => {
   res.json({ dueToday, overdue, upcoming, open });
 });
 
-/* ================= CALENDAR ================= */
 app.get('/api/calendar-events', (req, res) => {
   const contacts = loadContacts();
   const scheduledCampaigns = loadScheduledCampaigns();
@@ -458,7 +445,6 @@ app.get('/api/calendar-events', (req, res) => {
   contacts.forEach(contact => {
     (contact.tasks || []).forEach(task => {
       if (!task.due) return;
-
       events.push({
         id: `task-${contact.id}-${task.id}`,
         type: task.done ? 'Completed Task' : 'Task',
@@ -473,7 +459,6 @@ app.get('/api/calendar-events', (req, res) => {
 
     (contact.notes || []).forEach((note, index) => {
       if (!note.date) return;
-
       events.push({
         id: `note-${contact.id}-${index}`,
         type: 'Note',
@@ -486,7 +471,6 @@ app.get('/api/calendar-events', (req, res) => {
 
     (contact.stageHistory || []).forEach((stageItem, index) => {
       if (!stageItem.date) return;
-
       events.push({
         id: `stage-${contact.id}-${index}`,
         type: 'Pipeline Stage',
@@ -500,7 +484,6 @@ app.get('/api/calendar-events', (req, res) => {
 
   scheduledCampaigns.forEach(campaign => {
     if (!campaign.scheduledAt) return;
-
     events.push({
       id: `scheduled-${campaign.id}`,
       type: 'Scheduled Campaign',
@@ -512,7 +495,6 @@ app.get('/api/calendar-events', (req, res) => {
   });
 
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
-
   res.json(events);
 });
 
@@ -695,8 +677,7 @@ app.put('/api/campaigns/:id', (req, res) => {
   saveCampaigns(campaigns);
 
   res.json({ success: true, campaign: campaigns[index] });
-}
-);
+});
 
 app.delete('/api/campaigns/:id', (req, res) => {
   let campaigns = loadCampaigns();
@@ -713,6 +694,7 @@ app.delete('/api/campaigns/:id', (req, res) => {
   res.json({ success: true });
 });
 
+
 /* ================= TEMPLATES ================= */
 app.get('/api/templates', (req, res) => {
   res.json(loadTemplates());
@@ -724,9 +706,9 @@ app.post('/api/templates', (req, res) => {
   const newTemplate = {
     id: Date.now(),
     name: req.body.name || 'Untitled Template',
+    category: req.body.category || 'General',
     subject: req.body.subject || '',
     html: req.body.html || '',
-    category: req.body.category || 'General',
     createdAt: new Date().toISOString(),
     updatedAt: null
   };
@@ -748,9 +730,9 @@ app.put('/api/templates/:id', (req, res) => {
   templates[index] = {
     ...templates[index],
     name: req.body.name || templates[index].name || 'Untitled Template',
+    category: req.body.category || 'General',
     subject: req.body.subject || '',
     html: req.body.html || '',
-    category: req.body.category || templates[index].category || 'General',
     updatedAt: new Date().toISOString()
   };
 
@@ -773,60 +755,7 @@ app.delete('/api/templates/:id', (req, res) => {
   res.json({ success: true });
 });
 
-/* ================= TAGS ================= */
-app.get('/api/tags', (req, res) => {
-  const contacts = loadContacts();
-
-  const tags = [
-    ...new Set(
-      contacts.flatMap(contact => Array.isArray(contact.tags) ? contact.tags : [])
-        .map(tag => String(tag || '').trim())
-        .filter(Boolean)
-    )
-  ].sort();
-
-  res.json(tags);
-});
-
-app.post('/api/contacts/:id/tags', (req, res) => {
-  const contacts = loadContacts();
-  const contact = contacts.find(c => c.id == req.params.id);
-
-  if (!contact) {
-    return res.status(404).json({ success: false, error: 'Contact not found' });
-  }
-
-  const newTags = Array.isArray(req.body.tags)
-    ? req.body.tags.map(tag => String(tag || '').trim()).filter(Boolean)
-    : [];
-
-  contact.tags = [...new Set(newTags)];
-
-  saveContacts(contacts);
-
-  res.json({ success: true, contact });
-});
-
 /* ================= SEGMENTS ================= */
-function contactMatchesSegment(contact, segment) {
-  const contactTags = Array.isArray(contact.tags) ? contact.tags : [];
-  const segmentTags = Array.isArray(segment.tags) ? segment.tags : [];
-  const segmentTypes = Array.isArray(segment.types) ? segment.types : [];
-
-  const tagMatch =
-    segmentTags.length === 0 ||
-    segmentTags.some(tag => contactTags.includes(tag));
-
-  const typeMatch =
-    segmentTypes.length === 0 ||
-    segmentTypes.includes(contact.type || '');
-
-  const hasEmail = Boolean(contact.email);
-  const canReceive = !contact.unsubscribed && !contact.bounced;
-
-  return hasEmail && canReceive && tagMatch && typeMatch;
-}
-
 app.get('/api/segments', (req, res) => {
   res.json(loadSegments());
 });
@@ -837,8 +766,9 @@ app.post('/api/segments', (req, res) => {
   const newSegment = {
     id: Date.now(),
     name: req.body.name || 'Untitled Segment',
-    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
     types: Array.isArray(req.body.types) ? req.body.types : [],
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    matchMode: req.body.matchMode === 'all' ? 'all' : 'any',
     createdAt: new Date().toISOString(),
     updatedAt: null
   };
@@ -860,8 +790,9 @@ app.put('/api/segments/:id', (req, res) => {
   segments[index] = {
     ...segments[index],
     name: req.body.name || segments[index].name || 'Untitled Segment',
-    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
     types: Array.isArray(req.body.types) ? req.body.types : [],
+    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+    matchMode: req.body.matchMode === 'all' ? 'all' : 'any',
     updatedAt: new Date().toISOString()
   };
 
@@ -882,21 +813,6 @@ app.delete('/api/segments/:id', (req, res) => {
   saveSegments(segments);
 
   res.json({ success: true });
-});
-
-app.get('/api/segments/:id/contacts', (req, res) => {
-  const contacts = loadContacts();
-  const segments = loadSegments();
-
-  const segment = segments.find(s => s.id == req.params.id);
-
-  if (!segment) {
-    return res.status(404).json({ success: false, error: 'Segment not found' });
-  }
-
-  const matchingContacts = contacts.filter(contact => contactMatchesSegment(contact, segment));
-
-  res.json(matchingContacts);
 });
 
 /* ================= SCHEDULED CAMPAIGNS ================= */
@@ -966,7 +882,7 @@ app.delete('/api/scheduled-campaigns/:id', (req, res) => {
   res.json({ success: true });
 });
 
-/* ================= SEND CAMPAIGN CORE ================= */
+/* ================= SEND CAMPAIGN ================= */
 async function sendCampaignCore({ name, recipients, subject, html, saveCampaignRecord = true, scheduledCampaignId = null }) {
   if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
     throw new Error('Brevo is not configured. Please check BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.');
