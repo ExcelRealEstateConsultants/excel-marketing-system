@@ -83,6 +83,17 @@ body {
   color:white;
 }
 
+.btn-outline-danger {
+  border-color:#dc2626;
+  color:#dc2626;
+  border-radius:10px;
+}
+
+.btn-outline-danger:hover {
+  background:#dc2626;
+  color:white;
+}
+
 .form-control,
 .form-select {
   border-radius:10px;
@@ -390,6 +401,16 @@ body {
   font-size:12px;
   font-weight:700;
 }
+
+.editing-badge {
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#fff7ed;
+  color:#9a3412;
+  font-size:12px;
+  font-weight:700;
+}
 </style>
 </head>
 
@@ -506,6 +527,11 @@ body {
   <h4>Campaign Builder</h4>
 
   <div class="modern-card mb-3">
+    <div id="editingCampaignNotice" class="mb-3" style="display:none;">
+      <span class="editing-badge">Editing Existing Campaign</span>
+      <button class="btn btn-sm btn-outline-primary ms-2" onclick="cancelCampaignEdit()">Cancel Edit</button>
+    </div>
+
     <input id="campaignName" class="form-control mb-3" placeholder="Campaign Name">
     <input id="subject" class="form-control mb-3" placeholder="Subject">
 
@@ -538,7 +564,7 @@ body {
     <div id="editor"></div>
 
     <div class="mt-3">
-      <button class="btn btn-success" onclick="saveCampaign()">Save Campaign</button>
+      <button id="saveCampaignButton" class="btn btn-success" onclick="saveCampaign()">Save Campaign</button>
       <button class="btn btn-primary" onclick="sendCampaign()">Send Campaign</button>
     </div>
   </div>
@@ -663,22 +689,24 @@ let contactsCache = [];
 let campaignsCache = [];
 let activityCache = [];
 let currentContact = null;
+let editingCampaignId = null;
+
+/* CONTACT TYPES */
+let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA"]');
 
 function formatDate(value){
   if(!value) return '';
   const date = new Date(value);
   if(isNaN(date.getTime())) return value;
+
   return date.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
+    year:'numeric',
+    month:'short',
+    day:'numeric',
+    hour:'numeric',
+    minute:'2-digit'
   });
 }
-
-/* CONTACT TYPES */
-let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA"]');
 
 function saveTypes(){
   localStorage.setItem('contactTypes', JSON.stringify(contactTypes));
@@ -758,7 +786,7 @@ async function loadDashboard(){
           <b>${a.email || ''}</b> ${(a.type || a.status || 'activity').toLowerCase()} <b>${a.campaignName || ''}</b>
           ${a.url ? `<br><small>Link: ${a.url}</small>` : ''}
           ${a.error ? `<br><small class="text-danger">Error: ${a.error}</small>` : ''}
-          <br><small>${a.date || a.sentAt ? formatDate(a.date || a.sentAt) : ''}</small>
+          <br><small>${formatDate(a.date || a.sentAt)}</small>
         </div>
       `;
     });
@@ -874,8 +902,16 @@ async function saveCampaign(){
     html: quill.root.innerHTML
   };
 
-  const res = await fetch('/api/campaigns',{
-    method:'POST',
+  let url = '/api/campaigns';
+  let method = 'POST';
+
+  if(editingCampaignId){
+    url = '/api/campaigns/' + editingCampaignId;
+    method = 'PUT';
+  }
+
+  const res = await fetch(url,{
+    method,
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify(payload)
   });
@@ -883,9 +919,74 @@ async function saveCampaign(){
   const data = await res.json();
 
   if(data.success){
-    alert('Campaign saved.');
+    alert(editingCampaignId ? 'Campaign updated.' : 'Campaign saved.');
+
+    cancelCampaignEdit();
+
     loadCampaigns();
     loadDashboard();
+  } else {
+    alert(data.error || 'Campaign could not be saved.');
+  }
+}
+
+async function editCampaign(id){
+  const res = await fetch('/api/campaigns/' + id);
+  const campaign = await res.json();
+
+  if(!campaign || campaign.error){
+    alert('Campaign could not be loaded.');
+    return;
+  }
+
+  editingCampaignId = campaign.id;
+
+  campaignName.value = campaign.name || '';
+  subject.value = campaign.subject || '';
+  quill.root.innerHTML = campaign.html || '';
+
+  editingCampaignNotice.style.display = 'block';
+  saveCampaignButton.innerText = 'Update Campaign';
+
+  showTab('campaigns');
+
+  window.scrollTo({
+    top:0,
+    behavior:'smooth'
+  });
+}
+
+function cancelCampaignEdit(){
+  editingCampaignId = null;
+  campaignName.value = '';
+  subject.value = '';
+  quill.root.innerHTML = '';
+  editingCampaignNotice.style.display = 'none';
+  saveCampaignButton.innerText = 'Save Campaign';
+}
+
+async function deleteCampaign(id){
+  const confirmed = confirm('Delete this campaign? This cannot be undone.');
+
+  if(!confirmed) return;
+
+  const res = await fetch('/api/campaigns/' + id,{
+    method:'DELETE'
+  });
+
+  const data = await res.json();
+
+  if(data.success){
+    alert('Campaign deleted.');
+
+    if(editingCampaignId == id){
+      cancelCampaignEdit();
+    }
+
+    loadCampaigns();
+    loadDashboard();
+  } else {
+    alert(data.error || 'Campaign could not be deleted.');
   }
 }
 
@@ -939,6 +1040,8 @@ async function loadCampaigns(){
   const campaignsRes = await fetch('/api/campaigns');
   campaignsCache = await campaignsRes.json();
 
+  campaignsCache.sort((a,b)=>new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
+
   const activityRes = await fetch('/api/activity');
   activityCache = await activityRes.json();
 
@@ -948,8 +1051,6 @@ async function loadCampaigns(){
     campaignList.innerHTML = '<div class="text-muted">No campaigns saved yet.</div>';
     return;
   }
-
-  campaignsCache.sort((a,b)=>new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
 
   campaignsCache.forEach(c=>{
     const matching = activityCache.filter(a => a.campaignName === c.name || a.campaignName === c.subject);
@@ -968,9 +1069,29 @@ async function loadCampaigns(){
           <div>
             <b>${c.name || 'Untitled Campaign'}</b><br>
             <small>Subject: ${c.subject || ''}</small><br>
-            <small>Created: ${c.createdAt ? formatDate(c.createdAt) : ''}</small>
+            <small>Created: ${formatDate(c.createdAt)}</small>
+            ${c.updatedAt ? `<br><small>Updated: ${formatDate(c.updatedAt)}</small>` : ''}
           </div>
-          <span class="status-badge">${c.status || 'Draft'}</span>
+
+          <div class="text-end">
+            <span class="status-badge">${c.status || 'Draft'}</span>
+
+            <div class="mt-2">
+              <button
+                class="btn btn-sm btn-outline-primary me-1"
+                onclick="event.stopPropagation(); editCampaign(${c.id})"
+              >
+                Edit
+              </button>
+
+              <button
+                class="btn btn-sm btn-outline-danger"
+                onclick="event.stopPropagation(); deleteCampaign(${c.id})"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="row mt-3">
@@ -1027,7 +1148,7 @@ function openCampaignPanel(campaignId){
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <b>${a.email}</b><br>
-              <small>Sent: ${a.sentAt ? formatDate(a.sentAt) : a.sentDate || ''}</small><br>
+              <small>Sent: ${a.sentAt ? formatDate(a.sentAt) : formatDate(a.sentDate)}</small><br>
               <small>Opened: ${a.opened ? formatDate(a.openedAt) : 'No'}</small>
               ${isFailed ? `<br><small class="text-danger">Failed: ${a.error || 'Unknown error'}</small>` : ''}
             </div>
@@ -1129,11 +1250,11 @@ function openContact(id){
   editType.value=currentContact.type || '';
 
   contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
-    ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${currentContact.unsubscribedAt ? formatDate(currentContact.unsubscribedAt) : ''}</small>`
+    ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${formatDate(currentContact.unsubscribedAt)}</small>`
     : `<span class="active-badge">Subscribed</span>`;
 
   contactBounceStatus.innerHTML = currentContact.bounced
-    ? `<span class="bounced-badge">Bounced / Invalid Email</span><br><small class="text-muted">Bounced: ${currentContact.bouncedAt ? formatDate(currentContact.bouncedAt) : ''}</small>${currentContact.bounceReason ? `<br><small class="text-danger">${currentContact.bounceReason}</small>` : ''}`
+    ? `<span class="bounced-badge">Bounced / Invalid Email</span><br><small class="text-muted">Bounced: ${formatDate(currentContact.bouncedAt)}</small>${currentContact.bounceReason ? `<br><small class="text-danger">${currentContact.bounceReason}</small>` : ''}`
     : `<span class="active-badge">Valid Email</span>`;
 
   notesList.innerHTML = (currentContact.notes||[])
@@ -1191,6 +1312,8 @@ async function loadActivity(email){
     return;
   }
 
+  data.sort((a,b)=>new Date(b.sentAt || b.sentDate || 0) - new Date(a.sentAt || a.sentDate || 0));
+
   data.forEach(c=>{
     const clickList = (c.clicks || [])
       .map(click => `<div><small>Clicked: ${click.url}<br>${formatDate(click.clickedAt)}</small></div>`)
@@ -1203,7 +1326,7 @@ async function loadActivity(email){
     panelCampaigns.innerHTML += `
       <div class="campaign-card">
         <b>${c.campaignName}</b><br>
-        <small>${formatDate(c.sentAt || c.sentDate)}</small><br>
+        <small>${formatDate(c.sentDate || c.sentAt)}</small><br>
         ${failedHtml || `
           <span class="${c.opened?'badge-opened':'badge-closed'}">
             ${c.opened?'Opened':'Not opened'}
@@ -1233,7 +1356,7 @@ async function loadContacts(){
 
   filtered.forEach(c=>{
     const letter = (c.lastName||'#')[0].toUpperCase();
-    if(!grouped[letter]) grouped[letter]=[];
+    if(!grouped[letter]) grhttps://github.com/ExcelRealEstateConsultantsouped[letter]=[];
     grouped[letter].push(c);
   });
 
