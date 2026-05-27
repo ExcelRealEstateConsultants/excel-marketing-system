@@ -115,13 +115,71 @@ body {
 }
 
 /* DASHBOARD */
-.kpi-card {
+.dashboard-header-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.dashboard-help {
+  color:var(--muted);
+  font-size:13px;
+}
+
+.dashboard-grid {
+  display:grid;
+  grid-template-columns:repeat(12, 1fr);
+  gap:16px;
+  margin-top:16px;
+}
+
+.dashboard-widget {
   background:white;
   border:1px solid var(--border);
-  border-radius:16px;
-  padding:20px;
-  height:100%;
-  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 8px 22px rgba(15,23,42,0.06);
+  min-height:130px;
+  cursor:grab;
+}
+
+.dashboard-widget:active {
+  cursor:grabbing;
+}
+
+.dashboard-widget-small {
+  grid-column:span 3;
+}
+
+.dashboard-widget-medium {
+  grid-column:span 6;
+}
+
+.dashboard-widget-large {
+  grid-column:span 12;
+}
+
+.widget-title-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.widget-title {
+  font-weight:800;
+  color:var(--primary);
+  margin:0;
+}
+
+.drag-handle {
+  color:var(--muted);
+  font-size:18px;
+  cursor:grab;
+  user-select:none;
 }
 
 .kpi-number {
@@ -135,6 +193,11 @@ body {
   font-size:14px;
 }
 
+.chart-wrap {
+  height:260px;
+  position:relative;
+}
+
 .dashboard-section {
   background:white;
   border:1px solid var(--border);
@@ -142,6 +205,22 @@ body {
   padding:20px;
   margin-top:20px;
   box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+
+.sortable-ghost {
+  opacity:0.35;
+}
+
+.sortable-chosen {
+  box-shadow:0 14px 30px rgba(15,23,42,0.14);
+}
+
+@media (max-width: 992px) {
+  .dashboard-widget-small,
+  .dashboard-widget-medium,
+  .dashboard-widget-large {
+    grid-column:span 12;
+  }
 }
 
 /* RECIPIENT BUILDER */
@@ -438,85 +517,142 @@ body {
 <!-- DASHBOARD -->
 <div id="dashboardTab" class="mt-4">
 
-  <h4>Dashboard</h4>
-
-  <div class="row g-3 mt-2">
-    <div class="col-md-3">
-      <div class="kpi-card">
-        <div id="dashTotalContacts" class="kpi-number">0</div>
-        <div class="kpi-label">Total Contacts</div>
-      </div>
+  <div class="dashboard-header-row">
+    <div>
+      <h4 class="mb-1">Dashboard</h4>
+      <div class="dashboard-help">Drag cards to rearrange your dashboard. Your layout saves automatically.</div>
     </div>
-
-    <div class="col-md-3">
-      <div class="kpi-card">
-        <div id="dashTotalCampaigns" class="kpi-number">0</div>
-        <div class="kpi-label">Campaigns Created</div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="kpi-card">
-        <div id="dashOpenRate" class="kpi-number">0%</div>
-        <div class="kpi-label">Open Rate</div>
-      </div>
-    </div>
-
-    <div class="col-md-3">
-      <div class="kpi-card">
-        <div id="dashClickRate" class="kpi-number">0%</div>
-        <div class="kpi-label">Click Rate</div>
-      </div>
-    </div>
+    <button class="btn btn-sm btn-outline-primary" onclick="resetDashboardLayout()">Reset Layout</button>
   </div>
 
-  <div class="row g-3 mt-1">
-    <div class="col-md-4">
-      <div class="kpi-card">
-        <div id="dashTotalSent" class="kpi-number">0</div>
-        <div class="kpi-label">Total Emails Sent</div>
+  <div id="dashboardWidgetGrid" class="dashboard-grid">
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalContacts">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Total Contacts</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashTotalContacts" class="kpi-number">0</div>
+      <div class="kpi-label">Contacts in database</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalCampaigns">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Campaigns</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashTotalCampaigns" class="kpi-number">0</div>
+      <div class="kpi-label">Campaigns created</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="openRate">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Open Rate</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashOpenRate" class="kpi-number">0%</div>
+      <div class="kpi-label">Overall open performance</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="clickRate">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Click Rate</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashClickRate" class="kpi-number">0%</div>
+      <div class="kpi-label">Overall click performance</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalSent">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Emails Sent</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashTotalSent" class="kpi-number">0</div>
+      <div class="kpi-label">Total emails sent</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalOpened">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Total Opens</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashTotalOpened" class="kpi-number">0</div>
+      <div class="kpi-label">Tracked opens</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalClicks">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Total Clicks</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="dashTotalClicks" class="kpi-number">0</div>
+      <div class="kpi-label">Tracked link clicks</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="listHealth">
+      <div class="widget-title-row">
+        <h6 class="widget-title">List Health</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div class="row">
+        <div class="col-6">
+          <div id="dashTotalUnsubscribed" class="kpi-number">0</div>
+          <div class="kpi-label">Unsubscribed</div>
+        </div>
+        <div class="col-6">
+          <div id="dashTotalBounced" class="kpi-number">0</div>
+          <div class="kpi-label">Bounced</div>
+        </div>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="kpi-card">
-        <div id="dashTotalOpened" class="kpi-number">0</div>
-        <div class="kpi-label">Total Opens</div>
+    <div class="dashboard-widget dashboard-widget-large" data-widget-id="activityTrend">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Email Activity Trend</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="activityTrendChart"></canvas>
       </div>
     </div>
 
-    <div class="col-md-4">
-      <div class="kpi-card">
-        <div id="dashTotalClicks" class="kpi-number">0</div>
-        <div class="kpi-label">Total Clicks</div>
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="campaignPerformance">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Campaign Performance</h6>
+        <span class="drag-handle">⋮⋮</span>
       </div>
-    </div>
-  </div>
-
-  <div class="row g-3 mt-1">
-    <div class="col-md-6">
-      <div class="kpi-card">
-        <div id="dashTotalUnsubscribed" class="kpi-number">0</div>
-        <div class="kpi-label">Unsubscribed Contacts</div>
+      <div class="chart-wrap">
+        <canvas id="campaignPerformanceChart"></canvas>
       </div>
     </div>
 
-    <div class="col-md-6">
-      <div class="kpi-card">
-        <div id="dashTotalBounced" class="kpi-number">0</div>
-        <div class="kpi-label">Bounced / Invalid Contacts</div>
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="engagementBreakdown">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Engagement Breakdown</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="engagementBreakdownChart"></canvas>
       </div>
     </div>
-  </div>
 
-  <div class="dashboard-section">
-    <h5>Recent Activity</h5>
-    <div id="recentActivityList"></div>
-  </div>
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="recentActivity">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Recent Activity</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="recentActivityList"></div>
+    </div>
 
-  <div class="dashboard-section">
-    <h5>Top Links Clicked</h5>
-    <div id="topLinksList"></div>
+    <div class="dashboard-widget dashboard-widget-medium" data-widget-id="topLinks">
+      <div class="widget-title-row">
+        <h6 class="widget-title">Top Links Clicked</h6>
+        <span class="drag-handle">⋮⋮</span>
+      </div>
+      <div id="topLinksList"></div>
+    </div>
+
   </div>
 
 </div>
@@ -680,6 +816,8 @@ body {
 </div>
 
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
 <script>
 
@@ -690,6 +828,8 @@ let campaignsCache = [];
 let activityCache = [];
 let currentContact = null;
 let editingCampaignId = null;
+let dashboardSortable = null;
+let dashboardCharts = {};
 
 /* CONTACT TYPES */
 let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA"]');
@@ -747,6 +887,7 @@ function showTab(t){
   if(t === 'dashboard'){
     tabDashboard.classList.add('active');
     loadDashboard();
+    setTimeout(()=>Object.values(dashboardCharts).forEach(chart=>chart.resize()), 150);
   }
 
   if(t === 'campaigns'){
@@ -761,9 +902,234 @@ function showTab(t){
 }
 
 /* DASHBOARD */
+function initDashboardDrag(){
+  if(dashboardSortable) return;
+
+  applyDashboardLayout();
+
+  dashboardSortable = Sortable.create(dashboardWidgetGrid, {
+    animation: 160,
+    handle: '.drag-handle',
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    onEnd: saveDashboardLayout
+  });
+}
+
+function saveDashboardLayout(){
+  const order = Array.from(dashboardWidgetGrid.children)
+    .map(widget => widget.dataset.widgetId)
+    .filter(Boolean);
+
+  localStorage.setItem('excelMarketingDashboardLayout', JSON.stringify(order));
+}
+
+function applyDashboardLayout(){
+  const saved = JSON.parse(localStorage.getItem('excelMarketingDashboardLayout') || '[]');
+  if(!saved.length) return;
+
+  saved.forEach(widgetId=>{
+    const widget = dashboardWidgetGrid.querySelector(`[data-widget-id="${widgetId}"]`);
+    if(widget) dashboardWidgetGrid.appendChild(widget);
+  });
+}
+
+function resetDashboardLayout(){
+  localStorage.removeItem('excelMarketingDashboardLayout');
+  location.reload();
+}
+
+function getDayKey(value){
+  const date = new Date(value);
+  if(isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0,10);
+}
+
+function getLastDays(count){
+  const days = [];
+  const today = new Date();
+
+  for(let i = count - 1; i >= 0; i--){
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  return days;
+}
+
+function shortDayLabel(dayKey){
+  const date = new Date(dayKey + 'T00:00:00');
+  return date.toLocaleDateString([], { month:'short', day:'numeric' });
+}
+
+function destroyChart(name){
+  if(dashboardCharts[name]){
+    dashboardCharts[name].destroy();
+    delete dashboardCharts[name];
+  }
+}
+
+function renderActivityTrendChart(activity){
+  destroyChart('activityTrend');
+
+  const days = getLastDays(14);
+
+  const sentMap = {};
+  const openMap = {};
+  const clickMap = {};
+
+  days.forEach(day=>{
+    sentMap[day] = 0;
+    openMap[day] = 0;
+    clickMap[day] = 0;
+  });
+
+  activity.forEach(a=>{
+    const sentDay = getDayKey(a.sentAt || a.sentDate);
+    if(sentDay && sentMap[sentDay] !== undefined && a.status !== 'failed'){
+      sentMap[sentDay]++;
+    }
+
+    const openDay = getDayKey(a.openedAt);
+    if(a.opened && openDay && openMap[openDay] !== undefined){
+      openMap[openDay]++;
+    }
+
+    (a.clicks || []).forEach(click=>{
+      const clickDay = getDayKey(click.clickedAt);
+      if(clickDay && clickMap[clickDay] !== undefined){
+        clickMap[clickDay]++;
+      }
+    });
+  });
+
+  dashboardCharts.activityTrend = new Chart(activityTrendChart, {
+    type:'line',
+    data:{
+      labels:days.map(shortDayLabel),
+      datasets:[
+        {
+          label:'Sent',
+          data:days.map(day=>sentMap[day]),
+          tension:0.35
+        },
+        {
+          label:'Opened',
+          data:days.map(day=>openMap[day]),
+          tension:0.35
+        },
+        {
+          label:'Clicked',
+          data:days.map(day=>clickMap[day]),
+          tension:0.35
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom' }
+      },
+      scales:{
+        y:{ beginAtZero:true, ticks:{ precision:0 } }
+      }
+    }
+  });
+}
+
+function renderCampaignPerformanceChart(campaigns, activity){
+  destroyChart('campaignPerformance');
+
+  const rows = campaigns
+    .slice()
+    .sort((a,b)=>new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0))
+    .slice(0,8)
+    .map(c=>{
+      const matching = activity.filter(a => a.campaignName === c.name || a.campaignName === c.subject);
+      const sent = matching.filter(a => a.status === 'sent' || !a.status).length;
+      const opened = matching.filter(a => a.opened).length;
+      const clicks = matching.reduce((sum, a) => sum + ((a.clicks || []).length), 0);
+
+      return {
+        name:c.name || c.subject || 'Untitled',
+        sent,
+        opened,
+        clicks
+      };
+    });
+
+  dashboardCharts.campaignPerformance = new Chart(campaignPerformanceChart, {
+    type:'bar',
+    data:{
+      labels:rows.map(r=>r.name.length > 18 ? r.name.slice(0,18) + '…' : r.name),
+      datasets:[
+        {
+          label:'Sent',
+          data:rows.map(r=>r.sent)
+        },
+        {
+          label:'Opened',
+          data:rows.map(r=>r.opened)
+        },
+        {
+          label:'Clicks',
+          data:rows.map(r=>r.clicks)
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom' }
+      },
+      scales:{
+        y:{ beginAtZero:true, ticks:{ precision:0 } }
+      }
+    }
+  });
+}
+
+function renderEngagementBreakdownChart(data){
+  destroyChart('engagementBreakdown');
+
+  dashboardCharts.engagementBreakdown = new Chart(engagementBreakdownChart, {
+    type:'doughnut',
+    data:{
+      labels:['Opened', 'Clicked', 'Unsubscribed', 'Bounced'],
+      datasets:[
+        {
+          data:[
+            data.totalOpened || 0,
+            data.totalClicks || 0,
+            data.totalUnsubscribed || 0,
+            data.totalBounced || 0
+          ]
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'bottom' }
+      }
+    }
+  });
+}
+
 async function loadDashboard(){
-  const res = await fetch('/api/dashboard-stats');
-  const data = await res.json();
+  const [statsRes, campaignsRes, activityRes] = await Promise.all([
+    fetch('/api/dashboard-stats'),
+    fetch('/api/campaigns'),
+    fetch('/api/activity')
+  ]);
+
+  const data = await statsRes.json();
+  const campaigns = await campaignsRes.json();
+  const activity = await activityRes.json();
 
   dashTotalContacts.innerText = data.totalContacts || 0;
   dashTotalCampaigns.innerText = data.totalCampaigns || 0;
@@ -806,6 +1172,11 @@ async function loadDashboard(){
       `;
     });
   }
+
+  renderActivityTrendChart(activity);
+  renderCampaignPerformanceChart(campaigns, activity);
+  renderEngagementBreakdownChart(data);
+  initDashboardDrag();
 }
 
 /* RECIPIENT BUILDER */
@@ -1356,7 +1727,7 @@ async function loadContacts(){
 
   filtered.forEach(c=>{
     const letter = (c.lastName||'#')[0].toUpperCase();
-    if(!grouped[letter]) grhttps://github.com/ExcelRealEstateConsultantsouped[letter]=[];
+    if(!grouped[letter]) grouped[letter]=[];
     grouped[letter].push(c);
   });
 
