@@ -793,11 +793,16 @@ body {
     <input id="campaignName" class="form-control mb-3" placeholder="Campaign Name">
     <input id="subject" class="form-control mb-3" placeholder="Subject">
 
+    <div class="feature-card mb-3">
+      <div class="feature-title mb-2">Email Content</div>
+      <div id="editor"></div>
+    </div>
+
     <div class="recipient-builder mb-3">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
           <h5 class="mb-1">Recipients</h5>
-          <div class="text-muted small">Unsubscribed and bounced contacts are automatically skipped.</div>
+          <div class="text-muted small">Choose groups here by segment, contact type, tag, or additional emails. Individual contacts are selected from each contact record.</div>
         </div>
         <div id="recipientCount" class="recipient-count">0 selected</div>
       </div>
@@ -817,16 +822,26 @@ body {
         <div id="recipientTagList"></div>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label fw-bold">Select Individual Contacts</label>
-        <input id="recipientSearch" class="form-control mb-2" placeholder="Search contacts for this campaign...">
-        <div id="recipientContactList" class="contact-select-list"></div>
-      </div>
-
       <div>
         <label class="form-label fw-bold">Additional Emails</label>
         <textarea id="extraRecipients" class="form-control" rows="2" placeholder="Optional: email1@gmail.com, email2@gmail.com"></textarea>
       </div>
+    </div>
+
+    <div class="feature-card mt-3">
+      <div class="feature-title mb-2">Campaign Actions</div>
+      <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small">Schedule date/time</label>
+          <input id="scheduleDateTime" type="datetime-local" class="form-control">
+        </div>
+        <div class="col-md-7">
+          <button id="saveCampaignButton" class="btn btn-success" onclick="saveCampaign()">Save Campaign</button>
+          <button class="btn btn-primary" onclick="sendCampaign()">Send Campaign</button>
+          <button class="btn btn-outline-primary" onclick="scheduleCampaign()">Schedule Campaign</button>
+        </div>
+      </div>
+      <div id="scheduledCampaignList" class="mt-3"></div>
     </div>
 
     <div class="feature-card">
@@ -840,28 +855,6 @@ body {
         </div>
       </div>
       <div id="templateList" class="mt-3"></div>
-    </div>
-
-    <div id="editor"></div>
-
-    <div class="feature-card mt-3">
-      <div class="feature-title mb-2">Scheduling</div>
-      <div class="row g-2 align-items-end">
-        <div class="col-md-5">
-          <label class="form-label small">Schedule date/time</label>
-          <input id="scheduleDateTime" type="datetime-local" class="form-control">
-        </div>
-        <div class="col-md-7">
-          <button class="btn btn-sm btn-outline-primary" onclick="scheduleCampaign()">Schedule Campaign</button>
-          <span class="small-muted ms-2">Uses the selected recipients, subject, and email content above.</span>
-        </div>
-      </div>
-      <div id="scheduledCampaignList" class="mt-3"></div>
-    </div>
-
-    <div class="mt-3">
-      <button id="saveCampaignButton" class="btn btn-success" onclick="saveCampaign()">Save Campaign</button>
-      <button class="btn btn-primary" onclick="sendCampaign()">Send Campaign</button>
     </div>
   </div>
 
@@ -906,6 +899,7 @@ body {
       <button class="btn btn-outline-primary" onclick="addContactType()">Add Type</button>
     </div>
 
+    <label class="form-label fw-bold small mb-1">Pipeline Stage</label>
     <select id="contactStage" class="form-control mb-2"></select>
     <input id="contactTags" class="form-control mb-2" placeholder="Tags, comma separated. Example: Investor, Reno, Hot Lead">
 
@@ -978,6 +972,13 @@ body {
   <div id="quickStageButtons"></div>
 </div>
   <input id="editTags" class="form-control mb-2" placeholder="Tags, comma separated">
+
+  <div class="feature-card">
+    <div class="feature-title mb-2">Individual Campaign Selection</div>
+    <div class="small-muted mb-2">Use this for one-off campaign recipients. Group sending still happens from the Campaigns tab.</div>
+    <button id="campaignSelectContactButton" class="btn btn-sm btn-outline-primary" onclick="toggleCurrentContactForCampaign()">Add to Campaign Recipients</button>
+    <button class="btn btn-sm btn-outline-danger" onclick="clearIndividualCampaignContacts()">Clear Selected Individuals</button>
+  </div>
 
   <button class="btn btn-primary mb-3" onclick="saveContact()">Save Changes</button>
 
@@ -1061,6 +1062,7 @@ let dashboardSortable = null;
 let dashboardCharts = {};
 let pipelineSortables = [];
 let calendarDate = new Date();
+let selectedCampaignContactIds = new Set(JSON.parse(localStorage.getItem('selectedCampaignContactIds') || '[]'));
 
 let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA","Agent","Prospect"]');
 
@@ -1096,6 +1098,19 @@ function renderTags(tags){
   const safeTags = Array.isArray(tags) ? tags : [];
   if(safeTags.length === 0) return '';
   return `<div class="mt-1">${safeTags.map(tag=>`<span class="tag-pill">${tag}</span>`).join('')}</div>`;
+}
+
+function getFallbackPipelineStages(){
+  return ['New Lead','Contacted','Appointment Set','Active Prospect','Under Contract','Pending','Closed','Past Client'];
+}
+
+function inferStageFromContact(contact){
+  if(contact && contact.stage) return contact.stage;
+  return 'New Lead';
+}
+
+function saveSelectedCampaignContacts(){
+  localStorage.setItem('selectedCampaignContactIds', JSON.stringify(Array.from(selectedCampaignContactIds)));
 }
 
 function contactName(contact){
@@ -1137,8 +1152,11 @@ async function loadPipelineStages(){
   try {
     const res = await fetch('/api/pipeline-stages');
     pipelineStagesCache = await res.json();
+    if(!Array.isArray(pipelineStagesCache) || pipelineStagesCache.length === 0){
+      pipelineStagesCache = getFallbackPipelineStages();
+    }
   } catch(e) {
-    pipelineStagesCache = ['New Lead','Contacted','Appointment Set','Active Prospect','Under Contract','Pending','Closed','Past Client'];
+    pipelineStagesCache = getFallbackPipelineStages();
   }
 
   renderStageSelects();
@@ -1722,7 +1740,7 @@ function renderRecipientBuilder(){
   renderRecipientSegments();
   renderRecipientTypes();
   renderRecipientTags();
-  renderRecipientContacts();
+  renderIndividualCampaignSummary();
   updateRecipientCount();
 }
 
@@ -1792,7 +1810,8 @@ function renderRecipientTags(){
 }
 
 function renderRecipientContacts(){
-  const search = (recipientSearch.value || '').toLowerCase();
+  if(!document.getElementById('recipientContactList')) return;
+  const search = (document.getElementById('recipientSearch')?.value || '').toLowerCase();
   recipientContactList.innerHTML = '';
 
   const filtered = contactsCache.filter(c=>{
@@ -1828,6 +1847,66 @@ function renderRecipientContacts(){
   });
 }
 
+function renderIndividualCampaignSummary(){
+  const container = document.getElementById('individualCampaignSummary');
+  if(!container) return;
+
+  const selectedContacts = contactsCache.filter(c => selectedCampaignContactIds.has(String(c.id)));
+
+  if(selectedContacts.length === 0){
+    container.innerHTML = '<div class="text-muted small">No individual contacts selected. Open a contact from the Contacts tab to add them here.</div>';
+    return;
+  }
+
+  container.innerHTML = selectedContacts.map(c=>`
+    <span class="tag-pill">
+      ${contactName(c)}
+      <button class="btn btn-sm btn-link p-0 ms-1" onclick="removeIndividualCampaignContact('${c.id}')">remove</button>
+    </span>
+  `).join('') + `<div class="small-muted mt-2">${selectedContacts.length} individual contact(s) selected.</div>`;
+}
+
+function toggleCurrentContactForCampaign(){
+  if(!currentContact) return;
+  const id = String(currentContact.id);
+
+  if(selectedCampaignContactIds.has(id)){
+    selectedCampaignContactIds.delete(id);
+  } else {
+    selectedCampaignContactIds.add(id);
+  }
+
+  saveSelectedCampaignContacts();
+  updateCampaignContactButton();
+  renderIndividualCampaignSummary();
+  updateRecipientCount();
+}
+
+function removeIndividualCampaignContact(id){
+  selectedCampaignContactIds.delete(String(id));
+  saveSelectedCampaignContacts();
+  renderIndividualCampaignSummary();
+  updateRecipientCount();
+  updateCampaignContactButton();
+}
+
+function clearIndividualCampaignContacts(){
+  selectedCampaignContactIds.clear();
+  saveSelectedCampaignContacts();
+  renderIndividualCampaignSummary();
+  updateRecipientCount();
+  updateCampaignContactButton();
+}
+
+function updateCampaignContactButton(){
+  const button = document.getElementById('campaignSelectContactButton');
+  if(!button || !currentContact) return;
+
+  const selected = selectedCampaignContactIds.has(String(currentContact.id));
+  button.innerText = selected ? 'Remove from Campaign Recipients' : 'Add to Campaign Recipients';
+  button.className = selected ? 'btn btn-sm btn-success' : 'btn btn-sm btn-outline-primary';
+}
+
 function segmentMatchesContact(segment, contact){
   const contactTags = Array.isArray(contact.tags) ? contact.tags : [];
   const segmentTags = Array.isArray(segment.tags) ? segment.tags : [];
@@ -1861,6 +1940,13 @@ function getSelectedRecipients(){
     contactsCache
       .filter(c => Array.isArray(c.tags) && c.tags.includes(box.value) && c.email && !c.unsubscribed && !c.bounced)
       .forEach(c => selectedEmails.add(c.email.trim()));
+  });
+
+  selectedCampaignContactIds.forEach(id=>{
+    const contact = contactsCache.find(c => String(c.id) === String(id));
+    if(contact && contact.email && !contact.unsubscribed && !contact.bounced){
+      selectedEmails.add(contact.email.trim());
+    }
   });
 
   document.querySelectorAll('.recipient-contact-checkbox:checked').forEach(box=>{
@@ -2210,6 +2296,7 @@ function openContact(id){
   editType.value=currentContact.type || '';
   editStage.value=currentContact.stage || 'New Lead';
   renderQuickStageButtons();
+  updateCampaignContactButton();
   editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
 
   contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
@@ -2424,7 +2511,7 @@ async function loadContacts(){
       (c.email||'')+
       formatPhone(c.phone||'')+
       (c.type||'')+
-      (c.stage||'')+
+      inferStageFromContact(c)+
       tagText+
       (c.unsubscribed ? 'unsubscribed' : 'subscribed')+
       (c.bounced ? 'bounced invalid' : 'valid')
@@ -2453,7 +2540,7 @@ async function loadContacts(){
             ${c.bounced ? '<span class="bounced-badge">Bounced</span>' : ''}
           </div>
           <div style="font-size:12px;color:#777;">
-            ${c.email || ''} | ${formatPhone(c.phone||'')} | ${c.type||''} | ${c.stage || 'New Lead'}
+            ${c.email || ''} | ${formatPhone(c.phone||'')} | ${c.type||''} | ${inferStageFromContact(c)}
           </div>
           ${renderTags(c.tags)}
         </div>
@@ -2474,7 +2561,7 @@ async function loadPipeline(){
   pipelineSortables = [];
 
   pipelineStagesCache.forEach(stage=>{
-    const contacts = contactsCache.filter(c=>(c.stage || 'New Lead') === stage);
+    const contacts = contactsCache.filter(c=>inferStageFromContact(c) === stage);
 
     const column = document.createElement('div');
     column.className = 'pipeline-column';
@@ -2664,7 +2751,7 @@ function renderCalendar(){
 
 /* INIT */
 contactSearch.addEventListener('input', loadContacts);
-recipientSearch.addEventListener('input', renderRecipientContacts);
+if(document.getElementById('recipientSearch')) recipientSearch.addEventListener('input', renderRecipientContacts);
 extraRecipients.addEventListener('input', updateRecipientCount);
 
 phone.addEventListener('input', () => normalizePhoneInput(phone));
