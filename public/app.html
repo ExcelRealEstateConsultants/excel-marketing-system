@@ -1431,6 +1431,123 @@ body {
 @media (max-width: 1200px){ .designer-shell-v2 { grid-template-columns:1fr; } }
 @media (max-width: 760px){ .email-media-flex, .email-media-flex.reverse { flex-direction:column; } .widget-card-grid { grid-template-columns:1fr; } }
 
+
+
+/* ===== EMAIL DESIGNER USABILITY + RESIZE PATCH ===== */
+.email-designer-help-strip {
+  background:#eef6ff;
+  border:1px solid #bfdbfe;
+  color:#0f3b63;
+  border-radius:14px;
+  padding:12px 14px;
+  margin:12px 0 16px 0;
+  font-size:13px;
+}
+.email-designer-help-strip b { color:var(--primary); }
+.email-block-v2 { position:relative; }
+.email-block-v2.selected { outline:3px solid rgba(0,161,67,.35); outline-offset:4px; }
+.email-block-toolbar-v2 {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.email-mini-btn-v2.danger { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+.email-mini-btn-v2.primary { background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+.email-image-resize-wrap {
+  position:relative;
+  display:inline-block;
+  max-width:100%;
+  vertical-align:top;
+}
+.email-media-flex .email-image-resize-wrap { display:block; width:100%; }
+.email-img-resize-handle {
+  position:absolute;
+  right:-8px;
+  bottom:-8px;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#00A143;
+  border:3px solid #fff;
+  box-shadow:0 3px 12px rgba(0,0,0,.25);
+  cursor:nwse-resize;
+  z-index:50;
+}
+.email-img-resize-handle::after {
+  content:'↘';
+  position:absolute;
+  inset:-4px 0 0 0;
+  text-align:center;
+  color:#fff;
+  font-size:12px;
+  line-height:18px;
+}
+.email-image-action-bar {
+  display:flex;
+  gap:6px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.email-image-action-bar button {
+  border:1px solid var(--border);
+  background:#fff;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:11px;
+  color:var(--primary);
+}
+.image-library-card-wrap { position:relative; }
+.image-library-delete {
+  position:absolute;
+  top:4px;
+  right:4px;
+  width:22px;
+  height:22px;
+  border:none;
+  border-radius:999px;
+  background:#dc2626;
+  color:#fff;
+  font-size:12px;
+  line-height:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:4;
+}
+.designer-settings-actions {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin:10px 0 12px 0;
+}
+.designer-settings-actions .btn { border-radius:12px; }
+.designer-simple-section {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:12px;
+}
+.designer-simple-section-title {
+  font-weight:800;
+  color:var(--primary);
+  font-size:13px;
+  margin-bottom:8px;
+}
+.email-image-placeholder {
+  border:2px dashed #cbd5e1;
+  background:#f8fafc;
+  color:#334155;
+  border-radius:16px;
+  padding:34px 18px;
+  text-align:center;
+  cursor:pointer;
+  transition:.2s ease;
+}
+.email-image-placeholder:hover { background:#eef6ff; border-color:#00A143; }
+@media (max-width: 900px){ .designer-shell-v2{ grid-template-columns:1fr!important; } }
+
 </style>
 </head>
 
@@ -1630,6 +1747,10 @@ body {
       <div><label>Preheader</label><input id="designerEmailPreheader" class="form-control form-control-sm" maxlength="180" placeholder="Preview text after the subject"></div>
     </div>
     <div id="emailDesignTestResults" class="email-test-panel" style="display:none;"></div>
+  </div>
+
+  <div class="email-designer-help-strip">
+    <b>How to use this designer:</b> Drag or click widgets on the left, click any block to edit it on the right, click any image area to open the image library, drag the green corner handle to resize images, and use Delete when you do not like a block or image.
   </div>
 
   <div class="designer-shell-v2">
@@ -2436,19 +2557,27 @@ function wrapBlock(block, inner){
   return `<div style="${style}">${renderOptionalMedia(block, inner)}</div>`;
 }
 
+function renderResizableImage({blockId, target='image', src='', alt='', width=100, height=0, fit='cover', radius=0, border='', shadow='', rotate='', extraStyle=''}){
+  if(!src) return '';
+  const heightStyle = Number(height||0) > 0 ? `height:${Number(height)}px;object-fit:${fit || 'cover'};` : '';
+  const widthStyle = target === 'media' ? 'width:100%;' : `width:${Number(width||100)}%;`;
+  return `<span class="email-image-resize-wrap" data-block-id="${blockId}" data-image-target="${target}">
+    <img onclick="event.stopPropagation();openEmailImagePicker('${blockId}','${target}')" src="${safeAttr(src)}" alt="${safeAttr(alt || '')}" style="${widthStyle}${heightStyle}border-radius:${Number(radius||0)}px;${border || ''}${shadow || ''}${rotate || ''}${extraStyle || ''}display:block;cursor:pointer;max-width:100%;">
+    <span class="email-img-resize-handle" title="Drag to resize image" onmousedown="startDesignerImageResize(event,'${blockId}','${target}')"></span>
+  </span>`;
+}
+
 function renderOptionalMedia(block, inner){
   if(!block.mediaUrl || ['image','imageGrid'].includes(block.type)) return inner;
   const mediaRadius = Number(block.mediaRadius||0);
   const mediaShadow = block.mediaShadow === 'yes' ? 'box-shadow:0 10px 24px rgba(15,23,42,.18);' : '';
   const mediaFit = block.mediaFit || 'cover';
-  const mediaHeight = Number(block.mediaHeight||0) > 0 ? `height:${Number(block.mediaHeight)}px;object-fit:${mediaFit};` : '';
-  const img = `<div class="media-side" style="--media-width:${Number(block.mediaWidth||38)}%;"><img onclick="event.stopPropagation();openEmailImagePicker('${block.id}','media')" src="${safeAttr(block.mediaUrl)}" style="width:100%;${mediaHeight}border-radius:${mediaRadius}px;display:block;cursor:pointer;${mediaShadow}"></div>`;
+  const img = `<div class="media-side" style="--media-width:${Number(block.mediaWidth||38)}%;">${renderResizableImage({blockId:block.id,target:'media',src:block.mediaUrl,alt:'Block image',width:100,height:block.mediaHeight,fit:mediaFit,radius:mediaRadius,shadow:mediaShadow})}</div>`;
   if(block.mediaPosition === 'left') return `<div class="email-media-flex">${img}<div class="content-side">${inner}</div></div>`;
   if(block.mediaPosition === 'right') return `<div class="email-media-flex reverse">${img}<div class="content-side">${inner}</div></div>`;
   if(block.mediaPosition === 'bottom') return `<div>${inner}<div style="height:14px"></div>${img}</div>`;
   return `<div>${img}<div style="height:14px"></div>${inner}</div>`;
 }
-
 function renderDesignerBlockInner(block){
   const align = block.align || 'left';
   if(block.type === 'header') return `<div style="text-align:${align};"><h1 style="margin:0;font-size:30px;">${safeHtml(block.title)}</h1><p style="margin:8px 0 0 0;opacity:.9;">${safeHtml(block.subtitle)}</p></div>`;
@@ -2461,7 +2590,7 @@ function renderDesignerBlockInner(block){
     const height = Number(block.imageHeight||0) > 0 ? `height:${Number(block.imageHeight)}px;object-fit:${block.imageFit || 'cover'};` : '';
     const border = Number(block.imageBorderWidth||0) > 0 ? `border:${Number(block.imageBorderWidth)}px solid ${block.imageBorderColor || '#e5e7eb'};` : '';
     const rotate = Number(block.imageRotate||0) ? `transform:rotate(${Number(block.imageRotate)}deg);` : '';
-    return url ? `<div style="text-align:${align};"><img onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')" src="${safeAttr(url)}" alt="${safeAttr(block.alt)}" style="width:${Number(block.imageWidth||100)}%;${height}border-radius:${shapeRadius}px;${border}${shadow}${rotate}display:inline-block;cursor:pointer;"></div>` : `<div class="email-image-placeholder" onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')"><b>Click to choose an image</b><br><small>Upload or select from your image library</small></div>`;
+    return url ? `<div style="text-align:${align};">${renderResizableImage({blockId:block.id,target:'image',src:url,alt:block.alt,width:block.imageWidth,height:block.imageHeight,fit:block.imageFit,radius:shapeRadius,border,shadow,rotate,extraStyle:'display:inline-block;'})}<div class="email-image-action-bar"><button onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')">Change Image</button><button onclick="event.stopPropagation();removeDesignerBlockImage('${block.id}','image')">Remove Image</button></div></div>` : `<div class="email-image-placeholder" onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')"><b>Click to choose an image</b><br><small>Upload or select from your image library</small></div>`;
   }
   if(block.type === 'button'){
     const size = block.buttonSize === 'large' ? '15px 28px' : block.buttonSize === 'small' ? '9px 16px' : '12px 22px';
@@ -2536,8 +2665,9 @@ function renderEmailDesigner(autosave=true){
     canvas.innerHTML = designerBlocks.map(block=>`
       <div class="email-block-v2 ${selectedDesignerBlockId===block.id?'selected':''}" data-block-id="${block.id}" onclick="selectDesignerBlock('${block.id}')">
         <div class="email-block-toolbar-v2" onclick="event.stopPropagation()">
+          <button class="email-mini-btn-v2 primary" onclick="selectDesignerBlock('${block.id}')">Edit</button>
           <button class="email-mini-btn-v2" onclick="duplicateDesignerBlock('${block.id}')">Copy</button>
-          <button class="email-mini-btn-v2" onclick="removeDesignerBlock('${block.id}')">Delete</button>
+          <button class="email-mini-btn-v2 danger" onclick="removeDesignerBlock('${block.id}')">Delete</button>
         </div>
         ${wrapBlock(block, renderDesignerBlockInner(block))}
       </div>
@@ -2571,11 +2701,18 @@ function renderEmailDesignerSettings(){
   `;
 
   if(!block){
-    el.innerHTML = html + '<div class="text-muted small">Select a block to customize it.</div>';
+    el.innerHTML = html + '<div class="designer-simple-section"><div class="designer-simple-section-title">No block selected</div><div class="text-muted small">Click a block in the canvas to edit it. You can also drag widgets from the left into the email body.</div></div>';
     return;
   }
 
   html += `<div class="designer-panel-title">Selected: ${block.type}</div>
+    <div class="designer-settings-actions">
+      <button class="btn btn-sm btn-outline-primary" onclick="duplicateDesignerBlock('${block.id}')">Copy Block</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="removeDesignerBlock('${block.id}')">Delete Block</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Add Image to Block</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="removeDesignerBlockImage('${block.id}','media')">Remove Block Image</button>
+    </div>
+    <div class="designer-simple-section"><div class="designer-simple-section-title">Block Style</div>
     <div class="setting-grid-v2">
       ${setInput(block,'bg','Block BG','color')}
       ${setInput(block,'text','Text Color','color')}
@@ -2585,15 +2722,15 @@ function renderEmailDesignerSettings(){
       ${setInput(block,'borderColor','Border Color','color')}
       ${setSelect('align','Align',['left','center','right'])}
       ${setInput(block,'bgImage','Block BG Image')}
-    </div>
-    <hr>
+    </div></div>
+    <div class="designer-simple-section">
     <div class="designer-panel-title">Image Inside This Block</div>
     <div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Library</button></div></div>
     <div class="setting-grid-v2 mt-2">
       ${setSelect('mediaPosition','Position',['top','bottom','left','right'])}
       ${setInput(block,'mediaWidth','Image %','number')}
       ${setInput(block,'mediaRadius','Image Radius','number')}${setInput(block,'mediaHeight','Height px','number')}${setSelect('mediaFit','Fit',['cover','contain','fill'])}${setSelect('mediaShadow','Shadow',['no','yes'])}
-    </div>
+    </div></div>
     <hr>
   `;
 
@@ -2680,16 +2817,23 @@ function loadSavedEmailDesignerDraft(){
 }
 
 async function loadEmailImagesFromServer(){
+  const localImages = JSON.parse(localStorage.getItem('excelEmailImageLibrary') || '[]');
   try {
     const res = await fetch('/api/email-images');
     if(!res.ok) throw new Error('Image library unavailable');
-    const data = await res.json();
-    if(Array.isArray(data)) {
-      designerImageLibrary = data;
+    const serverImages = await res.json();
+    if(Array.isArray(serverImages)) {
+      const merged = [];
+      const seen = new Set();
+      [...serverImages, ...localImages, ...designerImageLibrary].forEach(img=>{
+        const key = img.id || img.data;
+        if(img && img.data && !seen.has(key)) { seen.add(key); merged.push(img); }
+      });
+      designerImageLibrary = merged.slice(0,100);
       localStorage.setItem('excelEmailImageLibrary', JSON.stringify(designerImageLibrary.slice(0,60)));
     }
   } catch(e) {
-    designerImageLibrary = JSON.parse(localStorage.getItem('excelEmailImageLibrary') || '[]');
+    designerImageLibrary = localImages.length ? localImages : designerImageLibrary;
   }
   renderEmailImageLibrary();
   renderEmailImagePickerGrid();
@@ -2733,8 +2877,8 @@ function handleEmailImageUpload(event){
 function renderEmailImageLibrary(){
   const el = document.getElementById('emailImageLibrary');
   if(!el) return;
-  if(!designerImageLibrary.length){ el.innerHTML = '<div class="text-muted small">No images uploaded yet.</div>'; return; }
-  el.innerHTML = designerImageLibrary.slice(0,18).map(img=>`<div class="image-library-item" title="Click to add to selected block" onclick="useLibraryImage('${img.id}')"><img src="${img.data}"></div>`).join('');
+  if(!designerImageLibrary.length){ el.innerHTML = '<div class="text-muted small">No images uploaded yet. Upload images here and they will be reusable.</div>'; return; }
+  el.innerHTML = designerImageLibrary.slice(0,24).map(img=>`<div class="image-library-card-wrap"><button class="image-library-delete" title="Delete image" onclick="event.stopPropagation();deleteEmailLibraryImage('${img.id}')">×</button><div class="image-library-item" title="Click to add to selected block" onclick="useLibraryImage('${img.id}')"><img src="${img.data}"></div></div>`).join('');
 }
 
 function openEmailImagePicker(blockId=null,target='image'){
@@ -2758,9 +2902,12 @@ function renderEmailImagePickerGrid(){
     return;
   }
   grid.innerHTML = designerImageLibrary.map(img=>`
-    <div class="image-picker-card" onclick="chooseImageForActiveTarget('${img.id}')">
-      <img src="${img.data}">
-      <div>${safeHtml(img.name || 'Image')}</div>
+    <div class="image-picker-card image-library-card-wrap">
+      <button class="image-library-delete" title="Delete image" onclick="event.stopPropagation();deleteEmailLibraryImage('${img.id}')">×</button>
+      <div onclick="chooseImageForActiveTarget('${img.id}')">
+        <img src="${img.data}">
+        <div>${safeHtml(img.name || 'Image')}</div>
+      </div>
     </div>
   `).join('');
 }
@@ -2821,6 +2968,63 @@ async function clearEmailImageLibrary(){
   try { await fetch('/api/email-images', { method:'DELETE' }); } catch(e) {}
   renderEmailImageLibrary();
   renderEmailImagePickerGrid();
+}
+
+
+function removeDesignerBlockImage(id, target='image'){
+  const block = designerBlocks.find(b=>b.id===id);
+  if(!block) return;
+  if(target === 'media'){
+    block.mediaUrl = '';
+  } else if(block.type === 'image'){
+    block.imageUrl = '';
+    block.mediaUrl = '';
+  } else {
+    block.mediaUrl = '';
+  }
+  renderEmailDesigner();
+}
+
+async function deleteEmailLibraryImage(id){
+  const image = designerImageLibrary.find(img=>String(img.id)===String(id));
+  if(!image) return;
+  if(!confirm('Delete this image from the image library?')) return;
+  designerImageLibrary = designerImageLibrary.filter(img=>String(img.id)!==String(id));
+  localStorage.setItem('excelEmailImageLibrary', JSON.stringify(designerImageLibrary.slice(0,60)));
+  try { await fetch('/api/email-images/' + encodeURIComponent(id), { method:'DELETE' }); } catch(e) {}
+  renderEmailImageLibrary();
+  renderEmailImagePickerGrid();
+}
+
+function startDesignerImageResize(event, blockId, target='image'){
+  event.preventDefault();
+  event.stopPropagation();
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  selectDesignerBlock(blockId);
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const startWidth = target === 'media' ? Number(block.mediaWidth || 38) : Number(block.imageWidth || 100);
+  const startHeight = target === 'media' ? Number(block.mediaHeight || 0) : Number(block.imageHeight || 0);
+  const move = (e)=>{
+    const deltaX = e.clientX - startX;
+    const deltaY = e.clientY - startY;
+    if(target === 'media'){
+      block.mediaWidth = Math.max(15, Math.min(90, Math.round(startWidth + deltaX / 5)));
+      if(startHeight > 0 || Math.abs(deltaY) > 12) block.mediaHeight = Math.max(40, Math.round((startHeight || 180) + deltaY));
+    } else {
+      block.imageWidth = Math.max(10, Math.min(100, Math.round(startWidth + deltaX / 5)));
+      if(startHeight > 0 || Math.abs(deltaY) > 12) block.imageHeight = Math.max(40, Math.round((startHeight || 220) + deltaY));
+    }
+    renderEmailDesigner(false);
+  };
+  const up = ()=>{
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    saveEmailDesignLocal(false);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
 }
 
 function syncDesignerMetaFromInputs(){
