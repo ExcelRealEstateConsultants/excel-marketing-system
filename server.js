@@ -121,6 +121,55 @@ function escapeHtml(value) {
     .replaceAll("'", '&#039;');
 }
 
+
+function parseTags(value) {
+  if (Array.isArray(value)) return value.map(tag => String(tag || '').trim()).filter(Boolean);
+  return String(value || '')
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+}
+
+function csvEscape(value) {
+  const stringValue = String(value ?? '');
+  if (/[",\n\r]/.test(stringValue)) {
+    return `"${stringValue.replaceAll('"', '""')}"`;
+  }
+  return stringValue;
+}
+
+function buildContactFromPayload(payload = {}) {
+  const stage = defaultStage(payload.stage || 'New Lead');
+  const notes = [];
+
+  if (payload.note || payload.notes) {
+    notes.push({
+      text: String(payload.note || payload.notes || '').trim(),
+      date: new Date().toISOString()
+    });
+  }
+
+  return {
+    id: Date.now() + Math.floor(Math.random() * 1000000),
+    firstName: payload.firstName || '',
+    lastName: payload.lastName || '',
+    email: payload.email || '',
+    phone: normalizePhone(payload.phone),
+    type: payload.type || 'Unassigned',
+    stage,
+    stageUpdatedAt: new Date().toISOString(),
+    stageHistory: [{ stage, date: new Date().toISOString() }],
+    tags: parseTags(payload.tags),
+    unsubscribed: false,
+    unsubscribedAt: null,
+    bounced: false,
+    bouncedAt: null,
+    bounceReason: '',
+    notes,
+    tasks: []
+  };
+}
+
 function isBounceError(message = '') {
   const m = String(message).toLowerCase();
 
@@ -286,32 +335,85 @@ app.get('/api/contacts', (req, res) => {
 
 app.post('/api/contacts', (req, res) => {
   const contacts = loadContacts();
-  const stage = defaultStage(req.body.stage || 'New Lead');
-
-  const newContact = {
-    id: Date.now(),
-    firstName: req.body.firstName || '',
-    lastName: req.body.lastName || '',
-    email: req.body.email || '',
-    phone: normalizePhone(req.body.phone),
-    type: req.body.type || 'Unassigned',
-    stage,
-    stageUpdatedAt: new Date().toISOString(),
-    stageHistory: [{ stage, date: new Date().toISOString() }],
-    tags: Array.isArray(req.body.tags) ? req.body.tags : [],
-    unsubscribed: false,
-    unsubscribedAt: null,
-    bounced: false,
-    bouncedAt: null,
-    bounceReason: '',
-    notes: [],
-    tasks: []
-  };
+  const newContact = buildContactFromPayload(req.body);
 
   contacts.push(newContact);
   saveContacts(contacts);
 
   res.json({ success: true, contact: newContact });
+});
+
+
+app.post('/api/contacts/import', (req, res) => {
+  const incoming = Array.isArray(req.body.contacts) ? req.body.contacts : [];
+  const contacts = loadContacts();
+
+  const existingEmails = new Set(contacts.map(c => normalizeEmail(c.email)).filter(Boolean));
+  const existingPhones = new Set(contacts.map(c => normalizePhone(c.phone)).filter(Boolean));
+  const seenEmails = new Set();
+  const seenPhones = new Set();
+
+  const importedContacts = [];
+  const skippedRows = [];
+
+  incoming.forEach((row, index) => {
+    const emailKey = normalizeEmail(row.email);
+    const phoneKey = normalizePhone(row.phone);
+    const reasons = [];
+
+    if (!emailKey && !phoneKey) reasons.push('Missing email and phone');
+    if (emailKey && (existingEmails.has(emailKey) || seenEmails.has(emailKey))) reasons.push('Duplicate email');
+    if (phoneKey && (existingPhones.has(phoneKey) || seenPhones.has(phoneKey))) reasons.push('Duplicate phone');
+
+    if (reasons.length) {
+      skippedRows.push({ index, row, reasons });
+      return;
+    }
+
+    const newContact = buildContactFromPayload(row);
+    importedContacts.push(newContact);
+    contacts.push(newContact);
+
+    if (emailKey) seenEmails.add(emailKey);
+    if (phoneKey) seenPhones.add(phoneKey);
+  });
+
+  saveContacts(contacts);
+
+  res.json({
+    success: true,
+    imported: importedContacts.length,
+    skipped: skippedRows.length,
+    skippedRows,
+    contacts: importedContacts
+  });
+});
+
+app.get('/api/contacts/export', (req, res) => {
+  const contacts = loadContacts();
+  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Type', 'Stage', 'Tags', 'Unsubscribed', 'Bounced', 'Open Tasks', 'Notes'];
+
+  const rows = contacts.map(contact => [
+    contact.firstName || '',
+    contact.lastName || '',
+    contact.email || '',
+    contact.phone || '',
+    contact.type || '',
+    contact.stage || 'New Lead',
+    Array.isArray(contact.tags) ? contact.tags.join(', ') : '',
+    contact.unsubscribed ? 'Yes' : 'No',
+    contact.bounced ? 'Yes' : 'No',
+    Array.isArray(contact.tasks) ? contact.tasks.filter(task => !task.done).length : 0,
+    Array.isArray(contact.notes) ? contact.notes.map(note => note.text || '').join(' | ') : ''
+  ]);
+
+  const csv = [headers, ...rows]
+    .map(row => row.map(csvEscape).join(','))
+    .join('\n');
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="excel-crm-contacts-export.csv"');
+  res.send(csv);
 });
 
 app.put('/api/contacts/:id', (req, res) => {
