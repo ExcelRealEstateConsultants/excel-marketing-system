@@ -1232,6 +1232,21 @@ body {
     <button class="btn btn-sm btn-outline-danger" onclick="clearIndividualCampaignContacts()">Clear Selected Individuals</button>
   </div>
 
+
+
+  <div class="feature-card">
+    <div class="feature-title mb-2">Text Message</div>
+    <div class="small-muted mb-2">Send a one-on-one SMS text to this contact using Twilio.</div>
+    <textarea id="smsMessage" class="form-control mb-2" rows="3" maxlength="1500" placeholder="Type your text message here..."></textarea>
+    <button class="btn btn-sm btn-success" onclick="sendSmsToCurrentContact()">Send Text</button>
+    <div id="smsSendStatus" class="small-muted mt-2"></div>
+  </div>
+
+  <div class="section">
+    <h6>SMS History</h6>
+    <div id="contactSmsHistory"></div>
+  </div>
+
   <button class="btn btn-primary mb-3" onclick="saveContact()">Save Changes</button>
 
   <div class="section">
@@ -2760,6 +2775,7 @@ function openContact(id){
   renderContactTasks();
   renderContactTimeline([]);
   loadActivity(currentContact.email);
+  loadSmsHistory();
 }
 
 function renderContactQuickSummary(){
@@ -2873,6 +2889,95 @@ async function saveContact(){
 
   currentContact = contactsCache.find(c=>c.id==currentContact.id);
   openContact(currentContact.id);
+}
+
+
+async function sendSmsToCurrentContact(){
+  if(!currentContact) return;
+
+  const message = (smsMessage.value || '').trim();
+
+  if(!currentContact.phone){
+    alert('This contact does not have a phone number yet.');
+    return;
+  }
+
+  if(!message){
+    alert('Please type a text message first.');
+    return;
+  }
+
+  smsSendStatus.innerText = 'Sending text...';
+
+  try {
+    const res = await fetch('/api/send-sms', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contactId: currentContact.id,
+        to: currentContact.phone,
+        message
+      })
+    });
+
+    const data = await res.json();
+
+    if(data.success){
+      smsMessage.value = '';
+      smsSendStatus.innerText = 'Text sent successfully.';
+      await loadSmsHistory();
+      renderContactTimeline([]);
+    } else {
+      smsSendStatus.innerText = data.error || 'Text could not be sent.';
+      alert(data.error || 'Text could not be sent.');
+      await loadSmsHistory();
+    }
+  } catch(error) {
+    smsSendStatus.innerText = 'Text could not be sent. Check Twilio settings and server logs.';
+    alert('Text could not be sent. Check Twilio settings and server logs.');
+    console.error('SMS send error:', error);
+  }
+}
+
+async function loadSmsHistory(){
+  if(!currentContact) return;
+
+  try {
+    const res = await fetch('/api/sms-activity?contactId=' + currentContact.id);
+    const data = await res.json();
+    renderSmsHistory(Array.isArray(data) ? data : []);
+  } catch(error) {
+    contactSmsHistory.innerHTML = '<div class="text-muted small">SMS history could not be loaded.</div>';
+  }
+}
+
+function renderSmsHistory(items){
+  contactSmsHistory.innerHTML = '';
+
+  if(!items.length){
+    contactSmsHistory.innerHTML = '<div class="text-muted small">No text messages yet.</div>';
+    return;
+  }
+
+  items
+    .slice()
+    .sort((a,b)=>new Date(b.createdAt || b.sentAt || 0) - new Date(a.createdAt || a.sentAt || 0))
+    .forEach(item=>{
+      const failed = item.status === 'failed';
+      contactSmsHistory.innerHTML += `
+        <div class="activity-row ${failed ? 'task-overdue' : ''}">
+          <div class="d-flex justify-content-between align-items-start gap-2">
+            <div>
+              <b>${item.direction === 'inbound' ? 'Incoming Text' : 'Outgoing Text'}</b><br>
+              <small>${formatDate(item.sentAt || item.createdAt)}</small><br>
+              <div class="mt-2">${item.message || ''}</div>
+              ${item.error ? `<small class="text-danger">${item.error}</small>` : ''}
+            </div>
+            <span class="status-badge">${item.status || 'sent'}</span>
+          </div>
+        </div>
+      `;
+    });
 }
 
 function closePanel(){
