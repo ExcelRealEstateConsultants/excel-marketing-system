@@ -653,6 +653,88 @@ app.post('/api/send-sms', async (req, res) => {
   }
 });
 
+
+app.post('/api/send-text-campaign', async (req, res) => {
+  const smsActivity = loadSmsActivity();
+  const campaignName = String(req.body.name || 'Untitled Text Campaign').trim();
+  const message = String(req.body.message || '').trim();
+  const recipients = Array.isArray(req.body.recipients) ? req.body.recipients : [];
+
+  if (!message) {
+    return res.status(400).json({ success: false, error: 'A message is required before sending a text campaign.' });
+  }
+
+  if (recipients.length === 0) {
+    return res.status(400).json({ success: false, error: 'At least one recipient is required before sending a text campaign.' });
+  }
+
+  const results = [];
+  let sent = 0;
+  let failed = 0;
+
+  for (const recipient of recipients) {
+    const to = normalizeSmsPhone(recipient.to || recipient.phone || '');
+
+    const baseRecord = {
+      id: Date.now() + Math.floor(Math.random() * 100000),
+      campaignName,
+      contactId: recipient.contactId || null,
+      contactName: recipient.contactName || '',
+      to,
+      from: normalizeSmsPhone(TWILIO_PHONE_NUMBER),
+      message,
+      direction: 'outbound',
+      provider: 'Twilio',
+      type: 'text-campaign',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      sentAt: null,
+      twilioSid: null,
+      error: ''
+    };
+
+    if (!to) {
+      failed++;
+      const failedRecord = { ...baseRecord, status: 'failed', error: 'Missing phone number.' };
+      smsActivity.unshift(failedRecord);
+      results.push(failedRecord);
+      continue;
+    }
+
+    try {
+      const twilioResult = await sendTwilioSms({ to, body: message });
+      sent++;
+      const sentRecord = {
+        ...baseRecord,
+        status: twilioResult.status || 'sent',
+        sentAt: new Date().toISOString(),
+        twilioSid: twilioResult.sid || null
+      };
+      smsActivity.unshift(sentRecord);
+      results.push(sentRecord);
+    } catch (error) {
+      failed++;
+      const failedRecord = {
+        ...baseRecord,
+        status: 'failed',
+        error: error.message || 'Unknown SMS failure'
+      };
+      smsActivity.unshift(failedRecord);
+      results.push(failedRecord);
+    }
+  }
+
+  saveSmsActivity(smsActivity);
+
+  res.json({
+    success: sent > 0,
+    message: `Text campaign finished. Sent: ${sent}. Failed: ${failed}.`,
+    sent,
+    failed,
+    results
+  });
+});
+
 /* ================= UNSUBSCRIBE ================= */
 app.get('/unsubscribe', (req, res) => {
   const email = normalizeEmail(req.query.email);
