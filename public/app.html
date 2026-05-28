@@ -1771,6 +1771,102 @@ body {
   margin-top:10px;
 }
 
+.social-picker-v3 {
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+.social-picker-title-v3 {
+  font-weight:900;
+  color:#042C49;
+  margin-bottom:8px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+}
+.social-picker-grid-v3 {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(92px, 1fr));
+  gap:8px;
+}
+.social-picker-card-v3 {
+  border:1px solid #e2e8f0;
+  background:#ffffff;
+  border-radius:14px;
+  padding:10px 8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:7px;
+  cursor:grab;
+  user-select:none;
+  transition:.15s ease;
+  position:relative;
+}
+.social-picker-card-v3:hover {
+  transform:translateY(-1px);
+  box-shadow:0 8px 18px rgba(15,23,42,.10);
+}
+.social-picker-card-v3.selected {
+  border-color:#00A143;
+  box-shadow:0 0 0 3px rgba(0,161,67,.12);
+}
+.social-picker-card-v3 input {
+  position:absolute;
+  top:7px;
+  right:7px;
+  accent-color:#00A143;
+}
+.social-brand-icon-v3,
+.social-placed-icon-v3 {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  color:#ffffff;
+  text-decoration:none!important;
+  cursor:pointer;
+  box-shadow:0 7px 16px rgba(15,23,42,.14);
+  flex:0 0 auto;
+}
+.social-brand-icon-v3 svg,
+.social-placed-icon-v3 svg {
+  width:20px;
+  height:20px;
+  fill:currentColor;
+  display:block;
+}
+.social-picker-name-v3 {
+  font-size:11px;
+  font-weight:800;
+  color:#334155;
+  text-align:center;
+}
+.social-display-row-v3 {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+  justify-content:center;
+}
+.social-display-row-v3.left { justify-content:flex-start; }
+.social-display-row-v3.right { justify-content:flex-end; }
+.social-placed-icon-v3.missing-url {
+  outline:2px dashed rgba(15,23,42,.28);
+  outline-offset:3px;
+}
+.social-icon-helper-v3 {
+  font-size:12px;
+  color:#64748b;
+  margin-top:10px;
+  text-align:center;
+}
+
 @media (max-width: 900px){ .designer-shell-v2{ grid-template-columns:1fr!important; } }
 
 </style>
@@ -2665,7 +2761,7 @@ function emailBlockDefaults(type){
     button:{...base,label:'Click Here',url:'#',buttonBg:'#00A143',buttonText:'#ffffff',buttonRadius:8,buttonSize:'medium',fullWidth:'no',align:'center'},
     divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:18},
     spacer:{...base,height:32,padding:0},
-    social:{...base,facebook:'',instagram:'',linkedin:'',youtube:'',x:'',website:'',useBrandColors:'yes',customBg:'#042C49',customText:'#ffffff',iconShape:'circle',iconSize:40,showLabels:'no',align:'center'},
+    social:{...base,selectedSocialIcons:['facebook','instagram','linkedin'],facebook:'',instagram:'',linkedin:'',youtube:'',x:'',website:'',useBrandColors:'yes',customBg:'#042C49',customText:'#ffffff',iconShape:'circle',iconSize:40,showLabels:'no',align:'center'},
     video:{...base,title:'Watch the Video',videoUrl:'#',imageUrl:'',buttonLabel:'Watch Video',buttonBg:'#00A143'},
     table:{...base,title:'Data Table',headers:'Item,Details,Status',rows:'Open House,Saturday 11-2,Scheduled\nFollow Up,Call interested buyer,Pending'},
     article:{...base,title:'Feature Article',body:'Use this for a market update, listing highlight, newsletter story, or client education.',buttonLabel:'Read More',buttonUrl:'',mediaUrl:'',mediaPosition:'top',mediaWidth:40,borderWidth:1,radius:12},
@@ -2833,7 +2929,7 @@ function renderOptionalMedia(block, inner){
   if(block.mediaPosition === 'bottom') return `<div>${inner}<div style="height:14px"></div>${img}</div>`;
   return `<div>${img}<div style="height:14px"></div>${inner}</div>`;
 }
-function renderDesignerBlockInner(block){
+function renderDesignerBlockInner(block, final=false){
   const align = block.align || 'left';
   if(block.type === 'header') return `<div style="text-align:${align};"><h1 style="margin:0;font-size:30px;">${safeHtml(block.title)}</h1><p style="margin:8px 0 0 0;opacity:.9;">${safeHtml(block.subtitle)}</p></div>`;
   if(block.type === 'heading') return `<div style="text-align:${align};"><h2 style="margin:0;color:inherit;">${safeHtml(block.title)}</h2>${block.subtitle ? `<p style="margin:8px 0 0 0;">${safeHtml(block.subtitle)}</p>` : ''}</div>`;
@@ -2852,7 +2948,7 @@ function renderDesignerBlockInner(block){
   }
   if(block.type === 'divider') return `<div style="text-align:center;"><div style="display:inline-block;width:${Number(block.lineWidth||100)}%;border-top:${Number(block.thickness||2)}px solid ${block.lineColor || '#00A143'};"></div></div>`;
   if(block.type === 'spacer') return `<div style="height:${Number(block.height||32)}px;"></div>`;
-  if(block.type === 'social') return renderSocialBlock(block);
+  if(block.type === 'social') return renderSocialBlock(block, final);
   if(block.type === 'video'){
     const img = block.imageUrl || block.mediaUrl;
     return `<div style="text-align:center;">${img ? `<img src="${safeAttr(img)}" style="width:100%;border-radius:12px;display:block;margin-bottom:14px;">` : ''}<h3 style="margin:0 0 12px 0;">${safeHtml(block.title)}</h3><a href="${safeAttr(block.videoUrl)}" style="display:inline-block;background:${block.buttonBg || '#00A143'};color:white;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold;">▶ ${safeHtml(block.buttonLabel)}</a></div>`;
@@ -2872,29 +2968,70 @@ function renderDesignerBlockInner(block){
 }
 
 const socialIconMeta = [
-  ['facebook','f','Facebook'],
-  ['instagram','◎','Instagram'],
-  ['linkedin','in','LinkedIn'],
-  ['youtube','▶','YouTube'],
-  ['x','X','X'],
-  ['website','🌐','Website']
+  { key:'facebook', name:'Facebook', brand:'#1877F2', svg:'<svg viewBox="0 0 24 24"><path d="M14.5 8.7V6.9c0-.8.2-1.2 1.3-1.2H17V2.4c-.6-.1-1.6-.2-2.8-.2-2.8 0-4.8 1.7-4.8 4.8v1.7H6.3v3.7h3.1v9.4h3.8v-9.4h3.1l.5-3.7h-3.6Z"/></svg>' },
+  { key:'instagram', name:'Instagram', brand:'#E4405F', svg:'<svg viewBox="0 0 24 24"><path d="M7.7 2.5h8.6c2.9 0 5.2 2.3 5.2 5.2v8.6c0 2.9-2.3 5.2-5.2 5.2H7.7c-2.9 0-5.2-2.3-5.2-5.2V7.7c0-2.9 2.3-5.2 5.2-5.2Zm0 1.9c-1.8 0-3.3 1.5-3.3 3.3v8.6c0 1.8 1.5 3.3 3.3 3.3h8.6c1.8 0 3.3-1.5 3.3-3.3V7.7c0-1.8-1.5-3.3-3.3-3.3H7.7Zm4.3 3.2a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8Zm0 1.9a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Zm4.7-2.8a1.1 1.1 0 1 1 0 2.2 1.1 1.1 0 0 1 0-2.2Z"/></svg>' },
+  { key:'linkedin', name:'LinkedIn', brand:'#0A66C2', svg:'<svg viewBox="0 0 24 24"><path d="M5.3 8.8h3.5v11H5.3v-11Zm1.8-5.3a2 2 0 1 1 0 4 2 2 0 0 1 0-4Zm4.2 5.3h3.3v1.5h.1c.5-.9 1.6-1.8 3.3-1.8 3.5 0 4.1 2.3 4.1 5.2v6.1h-3.5v-5.4c0-1.3 0-2.9-1.8-2.9s-2.1 1.4-2.1 2.8v5.5h-3.5v-11Z"/></svg>' },
+  { key:'youtube', name:'YouTube', brand:'#FF0000', svg:'<svg viewBox="0 0 24 24"><path d="M21.6 7.2s-.2-1.6-.9-2.3c-.9-.9-1.9-.9-2.3-1C15.2 3.7 12 3.7 12 3.7s-3.2 0-6.4.2c-.5.1-1.5.1-2.3 1-.7.7-.9 2.3-.9 2.3S2.2 9.1 2.2 11v1.8c0 1.9.2 3.8.2 3.8s.2 1.6.9 2.3c.9.9 2 .9 2.5 1 1.8.2 6.2.2 6.2.2s3.2 0 6.4-.2c.5-.1 1.5-.1 2.3-1 .7-.7.9-2.3.9-2.3s.2-1.9.2-3.8V11c0-1.9-.2-3.8-.2-3.8ZM10.1 14.8V8.4l5.9 3.2-5.9 3.2Z"/></svg>' },
+  { key:'x', name:'X', brand:'#111827', svg:'<svg viewBox="0 0 24 24"><path d="M13.9 10.4 21.3 2h-1.8l-6.4 7.3L8 2H2l7.8 11.3L2 22h1.8l6.8-7.7L16 22h6l-8.1-11.6Zm-2.4 2.7-.8-1.1L4.4 3.3h2.7l5 6.9.8 1.1 6.6 9.3h-2.7l-5.3-7.5Z"/></svg>' },
+  { key:'website', name:'Website', brand:'#00A143', svg:'<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.9 6h-3a15 15 0 0 0-1.4-3.1A8.1 8.1 0 0 1 18.9 8ZM12 4.1c.7 1 1.3 2.3 1.7 3.9h-3.4c.4-1.6 1-2.9 1.7-3.9ZM4.3 14a8.4 8.4 0 0 1 0-4h3.4a16.6 16.6 0 0 0 0 4H4.3Zm.8 2h3c.3 1.2.8 2.3 1.4 3.1A8.1 8.1 0 0 1 5.1 16Zm3-8h-3a8.1 8.1 0 0 1 4.4-3.1A15 15 0 0 0 8.1 8ZM12 19.9c-.7-1-1.3-2.3-1.7-3.9h3.4c-.4 1.6-1 2.9-1.7 3.9Zm2.1-5.9H9.9a14.7 14.7 0 0 1 0-4h4.2a14.7 14.7 0 0 1 0 4Zm.4 5.1c.6-.8 1.1-1.9 1.4-3.1h3a8.1 8.1 0 0 1-4.4 3.1Zm1.8-5.1a16.6 16.6 0 0 0 0-4h3.4a8.4 8.4 0 0 1 0 4h-3.4Z"/></svg>' }
 ];
 
-function socialIconStyle(block, key){
-  const bg = block.useBrandColors === 'no' ? (block.customBg || '#042C49') : (socialBrandColors[key] || '#042C49');
-  const text = block.customText || '#ffffff';
-  const size = Number(block.iconSize || 38);
-  const radius = block.iconShape === 'square' ? 7 : block.iconShape === 'rounded' ? 12 : 999;
+function getSocialMeta(network){
+  return socialIconMeta.find(m=>m.key === network) || socialIconMeta[0];
+}
+
+function socialIconStyleFromConfig(config={}, network){
+  const meta = getSocialMeta(network);
+  const useCustom = config.useCustomColor === 'yes' || config.useBrandColors === 'no';
+  const bg = useCustom ? (config.customBg || config.customColor || '#042C49') : (meta.brand || '#042C49');
+  const text = config.customText || '#ffffff';
+  const size = Number(config.iconSize || 38);
+  const shape = config.iconShape || 'circle';
+  const radius = shape === 'square' ? 7 : shape === 'rounded' ? 12 : 999;
   return `background:${bg};color:${text};width:${size}px;height:${size}px;border-radius:${radius}px;`;
 }
 
-function setSocialIconUrl(blockId, network){
+function renderSocialLogo(network){
+  return getSocialMeta(network).svg || '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>';
+}
+
+function toggleSocialIconInTray(blockId, network){
   const block = designerBlocks.find(b=>String(b.id)===String(blockId));
   if(!block) return;
-  const current = block[network] || '';
-  const url = prompt(`Enter ${network === 'x' ? 'X' : network.charAt(0).toUpperCase()+network.slice(1)} URL:`, current);
+  if(!Array.isArray(block.selectedSocialIcons)) block.selectedSocialIcons = [];
+  if(block.selectedSocialIcons.includes(network)){
+    block.selectedSocialIcons = block.selectedSocialIcons.filter(n=>n!==network);
+  } else {
+    block.selectedSocialIcons.push(network);
+    if(!block[network]) block[network] = '';
+  }
+  selectedDesignerBlockId = block.id;
+  renderEmailDesigner();
+}
+
+function editSocialIconDetails(blockId, network, embedded=false){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  let iconObj = null;
+  if(embedded){
+    if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
+    iconObj = block.socialIcons.find(i=>i.network===network);
+    if(!iconObj) return;
+  }
+  const meta = getSocialMeta(network);
+  const currentUrl = embedded ? (iconObj.url || '') : (block[network] || '');
+  const url = prompt(`Enter ${meta.name} URL:`, currentUrl);
   if(url === null) return;
-  block[network] = url.trim();
+  const currentColor = embedded ? (iconObj.customBg || '') : (block[`${network}Color`] || '');
+  const color = prompt(`Optional custom ${meta.name} icon color. Leave blank for normal ${meta.name} brand color:`, currentColor);
+  if(embedded){
+    iconObj.url = url.trim();
+    iconObj.customBg = (color || '').trim();
+    iconObj.useCustomColor = iconObj.customBg ? 'yes' : 'no';
+  } else {
+    block[network] = url.trim();
+    block[`${network}Color`] = (color || '').trim();
+  }
   renderEmailDesigner();
 }
 
@@ -2903,40 +3040,47 @@ function addSocialIconToBlock(blockId, network){
   if(!block) return;
   if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
   if(!block.socialIcons.find(i=>i.network===network)){
-    block.socialIcons.push({ network, url:'' });
+    block.socialIcons.push({ network, url:'', useCustomColor:'no', customBg:'', customText:'#ffffff', iconSize:32, iconShape:'circle' });
   }
   selectedDesignerBlockId = block.id;
   renderEmailDesigner();
 }
 
-function editEmbeddedSocialIcon(blockId, network){
-  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
-  if(!block || !Array.isArray(block.socialIcons)) return;
-  const icon = block.socialIcons.find(i=>i.network===network);
-  if(!icon) return;
-  const current = icon.url || '';
-  const url = prompt(`Enter ${network === 'x' ? 'X' : network.charAt(0).toUpperCase()+network.slice(1)} URL:`, current);
-  if(url === null) return;
-  icon.url = url.trim();
-  renderEmailDesigner();
-}
-
 function renderEmbeddedSocialIcons(block){
   if(block.type === 'social' || !Array.isArray(block.socialIcons) || block.socialIcons.length === 0) return '';
-  return `<div class="embedded-social-row-v2 ${block.align || 'left'}">${block.socialIcons.map(item=>{
-    const meta = socialIconMeta.find(m=>m[0]===item.network) || [item.network,'★',item.network];
-    const tmp = { useBrandColors:'yes', iconSize:28, iconShape:'circle', customText:'#ffffff' };
-    return `<span class="social-icon-chip-v2 ${item.url ? '' : 'empty'}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${item.network}')" onclick="event.stopPropagation();editEmbeddedSocialIcon('${block.id}','${item.network}')" title="Click to set URL" style="${socialIconStyle(tmp,item.network)}">${meta[1]}</span>`;
+  return `<div class="social-display-row-v3 ${block.align || 'left'}">${block.socialIcons.map(item=>{
+    const href = item.url || '#';
+    const style = socialIconStyleFromConfig(item, item.network);
+    return `<a class="social-placed-icon-v3 ${item.url ? '' : 'missing-url'}" href="${safeAttr(href)}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${item.network}')" onclick="event.preventDefault();event.stopPropagation();editSocialIconDetails('${block.id}','${item.network}',true)" title="Click to edit ${getSocialMeta(item.network).name} URL/color" style="${style}">${renderSocialLogo(item.network)}</a>`;
   }).join('')}</div>`;
 }
 
-function renderSocialBlock(block){
-  return `<div style="text-align:${block.align || 'center'};">
-    <div class="social-icon-tray-v2">${socialIconMeta.map(([key,label,name])=>{
-      const hasUrl = !!block[key];
-      return `<span class="social-icon-chip-v2 ${hasUrl ? '' : 'empty'}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${key}')" onclick="event.stopPropagation();setSocialIconUrl('${block.id}','${key}')" title="Click to set ${name} URL, or drag this icon to another block" style="${socialIconStyle(block,key)}">${label}</span>`;
-    }).join('')}</div>
-    <div class="social-drop-hint-v2">Click an icon to set its URL. Drag individual icons into any block.</div>
+function renderSocialBlock(block, final=false){
+  if(!Array.isArray(block.selectedSocialIcons)) block.selectedSocialIcons = [];
+  const selected = block.selectedSocialIcons;
+  const display = selected.length ? selected : [];
+  const row = `<div class="social-display-row-v3 ${block.align || 'center'}">${display.map(network=>{
+    const meta = getSocialMeta(network);
+    const url = block[network] || '#';
+    const config = { iconSize:block.iconSize, iconShape:block.iconShape, customText:block.customText, customBg:block[`${network}Color`] || block.customBg, useCustomColor:block[`${network}Color`] ? 'yes' : (block.useBrandColors === 'no' ? 'yes' : 'no') };
+    return `<a class="social-placed-icon-v3 ${block[network] ? '' : 'missing-url'}" href="${safeAttr(url)}" ${final ? '' : `draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${network}')" onclick="event.preventDefault();event.stopPropagation();editSocialIconDetails('${block.id}','${network}',false)"`} title="${final ? meta.name : `Click to edit ${meta.name} URL/color`}" style="${socialIconStyleFromConfig(config, network)}">${renderSocialLogo(network)}</a>`;
+  }).join('')}</div>`;
+  if(final) return row;
+  return `<div>
+    <div class="social-picker-v3">
+      <div class="social-picker-title-v3"><span>Social Icons</span><small class="text-muted">Select icons, then drag them into any block</small></div>
+      <div class="social-picker-grid-v3">${socialIconMeta.map(meta=>{
+        const checked = selected.includes(meta.key);
+        const config = { iconSize:34, iconShape:'circle', customText:'#ffffff', customBg:block[`${meta.key}Color`] || '', useCustomColor:block[`${meta.key}Color`] ? 'yes' : 'no' };
+        return `<div class="social-picker-card-v3 ${checked ? 'selected' : ''}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${meta.key}')" ondblclick="event.stopPropagation();editSocialIconDetails('${block.id}','${meta.key}',false)">
+          <input type="checkbox" ${checked ? 'checked' : ''} onclick="event.stopPropagation();toggleSocialIconInTray('${block.id}','${meta.key}')">
+          <span class="social-brand-icon-v3" style="${socialIconStyleFromConfig(config, meta.key)}">${renderSocialLogo(meta.key)}</span>
+          <span class="social-picker-name-v3">${meta.name}</span>
+        </div>`;
+      }).join('')}</div>
+      <div class="social-icon-helper-v3">Checked icons appear below. Drag any icon card into another block. Double-click a card, or click an icon below, to add the URL and optional custom color.</div>
+    </div>
+    ${row || '<div class="small-muted text-center">Select one or more social icons above.</div>'}
   </div>`;
 }
 
@@ -3087,7 +3231,7 @@ function renderEmailDesignerSettings(){
     </div></div>
     <div class="designer-simple-section">
       <div class="designer-simple-section-title">Tip</div>
-      <div class="small-muted">Drag an Image widget onto this block to place an image inside it. Drag a Social Icons block's icon onto this block to add that icon here.</div>
+      <div class="small-muted">Drag an Image widget or an individual Social Icon into this block.</div>
     </div>
     <hr>
   `;
@@ -3098,7 +3242,7 @@ function renderEmailDesignerSettings(){
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
   if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
-  if(block.type === 'social') html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Tray</div><div class="small-muted mb-2">Click an icon in the canvas to add or edit its URL. Drag an icon from the Social Icons block onto another block to place it there.</div><div class="setting-grid-v2">${setSelect('useBrandColors','Icon Colors',['yes','no'])}${setInput(block,'customBg','Custom Icon Color','color')}${setInput(block,'customText','Icon Text Color','color')}${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}</div></div>`;
+  if(block.type === 'social') html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Display</div><div class="small-muted mb-2">Use the Social Icons widget on the canvas to choose Facebook, Instagram, LinkedIn, YouTube, X, or Website. Each icon uses its normal brand color unless you add a custom color by clicking the icon.</div><div class="setting-grid-v2">${setSelect('useBrandColors','Default Colors',['yes','no'])}${setInput(block,'customBg','Shared Custom Color','color')}${setInput(block,'customText','Icon Symbol Color','color')}${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}</div></div>`;
   if(block.type === 'video') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Video URL</label><input class="form-control form-control-sm" value="${safeAttr(block.videoUrl)}" onchange="updateDesignerBlock('${block.id}','videoUrl',this.value)"></div><div class="setting-full-v2 mt-2"><label>Preview Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div>`;
   if(block.type === 'table') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('headers','Headers, comma separated')}${setArea('rows','Rows, one per line, comma separated')}`;
   if(block.type === 'article') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'buttonLabel','Button Label')}${setInput(block,'buttonUrl','Button URL')}</div>`;
@@ -3116,7 +3260,7 @@ function renderFinalEmailDesignerHtml(){
   const outerBgImage = designerSettings.outerBgImage ? `background-image:url('${safeAttr(designerSettings.outerBgImage)}');background-size:cover;background-position:center;` : '';
   const canvasBgImage = designerSettings.canvasBgImage ? `background-image:url('${safeAttr(designerSettings.canvasBgImage)}');background-size:cover;background-position:center;` : '';
   const preheaderHtml = designerMeta.preheader ? `<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${safeHtml(designerMeta.preheader)}</div>` : '';
-  return `<!--EXCEL_EMAIL_DESIGN_V2:${encoded}-->${preheaderHtml}<div style="margin:0;padding:0;background:${designerSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(designerSettings.emailWidth||680)}px;margin:0 auto;background:${designerSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${designerSettings.fontFamily || 'Arial, sans-serif'};">${designerBlocks.map(b=>wrapBlock(b, renderDesignerBlockInner(b))).join('')}</div></div>`;
+  return `<!--EXCEL_EMAIL_DESIGN_V2:${encoded}-->${preheaderHtml}<div style="margin:0;padding:0;background:${designerSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(designerSettings.emailWidth||680)}px;margin:0 auto;background:${designerSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${designerSettings.fontFamily || 'Arial, sans-serif'};">${designerBlocks.map(b=>wrapBlock(b, renderDesignerBlockInner(b, true))).join('')}</div></div>`;
 }
 
 function applyEmailDesignToCampaign(){
