@@ -541,19 +541,63 @@ body {
   font-weight:700;
 }
 
-.pipeline-board {
+.pipeline-toolbar {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:14px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+  margin-bottom:16px;
+}
+
+.pipeline-view-buttons {
   display:flex;
-  gap:14px;
-  overflow-x:auto;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.pipeline-view-buttons .btn.active {
+  background:var(--accent);
+  color:white;
+  border-color:var(--accent);
+}
+
+.pipeline-summary-grid {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:12px;
+  margin-bottom:16px;
+}
+
+.pipeline-summary-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  box-shadow:0 4px 12px rgba(15,23,42,0.04);
+}
+
+.pipeline-summary-number {
+  color:var(--accent);
+  font-size:24px;
+  font-weight:800;
+}
+
+.pipeline-board {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+  gap:16px;
+  overflow-x:visible;
   padding-bottom:12px;
+  align-items:start;
 }
 
 .pipeline-column {
-  min-width:280px;
   background:#f9fafb;
   border:1px solid var(--border);
   border-radius:18px;
   padding:14px;
+  min-height:240px;
 }
 
 .pipeline-column-header {
@@ -574,7 +618,7 @@ body {
 }
 
 .pipeline-dropzone {
-  min-height:180px;
+  min-height:170px;
 }
 
 .pipeline-card {
@@ -585,6 +629,81 @@ body {
   margin-bottom:10px;
   box-shadow:0 4px 12px rgba(15,23,42,0.05);
   cursor:grab;
+}
+
+.pipeline-card:hover {
+  transform:translateY(-1px);
+  box-shadow:0 8px 18px rgba(15,23,42,0.08);
+}
+
+.pipeline-meta-row {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+
+.pipeline-warning-pill {
+  display:inline-flex;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:800;
+  background:#fee2e2;
+  color:#991b1b;
+}
+
+.pipeline-compact-table {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+
+.pipeline-compact-table table {
+  margin-bottom:0;
+}
+
+.pipeline-compact-table th {
+  color:var(--primary);
+  background:#f9fafb;
+  font-size:13px;
+}
+
+.pipeline-analytics-grid {
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:16px;
+}
+
+.pipeline-analytics-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+
+.pipeline-stage-bar {
+  height:12px;
+  background:#e5e7eb;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:6px;
+}
+
+.pipeline-stage-bar-fill {
+  height:100%;
+  background:var(--accent);
+  border-radius:999px;
+}
+
+@media (max-width: 992px) {
+  .pipeline-summary-grid,
+  .pipeline-analytics-grid {
+    grid-template-columns:1fr;
+  }
 }
 
 .calendar-wrap {
@@ -996,12 +1115,39 @@ body {
 <div id="pipelineTab" class="mt-4" style="display:none;">
   <div class="dashboard-header-row mb-3">
     <div>
-      <h4 class="mb-1">Pipeline Board</h4>
-      <div class="dashboard-help">Drag contacts between stages to update their deal stage.</div>
+      <h4 class="mb-1">Smart Pipeline</h4>
+      <div class="dashboard-help">Use Kanban for visual deal movement, Compact for power-user sorting, and Analytics for stage insights.</div>
     </div>
     <button class="btn btn-sm btn-outline-primary" onclick="loadPipeline()">Refresh Pipeline</button>
   </div>
 
+  <div class="pipeline-toolbar">
+    <div class="row g-2 align-items-end">
+      <div class="col-lg-4">
+        <label class="form-label small fw-bold">Pipeline View</label>
+        <div class="pipeline-view-buttons">
+          <button id="pipelineViewKanban" class="btn btn-sm btn-outline-primary active" onclick="setPipelineView('kanban')">Kanban</button>
+          <button id="pipelineViewCompact" class="btn btn-sm btn-outline-primary" onclick="setPipelineView('compact')">Compact</button>
+          <button id="pipelineViewAnalytics" class="btn btn-sm btn-outline-primary" onclick="setPipelineView('analytics')">Analytics</button>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <label class="form-label small fw-bold">Search Pipeline</label>
+        <input id="pipelineSearch" class="form-control" placeholder="Search name, email, phone, type, tag, stage..." oninput="renderPipelineCurrentView()">
+      </div>
+      <div class="col-lg-3">
+        <label class="form-label small fw-bold">Filter by Type</label>
+        <select id="pipelineTypeFilter" class="form-control" onchange="renderPipelineCurrentView()">
+          <option value="">All Types</option>
+        </select>
+      </div>
+      <div class="col-lg-1">
+        <button class="btn btn-outline-primary w-100" onclick="clearPipelineFilters()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pipelineSummary" class="pipeline-summary-grid"></div>
   <div id="pipelineBoard" class="pipeline-board"></div>
 </div>
 
@@ -1165,6 +1311,7 @@ let editingCampaignId = null;
 let dashboardSortable = null;
 let dashboardCharts = {};
 let pipelineSortables = [];
+let currentPipelineView = localStorage.getItem('excelMarketingPipelineView') || 'kanban';
 let calendarDate = new Date();
 let selectedCampaignContactIds = new Set(JSON.parse(localStorage.getItem('selectedCampaignContactIds') || '[]'));
 
@@ -2926,26 +3073,136 @@ async function loadContacts(){
 }
 
 /* PIPELINE */
+function setPipelineView(view){
+  currentPipelineView = view;
+  localStorage.setItem('excelMarketingPipelineView', view);
+  renderPipelineCurrentView();
+}
+
+function updatePipelineViewButtons(){
+  ['kanban','compact','analytics'].forEach(view=>{
+    const button = document.getElementById('pipelineView' + view.charAt(0).toUpperCase() + view.slice(1));
+    if(button) button.classList.toggle('active', currentPipelineView === view);
+  });
+}
+
+function renderPipelineTypeFilter(){
+  if(!document.getElementById('pipelineTypeFilter')) return;
+
+  const existing = pipelineTypeFilter.value || '';
+  const types = Array.from(new Set(contactsCache.map(c=>c.type || 'Unassigned').filter(Boolean))).sort();
+
+  pipelineTypeFilter.innerHTML = '<option value="">All Types</option>';
+  types.forEach(type=>{
+    pipelineTypeFilter.innerHTML += `<option value="${type}">${type}</option>`;
+  });
+  pipelineTypeFilter.value = types.includes(existing) ? existing : '';
+}
+
+function clearPipelineFilters(){
+  if(document.getElementById('pipelineSearch')) pipelineSearch.value = '';
+  if(document.getElementById('pipelineTypeFilter')) pipelineTypeFilter.value = '';
+  renderPipelineCurrentView();
+}
+
+function getPipelineFilteredContacts(){
+  const search = (document.getElementById('pipelineSearch')?.value || '').toLowerCase();
+  const typeFilter = document.getElementById('pipelineTypeFilter')?.value || '';
+
+  return contactsCache.filter(contact=>{
+    const tagText = Array.isArray(contact.tags) ? contact.tags.join(' ') : '';
+    const text = `${contactName(contact)} ${contact.email || ''} ${formatPhone(contact.phone || '')} ${contact.type || ''} ${inferStageFromContact(contact)} ${tagText}`.toLowerCase();
+    const matchesSearch = !search || text.includes(search);
+    const matchesType = !typeFilter || (contact.type || 'Unassigned') === typeFilter;
+    return matchesSearch && matchesType;
+  });
+}
+
+function getOpenTasksForContact(contact){
+  return (contact.tasks || []).filter(task=>!task.done);
+}
+
+function getOverdueTasksForContact(contact){
+  return getOpenTasksForContact(contact).filter(task=>taskIsOverdue(task));
+}
+
+function getLastContactActivityDate(contact){
+  const dates = [];
+  if(contact.stageUpdatedAt) dates.push(contact.stageUpdatedAt);
+  (contact.notes || []).forEach(note=>{ if(note.date) dates.push(note.date); });
+  (contact.tasks || []).forEach(task=>{ if(task.createdAt) dates.push(task.createdAt); if(task.completedAt) dates.push(task.completedAt); });
+  activityCache.filter(a=>String(a.email || '').toLowerCase() === String(contact.email || '').toLowerCase()).forEach(a=>{
+    if(a.sentAt || a.sentDate) dates.push(a.sentAt || a.sentDate);
+    if(a.openedAt) dates.push(a.openedAt);
+    (a.clicks || []).forEach(click=>{ if(click.clickedAt) dates.push(click.clickedAt); });
+  });
+
+  if(!dates.length) return '';
+  return dates.sort((a,b)=>new Date(b) - new Date(a))[0];
+}
+
+function renderPipelineSummary(filteredContacts){
+  if(!document.getElementById('pipelineSummary')) return;
+
+  const openTasks = filteredContacts.reduce((sum, c)=>sum + getOpenTasksForContact(c).length, 0);
+  const overdueTasks = filteredContacts.reduce((sum, c)=>sum + getOverdueTasksForContact(c).length, 0);
+  const activeStages = new Set(filteredContacts.map(c=>inferStageFromContact(c))).size;
+  const hotContacts = filteredContacts.filter(c=>getOverdueTasksForContact(c).length > 0 || getOpenTasksForContact(c).length > 0).length;
+
+  pipelineSummary.innerHTML = `
+    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${filteredContacts.length}</div><div class="kpi-label">Pipeline Contacts</div></div>
+    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${activeStages}</div><div class="kpi-label">Active Stages</div></div>
+    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${openTasks}</div><div class="kpi-label">Open Tasks</div></div>
+    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${overdueTasks}</div><div class="kpi-label">Overdue Tasks</div></div>
+  `;
+}
+
 async function loadPipeline(){
   await loadPipelineStages();
   await loadContacts();
+  await loadTasks().catch(()=>{});
+  const activityRes = await fetch('/api/activity').catch(()=>null);
+  if(activityRes) activityCache = await activityRes.json();
 
-  pipelineBoard.innerHTML = '';
+  renderPipelineTypeFilter();
+  renderPipelineCurrentView();
+}
+
+function renderPipelineCurrentView(){
+  if(!document.getElementById('pipelineBoard')) return;
+
+  updatePipelineViewButtons();
+  const filteredContacts = getPipelineFilteredContacts();
+  renderPipelineSummary(filteredContacts);
+
   pipelineSortables.forEach(s=>s.destroy && s.destroy());
   pipelineSortables = [];
+
+  if(currentPipelineView === 'compact') return renderPipelineCompact(filteredContacts);
+  if(currentPipelineView === 'analytics') return renderPipelineAnalytics(filteredContacts);
+  return renderPipelineKanban(filteredContacts);
+}
+
+function renderPipelineKanban(filteredContacts){
+  pipelineBoard.className = 'pipeline-board';
+  pipelineBoard.innerHTML = '';
 
   const stages = pipelineStagesCache.length ? pipelineStagesCache : getFallbackPipelineStages();
   const contactsByStage = {};
   stages.forEach(stage=>contactsByStage[stage] = []);
 
-  contactsCache.forEach(contact=>{
+  filteredContacts.forEach(contact=>{
     const stage = inferStageFromContact(contact);
     if(!contactsByStage[stage]) contactsByStage[stage] = [];
     contactsByStage[stage].push(contact);
   });
 
   stages.forEach(stage=>{
-    const stageContacts = (contactsByStage[stage] || []).slice().sort((a,b)=>contactName(a).localeCompare(contactName(b)));
+    const stageContacts = (contactsByStage[stage] || []).slice().sort((a,b)=>{
+      const overdueDiff = getOverdueTasksForContact(b).length - getOverdueTasksForContact(a).length;
+      if(overdueDiff) return overdueDiff;
+      return contactName(a).localeCompare(contactName(b));
+    });
 
     const column = document.createElement('div');
     column.className = 'pipeline-column';
@@ -2964,15 +3221,28 @@ async function loadPipeline(){
     }
 
     stageContacts.forEach(c=>{
+      const openTasks = getOpenTasksForContact(c);
+      const overdueTasks = getOverdueTasksForContact(c);
+      const lastActivity = getLastContactActivityDate(c);
+
       const card = document.createElement('div');
       card.className = 'pipeline-card';
       card.dataset.contactId = c.id;
       card.innerHTML = `
-        <b>${contactName(c)}</b><br>
-        <small>${c.email || ''}</small><br>
-        <small>${formatPhone(c.phone || '')}</small><br>
-        <span class="stage-pill">${c.type || 'Unassigned'}</span>
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <b>${contactName(c)}</b><br>
+            <small>${c.email || ''}</small><br>
+            <small>${formatPhone(c.phone || '')}</small>
+          </div>
+          ${overdueTasks.length ? `<span class="pipeline-warning-pill">${overdueTasks.length} overdue</span>` : ''}
+        </div>
+        <div class="pipeline-meta-row">
+          <span class="stage-pill">${c.type || 'Unassigned'}</span>
+          ${openTasks.length ? `<span class="priority-pill priority-normal">${openTasks.length} task(s)</span>` : ''}
+        </div>
         ${renderTags(c.tags)}
+        ${lastActivity ? `<small class="text-muted">Last activity: ${formatDate(lastActivity)}</small>` : ''}
         <div class="mt-2">
           <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); openContact(${c.id})">Open</button>
         </div>
@@ -2988,7 +3258,7 @@ async function loadPipeline(){
         animation:150,
         filter:'.text-muted',
         onStart:function(){
-          dropzone.querySelectorAll('.text-muted').forEach(el=>el.remove());
+          dropzone.querySelectorAll('.text-muted.small.p-2').forEach(el=>el.remove());
         },
         onAdd: async function(evt){
           const contactId = evt.item.dataset.contactId;
@@ -3027,6 +3297,145 @@ async function loadPipeline(){
       pipelineSortables.push(sortable);
     }
   });
+}
+
+function renderPipelineCompact(filteredContacts){
+  pipelineBoard.className = 'pipeline-compact-table';
+
+  const rows = filteredContacts.slice().sort((a,b)=>{
+    const stageCompare = inferStageFromContact(a).localeCompare(inferStageFromContact(b));
+    if(stageCompare) return stageCompare;
+    return contactName(a).localeCompare(contactName(b));
+  });
+
+  if(!rows.length){
+    pipelineBoard.innerHTML = '<div class="p-3 text-muted">No contacts match this pipeline filter.</div>';
+    return;
+  }
+
+  pipelineBoard.innerHTML = `
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Contact</th>
+            <th>Stage</th>
+            <th>Type</th>
+            <th>Tasks</th>
+            <th>Tags</th>
+            <th>Last Activity</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(c=>{
+            const openTasks = getOpenTasksForContact(c);
+            const overdueTasks = getOverdueTasksForContact(c);
+            const lastActivity = getLastContactActivityDate(c);
+            return `
+              <tr>
+                <td><b>${contactName(c)}</b><br><small>${c.email || ''}<br>${formatPhone(c.phone || '')}</small></td>
+                <td>
+                  <select class="form-control form-control-sm" onchange="updatePipelineStageInline(${c.id}, this.value)">
+                    ${(pipelineStagesCache.length ? pipelineStagesCache : getFallbackPipelineStages()).map(stage=>`<option value="${stage}" ${inferStageFromContact(c) === stage ? 'selected' : ''}>${stage}</option>`).join('')}
+                  </select>
+                </td>
+                <td>${c.type || 'Unassigned'}</td>
+                <td>
+                  ${openTasks.length ? `<span class="priority-pill priority-normal">${openTasks.length} open</span>` : '<span class="text-muted small">None</span>'}
+                  ${overdueTasks.length ? `<br><span class="pipeline-warning-pill mt-1">${overdueTasks.length} overdue</span>` : ''}
+                </td>
+                <td>${renderTags(c.tags) || '<span class="text-muted small">No tags</span>'}</td>
+                <td><small>${lastActivity ? formatDate(lastActivity) : 'No activity yet'}</small></td>
+                <td><button class="btn btn-sm btn-outline-primary" onclick="openContact(${c.id})">Open</button></td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function updatePipelineStageInline(contactId, stage){
+  const res = await fetch(`/api/contacts/${contactId}/stage`, {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({stage})
+  });
+
+  if(!res.ok){
+    alert('Stage could not be updated.');
+    await loadPipeline();
+    return;
+  }
+
+  await loadContacts();
+  await loadDashboard();
+  renderPipelineCurrentView();
+}
+
+function renderPipelineAnalytics(filteredContacts){
+  pipelineBoard.className = 'pipeline-analytics-grid';
+
+  const stages = pipelineStagesCache.length ? pipelineStagesCache : getFallbackPipelineStages();
+  const total = filteredContacts.length || 1;
+  const stageRows = stages.map(stage=>{
+    const contacts = filteredContacts.filter(c=>inferStageFromContact(c) === stage);
+    return { stage, count: contacts.length, pct: Math.round((contacts.length / total) * 100) };
+  });
+
+  const typeMap = {};
+  filteredContacts.forEach(c=>{
+    const type = c.type || 'Unassigned';
+    typeMap[type] = (typeMap[type] || 0) + 1;
+  });
+
+  const overdueRows = filteredContacts
+    .map(c=>({ contact:c, overdue:getOverdueTasksForContact(c).length, open:getOpenTasksForContact(c).length }))
+    .filter(row=>row.overdue || row.open)
+    .sort((a,b)=>b.overdue - a.overdue || b.open - a.open)
+    .slice(0,10);
+
+  pipelineBoard.innerHTML = `
+    <div class="pipeline-analytics-card">
+      <h5 class="widget-title">Stage Distribution</h5>
+      ${stageRows.map(row=>`
+        <div class="mb-3">
+          <div class="d-flex justify-content-between"><b>${row.stage}</b><span>${row.count}</span></div>
+          <div class="pipeline-stage-bar"><div class="pipeline-stage-bar-fill" style="width:${row.pct}%;"></div></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="pipeline-analytics-card">
+      <h5 class="widget-title">Contacts by Type</h5>
+      ${Object.keys(typeMap).length ? Object.entries(typeMap).sort((a,b)=>b[1]-a[1]).map(([type,count])=>`
+        <div class="d-flex justify-content-between border-bottom py-2"><b>${type}</b><span>${count}</span></div>
+      `).join('') : '<div class="text-muted">No contacts yet.</div>'}
+    </div>
+
+    <div class="pipeline-analytics-card">
+      <h5 class="widget-title">Follow-Up Attention Needed</h5>
+      ${overdueRows.length ? overdueRows.map(row=>`
+        <div class="drilldown-row" onclick="openContact(${row.contact.id})">
+          <b>${contactName(row.contact)}</b><br>
+          <small>${row.open} open task(s) ${row.overdue ? '| ' + row.overdue + ' overdue' : ''}</small><br>
+          <small>${inferStageFromContact(row.contact)} | ${row.contact.type || 'Unassigned'}</small>
+        </div>
+      `).join('') : '<div class="text-muted">No open or overdue tasks found.</div>'}
+    </div>
+
+    <div class="pipeline-analytics-card">
+      <h5 class="widget-title">Most Recent Pipeline Activity</h5>
+      ${filteredContacts.slice().map(c=>({contact:c, date:getLastContactActivityDate(c)})).filter(row=>row.date).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10).map(row=>`
+        <div class="drilldown-row" onclick="openContact(${row.contact.id})">
+          <b>${contactName(row.contact)}</b><br>
+          <small>${inferStageFromContact(row.contact)} | ${formatDate(row.date)}</small>
+        </div>
+      `).join('') || '<div class="text-muted">No pipeline activity yet.</div>'}
+    </div>
+  `;
 }
 
 function renderQuickStageButtons(){
