@@ -1384,6 +1384,108 @@ body {
   .email-settings-panel { position:static; }
 }
 
+
+
+/* ================= PREMIUM EMAIL ASSET BUILDER UPGRADE ================= */
+.email-widget-button {
+  min-height:96px;
+  align-items:flex-start;
+  text-align:left;
+  position:relative;
+  overflow:hidden;
+}
+.email-widget-button::after {
+  content:'';
+  position:absolute;
+  right:10px;
+  bottom:8px;
+  width:54px;
+  height:38px;
+  border-radius:10px;
+  background:linear-gradient(135deg,#f8fafc,#e2e8f0);
+  border:1px solid #dbe3ee;
+  opacity:.9;
+}
+.widget-icon-preview {
+  width:42px;
+  height:34px;
+  border-radius:10px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:#f8fafc;
+  border:1px solid #dbe3ee;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.7);
+  font-size:18px;
+}
+.widget-icon-preview.header-icon::before { content:'▰'; color:#042C49; font-size:22px; }
+.widget-icon-preview.text-icon::before { content:'☰'; color:#334155; }
+.widget-icon-preview.image-icon::before { content:'▧'; color:#00A143; }
+.widget-icon-preview.button-icon::before { content:'▣'; color:#0f766e; }
+.widget-icon-preview.divider-icon::before { content:'━'; color:#00A143; font-size:24px; }
+.widget-icon-preview.grid-icon::before { content:'▦'; color:#2563eb; }
+.widget-icon-preview.columns-icon::before { content:'▥'; color:#7c3aed; }
+.widget-icon-preview.video-icon::before { content:'▶'; color:#dc2626; }
+.widget-icon-preview.social-icon::before { content:'f  ◎  in'; color:#042C49; font-size:10px; font-weight:900; letter-spacing:1px; }
+.widget-icon-preview.table-icon::before { content:'▤'; color:#475569; }
+.widget-icon-preview.calendar-icon::before { content:'◷'; color:#ea580c; }
+.widget-icon-preview.rsvp-icon::before { content:'✓'; color:#16a34a; }
+.email-image-library-box {
+  border:1px solid var(--border);
+  background:#f8fafc;
+  border-radius:14px;
+  padding:12px;
+  margin-top:14px;
+}
+.email-image-library-grid {
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:8px;
+  max-height:240px;
+  overflow:auto;
+}
+.email-image-library-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:8px;
+  cursor:pointer;
+}
+.email-image-library-card:hover { border-color:var(--accent); box-shadow:0 4px 12px rgba(15,23,42,.08); }
+.email-image-library-card img { width:100%; height:72px; object-fit:cover; border-radius:9px; display:block; }
+.email-image-library-card small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:5px; }
+.email-canvas.drop-ready { outline:3px dashed var(--accent); outline-offset:6px; background:#f0fdf4; }
+.email-builder-block { position:relative; }
+.email-builder-block.dragging { opacity:.55; }
+.email-block-drag-handle {
+  cursor:grab;
+  background:#f8fafc!important;
+  color:#334155!important;
+  border:1px solid #dbe3ee!important;
+}
+.email-social-real-icon {
+  font-family:Arial, sans-serif;
+  line-height:1;
+  box-sizing:border-box;
+}
+.email-settings-subtitle {
+  font-weight:800;
+  color:var(--primary);
+  margin:12px 0 8px;
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.email-tiny-button {
+  border:1px solid var(--border);
+  background:white;
+  border-radius:8px;
+  font-size:11px;
+  padding:4px 7px;
+  margin:2px;
+}
+.email-tiny-button:hover { border-color:var(--accent); color:var(--accent); }
+
 </style>
 </head>
 
@@ -2503,6 +2605,386 @@ setTimeout(()=>{
     loadStarterEmailLayout();
   }
 }, 300);
+
+
+
+
+/* ================= PREMIUM EMAIL ASSET BUILDER UPGRADE ================= */
+let emailImageLibrary = [];
+let emailCanvasSortable = null;
+const originalGetDefaultEmailBlock = getDefaultEmailBlock;
+const originalSharedStyle = sharedStyle;
+const originalRenderEmailBlockContent = renderEmailBlockContent;
+const originalBlockShell = blockShell;
+const originalRenderEmailDesigner = renderEmailDesigner;
+
+function emailUpgradeDefaults(block){
+  if(!block) return block;
+  if(block.socialColorMode === undefined && block.type === 'social') block.socialColorMode = 'brand';
+  if(block.socialStyle === undefined && block.type === 'social') block.socialStyle = 'circle';
+  if(block.supportImagePosition === undefined) block.supportImagePosition = 'none';
+  if(block.supportImageWidth === undefined) block.supportImageWidth = 35;
+  if(block.supportImageShape === undefined) block.supportImageShape = 'rounded';
+  if(block.supportImageGap === undefined) block.supportImageGap = 16;
+  if(block.supportImageAlt === undefined) block.supportImageAlt = '';
+  if(block.bgImage === undefined) block.bgImage = '';
+  if(block.bgSize === undefined) block.bgSize = 'cover';
+  if(block.bgRepeat === undefined) block.bgRepeat = 'no-repeat';
+  if(block.bgPosition === undefined) block.bgPosition = 'center';
+  return block;
+}
+
+getDefaultEmailBlock = function(type){
+  const block = originalGetDefaultEmailBlock(type);
+  emailUpgradeDefaults(block);
+  if(type === 'social'){
+    block.facebook = block.facebook || 'https://facebook.com/';
+    block.instagram = block.instagram || 'https://instagram.com/';
+    block.linkedin = block.linkedin || 'https://linkedin.com/';
+    block.youtube = block.youtube || '';
+    block.x = block.x || '';
+    block.website = block.website || '';
+    block.iconSize = block.iconSize || 38;
+    block.iconRadius = 999;
+    block.socialColorMode = 'brand';
+    block.showLabels = 'no';
+  }
+  return block;
+};
+
+sharedStyle = function(block){
+  emailUpgradeDefaults(block);
+  const base = originalSharedStyle(block);
+  const bgImage = block.bgImage ? `background-image:url('${escapeAttr(block.bgImage)}');background-size:${block.bgSize || 'cover'};background-repeat:${block.bgRepeat || 'no-repeat'};background-position:${block.bgPosition || 'center'};` : '';
+  return base + bgImage;
+};
+
+function imageUrlPickerHtml(block, field, label){
+  const options = emailImageLibrary.map(img=>`<button type="button" class="email-tiny-button" onclick="updateEmailBlock('${block.id}','${field}','${escapeAttr(img.url)}')">Use ${escapeText(img.name || 'image')}</button>`).join('');
+  return `
+    <div class="mt-2">
+      <label class="form-label small fw-bold">${label}</label>
+      <div class="input-group input-group-sm">
+        <input class="form-control" value="${escapeAttr(block[field] || '')}" onchange="updateEmailBlock('${block.id}','${field}',this.value)" placeholder="Image URL or choose from library">
+        <button class="btn btn-outline-primary" type="button" onclick="openEmailImagePrompt('${block.id}','${field}')">Library</button>
+      </div>
+      ${options ? `<div class="mt-1">${options}</div>` : '<div class="small-muted mt-1">Upload images in the Image Library panel.</div>'}
+    </div>
+  `;
+}
+
+function socialBrand(name){
+  const brands = {
+    facebook:{ bg:'#1877F2', color:'#ffffff', label:'f' },
+    instagram:{ bg:'#E4405F', color:'#ffffff', label:'◎' },
+    linkedin:{ bg:'#0A66C2', color:'#ffffff', label:'in' },
+    youtube:{ bg:'#FF0000', color:'#ffffff', label:'▶' },
+    x:{ bg:'#111111', color:'#ffffff', label:'𝕏' },
+    website:{ bg:'#042C49', color:'#ffffff', label:'↗' }
+  };
+  return brands[name] || { bg:'#042C49', color:'#ffffff', label:name[0] || '?' };
+}
+
+function renderSocialBlock(block){
+  emailUpgradeDefaults(block);
+  const style = sharedStyle(block);
+  const networks = [
+    ['facebook', block.facebook],
+    ['instagram', block.instagram],
+    ['linkedin', block.linkedin],
+    ['youtube', block.youtube],
+    ['x', block.x],
+    ['website', block.website]
+  ].filter(([,url]) => String(url || '').trim());
+  const icons = networks.length ? networks.map(([name,url])=>{
+    const brand = socialBrand(name);
+    const bg = block.socialColorMode === 'custom' ? (block.iconBg || '#042C49') : brand.bg;
+    const color = block.socialColorMode === 'custom' ? (block.iconColor || '#ffffff') : brand.color;
+    const radius = block.socialStyle === 'square' ? 6 : block.socialStyle === 'rounded' ? 14 : Number(block.iconRadius ?? 999);
+    return `<a href="${escapeAttr(url)}" class="email-social-real-icon" style="display:inline-flex;align-items:center;justify-content:center;margin:${Number(block.iconGap || 6)}px;width:${Number(block.iconSize || 38)}px;height:${Number(block.iconSize || 38)}px;background:${bg};border-radius:${radius}px;color:${color};text-decoration:none;font-weight:900;font-size:${name === 'linkedin' ? 12 : 17}px;vertical-align:middle;">${brand.label}</a>${block.showLabels === 'yes' ? `<span style="font-size:12px;margin-right:8px;color:${block.text || '#1f2937'};text-transform:capitalize;">${escapeText(name)}</span>` : ''}`;
+  }).join('') : '<span style="color:#6b7280;font-size:13px;">Add social links in block settings.</span>';
+  return `<div style="${style}text-align:${block.align || 'center'};">${icons}</div>`;
+}
+
+function supportImageHtml(block){
+  if(!block.supportImageUrl || block.supportImagePosition === 'none') return '';
+  const radius = block.supportImageShape === 'circle' ? '999px' : block.supportImageShape === 'rounded' ? '14px' : '0';
+  return `<img src="${escapeAttr(block.supportImageUrl)}" alt="${escapeAttr(block.supportImageAlt || '')}" style="display:block;width:100%;border-radius:${radius};object-fit:cover;">`;
+}
+
+function wrapWithSupportImage(block, mainHtml){
+  emailUpgradeDefaults(block);
+  if(!block.supportImageUrl || block.supportImagePosition === 'none') return mainHtml;
+  const img = supportImageHtml(block);
+  const gap = Number(block.supportImageGap || 16);
+  const w = Math.min(Math.max(Number(block.supportImageWidth || 35), 15), 70);
+  if(block.supportImagePosition === 'top') return `${img}<div style="height:${gap}px"></div>${mainHtml}`;
+  if(block.supportImagePosition === 'bottom') return `${mainHtml}<div style="height:${gap}px"></div>${img}`;
+  const imgTd = `<td style="width:${w}%;vertical-align:top;">${img}</td>`;
+  const textTd = `<td style="vertical-align:top;">${mainHtml}</td>`;
+  const spacer = `<td style="width:${gap}px;font-size:1px;line-height:1px;">&nbsp;</td>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr>${block.supportImagePosition === 'left' ? imgTd + spacer + textTd : textTd + spacer + imgTd}</tr></table>`;
+}
+
+renderEmailBlockContent = function(block){
+  emailUpgradeDefaults(block);
+  if(block.type === 'social') return renderSocialBlock(block);
+
+  if(block.supportImageUrl && block.supportImagePosition !== 'none' && !['image','imageGrid','splitFeature','video'].includes(block.type)){
+    const shellStyle = sharedStyle(block);
+    const clone = { ...block, supportImageUrl:'', supportImagePosition:'none', bg:'transparent', padding:0, marginBottom:0, borderWidth:0, radius:0, shadow:'none', bgImage:'' };
+    let inner = originalRenderEmailBlockContent(clone);
+    return `<div style="${shellStyle}">${wrapWithSupportImage(block, inner)}</div>`;
+  }
+
+  return originalRenderEmailBlockContent(block);
+};
+
+blockShell = function(block, inner){
+  return `
+    <div class="email-builder-block ${selectedEmailBlockId === block.id ? 'selected' : ''}" draggable="true" data-email-block-id="${block.id}" onclick="selectEmailBlock('${block.id}')">
+      <div class="email-block-tools" onclick="event.stopPropagation()">
+        <button class="email-block-drag-handle" title="Drag this block">↕</button>
+        <button onclick="moveEmailBlock('${block.id}', -1)">↑</button>
+        <button onclick="moveEmailBlock('${block.id}', 1)">↓</button>
+        <button onclick="duplicateEmailBlock('${block.id}')">Copy</button>
+        <button class="delete-tool" onclick="deleteEmailBlock('${block.id}')">Delete</button>
+      </div>
+      ${inner}
+    </div>
+  `;
+};
+
+function renderEmailDesigner(updateSettings = true){
+  emailDesignBlocks.forEach(emailUpgradeDefaults);
+  originalRenderEmailDesigner(updateSettings);
+  enhanceEmailWidgetLibrary();
+  renderEmailImageLibraryPanel();
+  addAdvancedDesignerControls();
+  initPremiumEmailDragDrop();
+}
+
+function enhanceEmailWidgetLibrary(){
+  const palette = document.querySelector('.email-block-palette');
+  if(!palette || document.getElementById('emailImageLibraryBox')) return;
+  const box = document.createElement('div');
+  box.id = 'emailImageLibraryBox';
+  box.className = 'email-image-library-box';
+  box.innerHTML = `
+    <h6 class="widget-title mb-2">Image Library</h6>
+    <input id="emailImageUploadInput" type="file" accept="image/*" class="form-control form-control-sm mb-2" multiple onchange="uploadEmailImages(this.files)">
+    <div class="small-muted mb-2">Upload once, reuse in any block, background, image grid, article, sidebar, or button section.</div>
+    <div id="emailImageLibraryGrid" class="email-image-library-grid"></div>
+  `;
+  palette.appendChild(box);
+}
+
+function renderEmailImageLibraryPanel(){
+  const grid = document.getElementById('emailImageLibraryGrid');
+  if(!grid) return;
+  if(!emailImageLibrary.length){
+    grid.innerHTML = '<div class="small-muted">No images uploaded yet.</div>';
+    return;
+  }
+  grid.innerHTML = emailImageLibrary.map(img=>`
+    <div class="email-image-library-card" onclick="copyEmailImageUrl('${escapeAttr(img.url)}')">
+      <img src="${escapeAttr(img.url)}" alt="${escapeAttr(img.name || '')}">
+      <small>${escapeText(img.name || 'Image')}</small>
+      <button class="btn btn-sm btn-outline-danger w-100 mt-1" onclick="event.stopPropagation(); deleteEmailImage(${img.id})">Delete</button>
+    </div>
+  `).join('');
+}
+
+async function loadEmailImages(){
+  try {
+    const res = await fetch('/api/email-images');
+    emailImageLibrary = await res.json();
+    renderEmailImageLibraryPanel();
+  } catch(error) {
+    console.warn('Could not load email images.', error);
+  }
+}
+
+async function uploadEmailImages(files){
+  const list = Array.from(files || []);
+  for(const file of list){
+    if(!file.type.startsWith('image/')) continue;
+    const dataUrl = await new Promise(resolve=>{
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+    const res = await fetch('/api/email-images', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ name:file.name, dataUrl })
+    });
+    const data = await res.json();
+    if(!data.success) alert(data.error || 'An image could not be uploaded.');
+  }
+  const input = document.getElementById('emailImageUploadInput');
+  if(input) input.value = '';
+  await loadEmailImages();
+  renderEmailDesigner(false);
+}
+
+async function deleteEmailImage(id){
+  if(!confirm('Delete this image from the library?')) return;
+  const res = await fetch('/api/email-images/' + id, { method:'DELETE' });
+  const data = await res.json();
+  if(!data.success) alert(data.error || 'Image could not be deleted.');
+  await loadEmailImages();
+}
+
+function copyEmailImageUrl(url){
+  navigator.clipboard?.writeText(location.origin + url);
+  alert('Image URL copied. You can also choose it directly from block settings.');
+}
+
+function openEmailImagePrompt(blockId, field){
+  if(!emailImageLibrary.length){ alert('Upload images to the Image Library first.'); return; }
+  const names = emailImageLibrary.map((img,i)=>`${i+1}. ${img.name}`).join('\n');
+  const choice = prompt('Choose image number:\n\n' + names);
+  const index = Number(choice) - 1;
+  if(emailImageLibrary[index]) updateEmailBlock(blockId, field, emailImageLibrary[index].url);
+}
+
+function chooseGlobalEmailImage(field){
+  if(!emailImageLibrary.length){ alert('Upload images to the Image Library first.'); return; }
+  const names = emailImageLibrary.map((img,i)=>`${i+1}. ${img.name}`).join('\n');
+  const choice = prompt('Choose image number:\n\n' + names);
+  const index = Number(choice) - 1;
+  if(emailImageLibrary[index]) updateEmailDesignSetting(field, emailImageLibrary[index].url);
+}
+
+function addAdvancedDesignerControls(){
+  const panel = document.getElementById('emailBlockSettings');
+  if(!panel || document.getElementById('advancedDesignerControlsAdded')) return;
+  const block = emailDesignBlocks.find(b => b.id === selectedEmailBlockId);
+  const advanced = document.createElement('div');
+  advanced.id = 'advancedDesignerControlsAdded';
+  advanced.innerHTML = `
+    <div class="email-settings-section">
+      <div class="email-settings-section-title">Background Images</div>
+      <label class="form-label small fw-bold">Outer Background Image</label>
+      <div class="input-group input-group-sm mb-2">
+        <input class="form-control" value="${escapeAttr(emailDesignSettings.outerBgImage || '')}" onchange="updateEmailDesignSetting('outerBgImage',this.value)" placeholder="Image URL">
+        <button class="btn btn-outline-primary" onclick="chooseGlobalEmailImage('outerBgImage')">Library</button>
+      </div>
+      <label class="form-label small fw-bold">Canvas Background Image</label>
+      <div class="input-group input-group-sm mb-2">
+        <input class="form-control" value="${escapeAttr(emailDesignSettings.canvasBgImage || '')}" onchange="updateEmailDesignSetting('canvasBgImage',this.value)" placeholder="Image URL">
+        <button class="btn btn-outline-primary" onclick="chooseGlobalEmailImage('canvasBgImage')">Library</button>
+      </div>
+    </div>
+  `;
+  panel.appendChild(advanced);
+
+  if(block){
+    emailUpgradeDefaults(block);
+    const blockAdvanced = document.createElement('div');
+    blockAdvanced.className = 'email-settings-section';
+    blockAdvanced.innerHTML = `
+      <div class="email-settings-section-title">Advanced Block Customization</div>
+      <div class="email-settings-subtitle">Optional image inside this block</div>
+      ${imageUrlPickerHtml(block,'supportImageUrl','Image Inside Block')}
+      <div class="email-mini-row">
+        <div>${selectFor(block,'Image Position','supportImagePosition',['none','left','right','top','bottom'])}</div>
+        <div>${inputFor(block,'Image Width %','supportImageWidth','number')}</div>
+      </div>
+      <div class="email-mini-row">
+        <div>${selectFor(block,'Image Shape','supportImageShape',['square','rounded','circle'])}</div>
+        <div>${inputFor(block,'Image Gap','supportImageGap','number')}</div>
+      </div>
+      <div class="email-settings-subtitle">Block background image</div>
+      ${imageUrlPickerHtml(block,'bgImage','Block Background Image')}
+      <div class="email-mini-row">
+        <div>${selectFor(block,'BG Size','bgSize',['cover','contain','auto'])}</div>
+        <div>${selectFor(block,'BG Repeat','bgRepeat',['no-repeat','repeat'])}</div>
+      </div>
+      ${selectFor(block,'BG Position','bgPosition',['center','top','bottom','left','right'])}
+    `;
+    panel.appendChild(blockAdvanced);
+  }
+
+  if(block && block.type === 'social'){
+    const socialAdvanced = document.createElement('div');
+    socialAdvanced.className = 'email-settings-section';
+    socialAdvanced.innerHTML = `
+      <div class="email-settings-section-title">Social Icon Brand Controls</div>
+      ${selectFor(block,'Color Mode','socialColorMode',['brand','custom'])}
+      ${selectFor(block,'Icon Style','socialStyle',['circle','rounded','square'])}
+      <div class="small-muted mt-1">Brand mode uses normal Facebook, Instagram, LinkedIn, YouTube, X, and website colors. Custom mode uses your selected icon colors.</div>
+    `;
+    panel.appendChild(socialAdvanced);
+  }
+}
+
+function initPremiumEmailDragDrop(){
+  const canvas = document.getElementById('emailCanvas');
+  if(!canvas) return;
+
+  document.querySelectorAll('.email-widget-button').forEach(btn=>{
+    if(btn.dataset.dragReady) return;
+    btn.dataset.dragReady = 'true';
+    btn.setAttribute('draggable','true');
+    const onclick = btn.getAttribute('onclick') || '';
+    const match = onclick.match(/addEmailBlock\('([^']+)'\)/);
+    if(match) btn.dataset.blockType = match[1];
+    btn.addEventListener('dragstart', e=>{
+      e.dataTransfer.setData('text/email-block-type', btn.dataset.blockType || 'text');
+      e.dataTransfer.effectAllowed = 'copy';
+    });
+  });
+
+  if(!canvas.dataset.dropReady){
+    canvas.dataset.dropReady = 'true';
+    canvas.addEventListener('dragover', e=>{ e.preventDefault(); canvas.classList.add('drop-ready'); });
+    canvas.addEventListener('dragleave', ()=>canvas.classList.remove('drop-ready'));
+    canvas.addEventListener('drop', e=>{
+      e.preventDefault();
+      canvas.classList.remove('drop-ready');
+      const type = e.dataTransfer.getData('text/email-block-type');
+      if(type) addEmailBlock(type);
+    });
+  }
+
+  if(window.Sortable && !emailCanvasSortable){
+    emailCanvasSortable = Sortable.create(canvas, {
+      animation: 160,
+      handle: '.email-block-drag-handle',
+      draggable: '.email-builder-block',
+      onEnd: function(){
+        const order = Array.from(canvas.querySelectorAll('.email-builder-block')).map(el=>el.dataset.emailBlockId);
+        emailDesignBlocks.sort((a,b)=>order.indexOf(a.id) - order.indexOf(b.id));
+        renderEmailDesigner(false);
+      }
+    });
+  }
+}
+
+const originalUpdateEmailDesignSetting = updateEmailDesignSetting;
+updateEmailDesignSetting = function(key, value){
+  if(['width'].includes(key)) value = Number(value || 680);
+  emailDesignSettings[key] = value;
+  renderEmailDesigner(false);
+};
+
+const originalGetCampaignHtml = getCampaignHtml;
+getCampaignHtml = function(){
+  if(emailDesignBlocks.length > 0){
+    const content = emailDesignBlocks.map(renderEmailBlockContent).join('');
+    const encodedDesign = encodeURIComponent(JSON.stringify({ settings: emailDesignSettings, blocks: emailDesignBlocks }));
+    const outerBgImage = emailDesignSettings.outerBgImage ? `background-image:url('${escapeAttr(emailDesignSettings.outerBgImage)}');background-size:cover;background-repeat:no-repeat;background-position:center;` : '';
+    const canvasBgImage = emailDesignSettings.canvasBgImage ? `background-image:url('${escapeAttr(emailDesignSettings.canvasBgImage)}');background-size:cover;background-repeat:no-repeat;background-position:center;` : '';
+    return `<!--EXCEL_EMAIL_DESIGN:${encodedDesign}--><div style="margin:0;padding:0;background:${emailDesignSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(emailDesignSettings.width || 680)}px;margin:0 auto;background:${emailDesignSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${emailDesignSettings.fontFamily || 'Arial, sans-serif'};">${content}</div></div>`;
+  }
+  return quill.root.innerHTML;
+};
+
+setTimeout(()=>{
+  loadEmailImages();
+}, 500);
 
 
 let contactsCache = [];
