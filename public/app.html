@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -652,6 +652,87 @@ body {
   background:#ede9fe;
   color:#5b21b6;
 }
+
+
+.dashboard-widget {
+  transition:0.18s ease;
+}
+
+.dashboard-widget:hover {
+  transform:translateY(-2px);
+  box-shadow:0 10px 26px rgba(15,23,42,0.10);
+}
+
+.dashboard-widget.drilldown-ready {
+  cursor:pointer;
+}
+
+.dashboard-widget .drag-handle {
+  cursor:grab;
+}
+
+#dashboardDrilldownPanel {
+  position:fixed;
+  top:0;
+  right:-760px;
+  width:760px;
+  height:100%;
+  background:white;
+  box-shadow:-2px 0 24px rgba(0,0,0,0.22);
+  transition:0.3s;
+  z-index:9997;
+  padding:24px;
+  overflow:auto;
+}
+
+#dashboardDrilldownPanel.open {
+  right:0;
+}
+
+.drilldown-row {
+  border:1px solid var(--border);
+  background:#ffffff;
+  border-radius:14px;
+  padding:13px;
+  margin-bottom:10px;
+  cursor:pointer;
+}
+
+.drilldown-row:hover {
+  background:#f9fafb;
+}
+
+.contact-quick-summary {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+
+.timeline-row {
+  border-left:3px solid var(--accent);
+  padding:8px 0 8px 12px;
+  margin-bottom:8px;
+  background:#ffffff;
+}
+
+.quick-tag-pill {
+  display:inline-block;
+  border:1px solid var(--border);
+  background:white;
+  border-radius:999px;
+  padding:5px 9px;
+  margin:3px;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:700;
+}
+
+.quick-tag-pill:hover {
+  background:#eef2f7;
+}
+
 </style>
 </head>
 
@@ -957,6 +1038,7 @@ body {
   <button class="btn btn-sm btn-secondary mb-3" onclick="closePanel()">Close</button>
 
   <h4>Edit Contact</h4>
+  <div id="contactQuickSummary" class="contact-quick-summary"></div>
   <div id="contactUnsubscribeStatus" class="mb-2"></div>
   <div id="contactBounceStatus" class="mb-3"></div>
 
@@ -972,6 +1054,15 @@ body {
   <div id="quickStageButtons"></div>
 </div>
   <input id="editTags" class="form-control mb-2" placeholder="Tags, comma separated">
+
+  <div class="feature-card">
+    <div class="feature-title mb-2">Tag Quick Add</div>
+    <div class="input-group mb-2">
+      <input id="quickTagInput" class="form-control" placeholder="Add tag to this contact">
+      <button class="btn btn-outline-primary" onclick="quickAddTagToCurrentContact()">Add Tag</button>
+    </div>
+    <div id="quickTagButtons"></div>
+  </div>
 
   <div class="feature-card">
     <div class="feature-title mb-2">Individual Campaign Selection</div>
@@ -1008,6 +1099,11 @@ body {
   </div>
 
   <div class="section">
+    <h6>Activity Timeline</h6>
+    <div id="contactTimeline"></div>
+  </div>
+
+  <div class="section">
     <h6>Campaign History</h6>
     <div id="panelCampaigns"></div>
   </div>
@@ -1037,6 +1133,14 @@ body {
     <h5>Links Clicked</h5>
     <div id="campaignLinksClicked"></div>
   </div>
+</div>
+
+<!-- DASHBOARD DRILLDOWN PANEL -->
+<div id="dashboardDrilldownPanel">
+  <button class="btn btn-sm btn-secondary mb-3" onclick="closeDashboardDrilldown()">Close</button>
+  <h4 id="dashboardDrilldownTitle" class="panel-title">Dashboard Detail</h4>
+  <div id="dashboardDrilldownSubtitle" class="text-muted mb-3"></div>
+  <div id="dashboardDrilldownContent"></div>
 </div>
 
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
@@ -1104,9 +1208,16 @@ function getFallbackPipelineStages(){
   return ['New Lead','Contacted','Appointment Set','Active Prospect','Under Contract','Pending','Closed','Past Client'];
 }
 
+function normalizeStageValue(value){
+  return String(value || '').trim().toLowerCase();
+}
+
 function inferStageFromContact(contact){
-  if(contact && contact.stage) return contact.stage;
-  return 'New Lead';
+  const fallback = 'New Lead';
+  const rawStage = String(contact && contact.stage ? contact.stage : fallback).trim();
+  const stages = Array.isArray(pipelineStagesCache) && pipelineStagesCache.length ? pipelineStagesCache : getFallbackPipelineStages();
+  const matchedStage = stages.find(stage => normalizeStageValue(stage) === normalizeStageValue(rawStage));
+  return matchedStage || fallback;
 }
 
 function saveSelectedCampaignContacts(){
@@ -1241,6 +1352,24 @@ function initDashboardDrag(){
     onEnd: saveDashboardLayout
   });
 }
+
+function initDashboardDrilldowns(){
+  const drilldownWidgets = ['totalContacts','totalCampaigns','openRate','clickRate','totalSent','totalOpened','totalClicks','listHealth','dueToday','overdue','recentActivity','topLinks','campaignPerformance','activityTrend','engagementBreakdown'];
+
+  drilldownWidgets.forEach(widgetId=>{
+    const widget = dashboardWidgetGrid.querySelector(`[data-widget-id="${widgetId}"]`);
+    if(!widget || widget.dataset.drilldownReady === 'true') return;
+
+    widget.dataset.drilldownReady = 'true';
+    widget.classList.add('drilldown-ready');
+
+    widget.addEventListener('click', function(event){
+      if(event.target.closest('.drag-handle')) return;
+      openDashboardDrilldown(widgetId);
+    });
+  });
+}
+
 
 function saveDashboardLayout(){
   const order = Array.from(dashboardWidgetGrid.children).map(widget => widget.dataset.widgetId).filter(Boolean);
@@ -1464,6 +1593,152 @@ async function loadDashboard(){
   renderCampaignPerformanceChart(campaigns, activity);
   renderEngagementBreakdownChart(data);
   initDashboardDrag();
+  initDashboardDrilldowns();
+}
+
+
+function openDashboardDrilldown(type){
+  const titleMap = {
+    totalContacts:'All Contacts',
+    totalCampaigns:'All Campaigns',
+    openRate:'Opened Emails',
+    clickRate:'Clicked Links',
+    totalSent:'Emails Sent',
+    totalOpened:'Total Opens',
+    totalClicks:'Total Clicks',
+    listHealth:'List Health',
+    dueToday:'Tasks Due Today',
+    overdue:'Overdue Tasks',
+    recentActivity:'Recent Activity',
+    topLinks:'Top Links Clicked',
+    campaignPerformance:'Campaign Performance',
+    activityTrend:'Email Activity Trend',
+    engagementBreakdown:'Engagement Breakdown'
+  };
+
+  dashboardDrilldownTitle.innerText = titleMap[type] || 'Dashboard Detail';
+  dashboardDrilldownSubtitle.innerText = 'Click a contact or campaign row to open more detail.';
+  dashboardDrilldownContent.innerHTML = buildDashboardDrilldownHtml(type);
+  dashboardDrilldownPanel.classList.add('open');
+}
+
+function closeDashboardDrilldown(){
+  dashboardDrilldownPanel.classList.remove('open');
+}
+
+function findContactByEmail(email){
+  return contactsCache.find(c => String(c.email || '').toLowerCase() === String(email || '').toLowerCase());
+}
+
+function contactOpenAction(email){
+  const contact = findContactByEmail(email);
+  return contact ? `onclick="openContact(${contact.id})"` : '';
+}
+
+function buildDashboardDrilldownHtml(type){
+  if(type === 'totalContacts'){
+    if(!contactsCache.length) return '<div class="text-muted">No contacts yet.</div>';
+    return contactsCache
+      .slice()
+      .sort((a,b)=>contactName(a).localeCompare(contactName(b)))
+      .map(c=>`
+        <div class="drilldown-row" onclick="openContact(${c.id})">
+          <b>${contactName(c)}</b><br>
+          <small>${c.email || ''} | ${formatPhone(c.phone || '')} | ${c.type || ''} | ${inferStageFromContact(c)}</small>
+          ${renderTags(c.tags)}
+        </div>
+      `).join('');
+  }
+
+  if(type === 'totalCampaigns' || type === 'campaignPerformance'){
+    if(!campaignsCache.length) return '<div class="text-muted">No campaigns yet.</div>';
+    return campaignsCache.map(c=>`
+      <div class="drilldown-row" onclick="openCampaignPanel(${c.id})">
+        <b>${c.name || 'Untitled Campaign'}</b><br>
+        <small>Subject: ${c.subject || ''}</small><br>
+        <small>Created: ${formatDate(c.createdAt)}${c.updatedAt ? ' | Updated: ' + formatDate(c.updatedAt) : ''}</small>
+      </div>
+    `).join('');
+  }
+
+  if(type === 'openRate' || type === 'totalOpened'){
+    const rows = activityCache.filter(a=>a.opened).sort((a,b)=>new Date(b.openedAt || 0) - new Date(a.openedAt || 0));
+    if(!rows.length) return '<div class="text-muted">No opens tracked yet.</div>';
+    return rows.map(a=>`
+      <div class="drilldown-row" ${contactOpenAction(a.email)}>
+        <b>${a.email || ''}</b><br>
+        <small>Opened: ${formatDate(a.openedAt)} | Campaign: ${a.campaignName || ''}</small>
+      </div>
+    `).join('');
+  }
+
+  if(type === 'clickRate' || type === 'totalClicks' || type === 'topLinks'){
+    const rows = [];
+    activityCache.forEach(a=>{
+      (a.clicks || []).forEach(click=>rows.push({...click, email:a.email, campaignName:a.campaignName}));
+    });
+    rows.sort((a,b)=>new Date(b.clickedAt || 0) - new Date(a.clickedAt || 0));
+    if(!rows.length) return '<div class="text-muted">No clicks tracked yet.</div>';
+    return rows.map(r=>`
+      <div class="drilldown-row" ${contactOpenAction(r.email)}>
+        <b>${r.email || ''}</b><br>
+        <small>Clicked: ${formatDate(r.clickedAt)} | Campaign: ${r.campaignName || ''}</small><br>
+        <small>${r.url || ''}</small>
+      </div>
+    `).join('');
+  }
+
+  if(type === 'totalSent' || type === 'recentActivity' || type === 'activityTrend'){
+    const rows = [];
+    activityCache.forEach(a=>{
+      rows.push({type:a.status === 'failed' ? 'Failed' : 'Sent', email:a.email, campaignName:a.campaignName, date:a.sentAt || a.sentDate, detail:a.error || ''});
+      if(a.opened) rows.push({type:'Opened', email:a.email, campaignName:a.campaignName, date:a.openedAt, detail:''});
+      (a.clicks || []).forEach(click=>rows.push({type:'Clicked', email:a.email, campaignName:a.campaignName, date:click.clickedAt, detail:click.url || ''}));
+    });
+    rows.sort((a,b)=>new Date(b.date || 0) - new Date(a.date || 0));
+    if(!rows.length) return '<div class="text-muted">No activity yet.</div>';
+    return rows.slice(0,100).map(r=>`
+      <div class="drilldown-row" ${contactOpenAction(r.email)}>
+        <b>${r.type}</b> — ${r.email || ''}<br>
+        <small>${r.campaignName || ''} | ${formatDate(r.date)}</small>
+        ${r.detail ? `<br><small>${r.detail}</small>` : ''}
+      </div>
+    `).join('');
+  }
+
+  if(type === 'listHealth'){
+    const rows = contactsCache.filter(c=>c.unsubscribed || c.bounced);
+    if(!rows.length) return '<div class="text-muted">No unsubscribed or bounced contacts.</div>';
+    return rows.map(c=>`
+      <div class="drilldown-row" onclick="openContact(${c.id})">
+        <b>${contactName(c)}</b><br>
+        <small>${c.email || ''} | ${c.unsubscribed ? 'Unsubscribed' : ''} ${c.bounced ? 'Bounced' : ''}</small>
+      </div>
+    `).join('');
+  }
+
+  if(type === 'dueToday' || type === 'overdue'){
+    const rows = [];
+    contactsCache.forEach(c=>{
+      (c.tasks || []).forEach(task=>{
+        if(type === 'dueToday' && !task.done && task.due && String(task.due).slice(0,10) === todayKey()) rows.push({contact:c, task});
+        if(type === 'overdue' && taskIsOverdue(task)) rows.push({contact:c, task});
+      });
+    });
+    if(!rows.length) return '<div class="text-muted">No matching tasks.</div>';
+    return rows.map(row=>`
+      <div class="drilldown-row" onclick="openContact(${row.contact.id})">
+        <b>${row.task.title || 'Untitled Task'}</b><br>
+        <small>${contactName(row.contact)} | Due: ${formatShortDate(row.task.due)} | Priority: ${row.task.priority || 'Normal'}</small>
+      </div>
+    `).join('');
+  }
+
+  if(type === 'engagementBreakdown'){
+    return buildDashboardDrilldownHtml('recentActivity');
+  }
+
+  return '<div class="text-muted">No detail available yet.</div>';
 }
 
 /* TEMPLATES */
@@ -2286,7 +2561,13 @@ async function addContact(){
 }
 
 function openContact(id){
-  currentContact = contactsCache.find(c=>c.id==id);
+  currentContact = contactsCache.find(c=>String(c.id) === String(id));
+  if(!currentContact){
+    alert('Contact could not be found. Refreshing contacts now.');
+    loadContacts();
+    return;
+  }
+
   contactPanel.classList.add('open');
 
   editFirst.value=currentContact.firstName || '';
@@ -2294,10 +2575,13 @@ function openContact(id){
   editEmail.value=currentContact.email || '';
   editPhone.value=formatPhone(currentContact.phone || '');
   editType.value=currentContact.type || '';
-  editStage.value=currentContact.stage || 'New Lead';
-  renderQuickStageButtons();
-  updateCampaignContactButton();
+  editStage.value=inferStageFromContact(currentContact);
   editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
+
+  renderContactQuickSummary();
+  renderQuickStageButtons();
+  renderQuickTagButtons();
+  updateCampaignContactButton();
 
   contactUnsubscribeStatus.innerHTML = currentContact.unsubscribed
     ? `<span class="unsubscribed-badge">Unsubscribed</span><br><small class="text-muted">Unsubscribed: ${formatDate(currentContact.unsubscribedAt)}</small>`
@@ -2312,7 +2596,95 @@ function openContact(id){
     .join('');
 
   renderContactTasks();
+  renderContactTimeline([]);
   loadActivity(currentContact.email);
+}
+
+function renderContactQuickSummary(){
+  const taskCount = (currentContact.tasks || []).filter(t=>!t.done).length;
+  const tagText = Array.isArray(currentContact.tags) && currentContact.tags.length ? currentContact.tags.join(', ') : 'No tags yet';
+
+  contactQuickSummary.innerHTML = `
+    <div class="d-flex justify-content-between align-items-start gap-2">
+      <div>
+        <b>${contactName(currentContact)}</b><br>
+        <small>${currentContact.email || 'No email'} | ${formatPhone(currentContact.phone || '')}</small><br>
+        <small>Type: ${currentContact.type || 'Unassigned'} | Stage: ${inferStageFromContact(currentContact)}</small><br>
+        <small>Tags: ${tagText}</small>
+      </div>
+      <div class="text-end">
+        <span class="stage-pill">${inferStageFromContact(currentContact)}</span><br>
+        <small class="text-muted">${taskCount} open task(s)</small>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuickTagButtons(){
+  if(!document.getElementById('quickTagButtons')) return;
+  const currentTags = Array.isArray(currentContact.tags) ? currentContact.tags : [];
+  const suggestions = allTagsCache.filter(tag => !currentTags.includes(tag)).slice(0,12);
+
+  if(suggestions.length === 0){
+    quickTagButtons.innerHTML = '<div class="text-muted small">No additional saved tags to suggest.</div>';
+    return;
+  }
+
+  quickTagButtons.innerHTML = suggestions.map(tag=>`
+    <span class="quick-tag-pill" onclick="quickAddTagValue('${String(tag).replaceAll("'", "\'")}')">+ ${tag}</span>
+  `).join('');
+}
+
+function quickAddTagValue(tag){
+  const tags = parseCommaList(editTags.value);
+  if(tag && !tags.includes(tag)) tags.push(tag);
+  editTags.value = tags.join(', ');
+}
+
+function quickAddTagToCurrentContact(){
+  const tag = quickTagInput.value.trim();
+  if(!tag) return;
+  quickAddTagValue(tag);
+  quickTagInput.value = '';
+}
+
+function renderContactTimeline(activityRows){
+  if(!document.getElementById('contactTimeline') || !currentContact) return;
+
+  const timeline = [];
+
+  (currentContact.stageHistory || []).forEach(item=>{
+    timeline.push({ date:item.date, title:'Pipeline Stage', detail:`Moved to ${item.stage || 'New Lead'}` });
+  });
+
+  (currentContact.notes || []).forEach(note=>{
+    timeline.push({ date:note.date, title:'Note Added', detail:note.text || '' });
+  });
+
+  (currentContact.tasks || []).forEach(task=>{
+    timeline.push({ date:task.createdAt || task.due, title: task.done ? 'Task Completed' : 'Task Created', detail:`${task.title || 'Untitled Task'}${task.due ? ' | Due ' + formatShortDate(task.due) : ''}` });
+  });
+
+  (activityRows || []).forEach(a=>{
+    if(a.sentAt || a.sentDate) timeline.push({ date:a.sentAt || a.sentDate, title:a.status === 'failed' ? 'Email Failed' : 'Email Sent', detail:a.campaignName || '' });
+    if(a.opened && a.openedAt) timeline.push({ date:a.openedAt, title:'Email Opened', detail:a.campaignName || '' });
+    (a.clicks || []).forEach(click=>timeline.push({ date:click.clickedAt, title:'Link Clicked', detail:click.url || '' }));
+  });
+
+  timeline.sort((a,b)=>new Date(b.date || 0) - new Date(a.date || 0));
+
+  if(timeline.length === 0){
+    contactTimeline.innerHTML = '<div class="text-muted small">No timeline activity yet.</div>';
+    return;
+  }
+
+  contactTimeline.innerHTML = timeline.slice(0,25).map(item=>`
+    <div class="timeline-row">
+      <b>${item.title}</b><br>
+      <small>${formatDate(item.date)}</small>
+      ${item.detail ? `<br><small>${item.detail}</small>` : ''}
+    </div>
+  `).join('');
 }
 
 async function saveContact(){
@@ -2461,6 +2833,8 @@ async function loadActivity(email){
   const res = await fetch('/api/contact-activity?email='+email);
   const data = await res.json();
 
+  renderContactTimeline(data);
+
   panelCampaigns.innerHTML='';
 
   if(data.length === 0){
@@ -2553,29 +2927,43 @@ async function loadContacts(){
 
 /* PIPELINE */
 async function loadPipeline(){
-  await loadContacts();
   await loadPipelineStages();
+  await loadContacts();
 
   pipelineBoard.innerHTML = '';
   pipelineSortables.forEach(s=>s.destroy && s.destroy());
   pipelineSortables = [];
 
-  pipelineStagesCache.forEach(stage=>{
-    const contacts = contactsCache.filter(c=>inferStageFromContact(c) === stage);
+  const stages = pipelineStagesCache.length ? pipelineStagesCache : getFallbackPipelineStages();
+  const contactsByStage = {};
+  stages.forEach(stage=>contactsByStage[stage] = []);
+
+  contactsCache.forEach(contact=>{
+    const stage = inferStageFromContact(contact);
+    if(!contactsByStage[stage]) contactsByStage[stage] = [];
+    contactsByStage[stage].push(contact);
+  });
+
+  stages.forEach(stage=>{
+    const stageContacts = (contactsByStage[stage] || []).slice().sort((a,b)=>contactName(a).localeCompare(contactName(b)));
 
     const column = document.createElement('div');
     column.className = 'pipeline-column';
     column.innerHTML = `
       <div class="pipeline-column-header">
         <span>${stage}</span>
-        <span class="pipeline-count">${contacts.length}</span>
+        <span class="pipeline-count">${stageContacts.length}</span>
       </div>
       <div class="pipeline-dropzone" data-stage="${stage}"></div>
     `;
 
     const dropzone = column.querySelector('.pipeline-dropzone');
 
-    contacts.forEach(c=>{
+    if(stageContacts.length === 0){
+      dropzone.innerHTML = '<div class="text-muted small p-2">No contacts in this stage.</div>';
+    }
+
+    stageContacts.forEach(c=>{
       const card = document.createElement('div');
       card.className = 'pipeline-card';
       card.dataset.contactId = c.id;
@@ -2598,22 +2986,43 @@ async function loadPipeline(){
       const sortable = Sortable.create(dropzone, {
         group:'pipeline',
         animation:150,
+        filter:'.text-muted',
+        onStart:function(){
+          dropzone.querySelectorAll('.text-muted').forEach(el=>el.remove());
+        },
         onAdd: async function(evt){
           const contactId = evt.item.dataset.contactId;
           const newStage = evt.to.dataset.stage;
+          const movedContact = contactsCache.find(c=>String(c.id) === String(contactId));
+          if(movedContact) movedContact.stage = newStage;
 
-          await fetch(`/api/contacts/${contactId}/stage`, {
+          const res = await fetch(`/api/contacts/${contactId}/stage`, {
             method:'PUT',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({stage:newStage})
           });
 
+          if(!res.ok){
+            alert('Stage could not be updated. The pipeline will refresh.');
+          }
+
           await loadContacts();
           await loadDashboard();
+          await loadTasks();
           await loadCalendar();
-          loadPipeline();
+
+          if(currentContact && String(currentContact.id) === String(contactId)){
+            currentContact = contactsCache.find(c=>String(c.id) === String(contactId));
+            if(currentContact){
+              editStage.value = inferStageFromContact(currentContact);
+              renderContactQuickSummary();
+              renderQuickStageButtons();
+            }
+          }
+
+          await loadPipeline();
         }
-        });
+      });
 
       pipelineSortables.push(sortable);
     }
@@ -2638,21 +3047,34 @@ function renderQuickStageButtons(){
 }
 
 async function quickMoveStage(stage){
+  if(!currentContact) return;
   editStage.value = stage;
 
-  await fetch('/api/contacts/'+currentContact.id+'/stage',{
+  const res = await fetch('/api/contacts/'+currentContact.id+'/stage',{
     method:'PUT',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ stage })
   });
 
+  if(!res.ok){
+    alert('Stage could not be updated.');
+    return;
+  }
+
   await loadContacts();
   await loadPipeline();
   await loadDashboard();
+  await loadTasks();
   await loadCalendar();
 
-  currentContact = contactsCache.find(c=>c.id==currentContact.id);
-  openContact(currentContact.id);
+  currentContact = contactsCache.find(c=>String(c.id) === String(currentContact.id));
+  if(currentContact){
+    editStage.value = inferStageFromContact(currentContact);
+    renderContactQuickSummary();
+    renderQuickStageButtons();
+    renderContactTimeline([]);
+    loadActivity(currentContact.email);
+  }
 }
 
 /* TASKS */
