@@ -1068,6 +1068,7 @@ app.post('/api/campaigns', (req, res) => {
     name: req.body.name || 'Untitled',
     subject: req.body.subject || '',
     html: req.body.html || '',
+    designBlocks: Array.isArray(req.body.designBlocks) ? req.body.designBlocks : [],
     status: 'Draft',
     createdAt: new Date().toISOString()
   };
@@ -1101,6 +1102,7 @@ app.put('/api/campaigns/:id', (req, res) => {
     name: req.body.name || campaigns[index].name || 'Untitled',
     subject: req.body.subject || '',
     html: req.body.html || '',
+    designBlocks: Array.isArray(req.body.designBlocks) ? req.body.designBlocks : (campaigns[index].designBlocks || []),
     updatedAt: new Date().toISOString()
   };
 
@@ -1139,6 +1141,7 @@ app.post('/api/templates', (req, res) => {
     category: req.body.category || 'General',
     subject: req.body.subject || '',
     html: req.body.html || '',
+    designBlocks: Array.isArray(req.body.designBlocks) ? req.body.designBlocks : [],
     createdAt: new Date().toISOString(),
     updatedAt: null
   };
@@ -1163,6 +1166,7 @@ app.put('/api/templates/:id', (req, res) => {
     category: req.body.category || 'General',
     subject: req.body.subject || '',
     html: req.body.html || '',
+    designBlocks: Array.isArray(req.body.designBlocks) ? req.body.designBlocks : (templates[index].designBlocks || []),
     updatedAt: new Date().toISOString()
   };
 
