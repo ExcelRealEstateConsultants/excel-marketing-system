@@ -27,6 +27,11 @@ const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.SENDER_
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Jeff Peterson';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+/* ================= TWILIO SMS ================= */
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '';
+
 /* ================= FILES ================= */
 const DATA_FILE = path.join(__dirname, 'contacts.json');
 const ACTIVITY_FILE = path.join(__dirname, 'activity.json');
@@ -34,6 +39,7 @@ const CAMPAIGN_FILE = path.join(__dirname, 'campaigns.json');
 const TEMPLATE_FILE = path.join(__dirname, 'templates.json');
 const SEGMENT_FILE = path.join(__dirname, 'segments.json');
 const SCHEDULED_CAMPAIGN_FILE = path.join(__dirname, 'scheduled-campaigns.json');
+const SMS_ACTIVITY_FILE = path.join(__dirname, 'sms-activity.json');
 
 const PIPELINE_STAGES = [
   'New Lead',
@@ -69,6 +75,25 @@ function normalizeEmail(email) {
 
 function normalizePhone(phone) {
   return String(phone || '').replace(/\D/g, '').slice(0, 10);
+}
+
+function normalizeSmsPhone(phone) {
+  const raw = String(phone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+
+  if (raw.startsWith('+')) return raw;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return raw;
+}
+
+function maskPhone(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length >= 10) {
+    const last10 = digits.slice(-10);
+    return `(${last10.slice(0,3)}) ${last10.slice(3,6)}-${last10.slice(6)}`;
+  }
+  return phone || '';
 }
 
 function defaultStage(stage) {
@@ -160,6 +185,14 @@ function saveScheduledCampaigns(data) {
   writeJsonFile(SCHEDULED_CAMPAIGN_FILE, data);
 }
 
+function loadSmsActivity() {
+  return readJsonFile(SMS_ACTIVITY_FILE, []);
+}
+
+function saveSmsActivity(data) {
+  writeJsonFile(SMS_ACTIVITY_FILE, data);
+}
+
 /* ================= EMAIL FOOTER ================= */
 function addUnsubscribeFooter(html, email) {
   const unsubscribeUrl = `${BASE_URL}/unsubscribe?email=${encodeURIComponent(email)}`;
@@ -203,6 +236,44 @@ async function sendBrevoEmail({ to, subject, html }) {
 
   if (!response.ok) {
     throw new Error(result.message || `Brevo send failed for ${to}`);
+  }
+
+  return result;
+}
+
+
+/* ================= TWILIO SEND FUNCTION ================= */
+async function sendTwilioSms({ to, body }) {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+    throw new Error('Twilio is not configured. Please check TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in your environment variables.');
+  }
+
+  const formattedTo = normalizeSmsPhone(to);
+  const formattedFrom = normalizeSmsPhone(TWILIO_PHONE_NUMBER);
+
+  if (!formattedTo || !body) {
+    throw new Error('Phone number and message are required.');
+  }
+
+  const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+  const params = new URLSearchParams();
+  params.append('To', formattedTo);
+  params.append('From', formattedFrom);
+  params.append('Body', body);
+
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${auth}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: params.toString()
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(result.message || `Twilio SMS failed for ${maskPhone(formattedTo)}`);
   }
 
   return result;
@@ -496,6 +567,90 @@ app.get('/api/calendar-events', (req, res) => {
 
   events.sort((a, b) => new Date(a.date) - new Date(b.date));
   res.json(events);
+});
+
+
+/* ================= SMS ACTIVITY / TEXTING ================= */
+app.get('/api/sms-activity', (req, res) => {
+  const smsActivity = loadSmsActivity();
+  const contactId = req.query.contactId ? String(req.query.contactId) : '';
+  const phone = req.query.phone ? normalizeSmsPhone(req.query.phone) : '';
+
+  let filtered = smsActivity;
+
+  if (contactId) {
+    filtered = filtered.filter(item => String(item.contactId || '') === contactId);
+  }
+
+  if (phone) {
+    filtered = filtered.filter(item => normalizeSmsPhone(item.to || item.from || '') === phone);
+  }
+
+  filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  res.json(filtered);
+});
+
+app.post('/api/send-sms', async (req, res) => {
+  const contacts = loadContacts();
+  const smsActivity = loadSmsActivity();
+
+  const contact = req.body.contactId
+    ? contacts.find(c => String(c.id) === String(req.body.contactId))
+    : null;
+
+  const to = normalizeSmsPhone(req.body.to || (contact ? contact.phone : ''));
+  const message = String(req.body.message || '').trim();
+
+  if (!to) {
+    return res.status(400).json({ success: false, error: 'A phone number is required before sending a text.' });
+  }
+
+  if (!message) {
+    return res.status(400).json({ success: false, error: 'A message is required before sending a text.' });
+  }
+
+  const baseRecord = {
+    id: Date.now(),
+    contactId: contact ? contact.id : (req.body.contactId || null),
+    contactName: contact ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim() : '',
+    to,
+    from: normalizeSmsPhone(TWILIO_PHONE_NUMBER),
+    message,
+    direction: 'outbound',
+    provider: 'Twilio',
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    sentAt: null,
+    twilioSid: null,
+    error: ''
+  };
+
+  try {
+    const twilioResult = await sendTwilioSms({ to, body: message });
+
+    const sentRecord = {
+      ...baseRecord,
+      status: twilioResult.status || 'sent',
+      sentAt: new Date().toISOString(),
+      twilioSid: twilioResult.sid || null
+    };
+
+    smsActivity.unshift(sentRecord);
+    saveSmsActivity(smsActivity);
+
+    res.json({ success: true, message: 'Text message sent.', sms: sentRecord });
+  } catch (error) {
+    const failedRecord = {
+      ...baseRecord,
+      status: 'failed',
+      error: error.message || 'Unknown SMS failure'
+    };
+
+    smsActivity.unshift(failedRecord);
+    saveSmsActivity(smsActivity);
+
+    res.status(500).json({ success: false, error: failedRecord.error, sms: failedRecord });
+  }
 });
 
 /* ================= UNSUBSCRIBE ================= */
