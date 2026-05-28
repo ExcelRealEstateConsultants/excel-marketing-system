@@ -8,8 +8,9 @@ require('dotenv').config();
 const app = express();
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '25mb' }));
 app.use(express.static('public'));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 /* ================= ROOT ROUTE FOR GODADDY ================= */
 app.get('/', (req, res) => {
@@ -241,6 +242,93 @@ function loadSmsActivity() {
 function saveSmsActivity(data) {
   writeJsonFile(SMS_ACTIVITY_FILE, data);
 }
+
+
+
+/* ================= EMAIL IMAGE LIBRARY ================= */
+const EMAIL_UPLOAD_DIR = path.join(__dirname, 'public', 'uploads', 'email-images');
+const EMAIL_IMAGE_LIBRARY_FILE = path.join(__dirname, 'email-images.json');
+
+function ensureEmailUploadDir() {
+  if (!fs.existsSync(EMAIL_UPLOAD_DIR)) {
+    fs.mkdirSync(EMAIL_UPLOAD_DIR, { recursive: true });
+  }
+}
+
+function loadEmailImages() {
+  return readJsonFile(EMAIL_IMAGE_LIBRARY_FILE, []);
+}
+
+function saveEmailImages(data) {
+  writeJsonFile(EMAIL_IMAGE_LIBRARY_FILE, data);
+}
+
+function safeFileName(name) {
+  return String(name || 'image')
+    .replace(/[^a-zA-Z0-9._-]/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 80);
+}
+
+app.get('/api/email-images', (req, res) => {
+  res.json(loadEmailImages());
+});
+
+app.post('/api/email-images', (req, res) => {
+  try {
+    ensureEmailUploadDir();
+
+    const name = safeFileName(req.body.name || 'email-image.png');
+    const dataUrl = String(req.body.dataUrl || '');
+    const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+
+    if (!match) {
+      return res.status(400).json({ success: false, error: 'Please upload a valid image file.' });
+    }
+
+    const mime = match[1];
+    const extensionFromMime = mime.includes('jpeg') ? 'jpg' : mime.split('/')[1].replace('svg+xml', 'svg');
+    const cleanBase = name.replace(/\.[^.]+$/, '');
+    const filename = `${Date.now()}-${cleanBase}.${extensionFromMime}`;
+    const filePath = path.join(EMAIL_UPLOAD_DIR, filename);
+
+    fs.writeFileSync(filePath, Buffer.from(match[2], 'base64'));
+
+    const images = loadEmailImages();
+    const image = {
+      id: Date.now(),
+      name,
+      filename,
+      mime,
+      url: `/uploads/email-images/${filename}`,
+      createdAt: new Date().toISOString()
+    };
+
+    images.unshift(image);
+    saveEmailImages(images);
+
+    res.json({ success: true, image });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message || 'Image could not be uploaded.' });
+  }
+});
+
+app.delete('/api/email-images/:id', (req, res) => {
+  const images = loadEmailImages();
+  const image = images.find(i => i.id == req.params.id);
+
+  if (!image) {
+    return res.status(404).json({ success: false, error: 'Image not found' });
+  }
+
+  const filePath = path.join(EMAIL_UPLOAD_DIR, path.basename(image.filename || ''));
+  if (fs.existsSync(filePath)) {
+    try { fs.unlinkSync(filePath); } catch (error) {}
+  }
+
+  saveEmailImages(images.filter(i => i.id != req.params.id));
+  res.json({ success: true });
+});
 
 /* ================= EMAIL FOOTER ================= */
 function addUnsubscribeFooter(html, email) {
