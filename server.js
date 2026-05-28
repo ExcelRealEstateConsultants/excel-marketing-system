@@ -484,6 +484,97 @@ app.put('/api/contacts/:id/stage', (req, res) => {
   res.json({ success: true, contact });
 });
 
+
+/* ================= CONTACT BULK ACTIONS ================= */
+app.put('/api/contacts/bulk-update', (req, res) => {
+  const contacts = loadContacts();
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(String) : [];
+  const addTags = Array.isArray(req.body.addTags) ? req.body.addTags.map(t => String(t).trim()).filter(Boolean) : [];
+  const newType = String(req.body.type || '').trim();
+  const newStageRaw = String(req.body.stage || '').trim();
+  const newStage = newStageRaw ? defaultStage(newStageRaw) : '';
+
+  if (!ids.length) {
+    return res.status(400).json({ success: false, error: 'No contacts selected.' });
+  }
+
+  let updated = 0;
+
+  contacts.forEach(contact => {
+    if (!ids.includes(String(contact.id))) return;
+
+    if (newType) contact.type = newType;
+
+    if (newStage) {
+      const oldStage = defaultStage(contact.stage || 'New Lead');
+      if (oldStage !== newStage) {
+        contact.stage = newStage;
+        contact.stageUpdatedAt = new Date().toISOString();
+        if (!Array.isArray(contact.stageHistory)) contact.stageHistory = [];
+        contact.stageHistory.push({ from: oldStage, stage: newStage, date: new Date().toISOString() });
+      }
+    }
+
+    if (!Array.isArray(contact.tags)) contact.tags = [];
+    addTags.forEach(tag => {
+      if (!contact.tags.includes(tag)) contact.tags.push(tag);
+    });
+
+    updated++;
+  });
+
+  saveContacts(contacts);
+  res.json({ success: true, updated });
+});
+
+app.delete('/api/contacts/bulk-delete', (req, res) => {
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(String) : [];
+
+  if (!ids.length) {
+    return res.status(400).json({ success: false, error: 'No contacts selected.' });
+  }
+
+  const contacts = loadContacts();
+  const remaining = contacts.filter(contact => !ids.includes(String(contact.id)));
+  const deleted = contacts.length - remaining.length;
+
+  saveContacts(remaining);
+  res.json({ success: true, deleted });
+});
+
+app.get('/api/contacts/duplicates', (req, res) => {
+  const contacts = loadContacts();
+  const emailMap = {};
+  const phoneMap = {};
+
+  contacts.forEach(contact => {
+    const email = normalizeEmail(contact.email);
+    const phone = normalizePhone(contact.phone);
+
+    if (email) {
+      if (!emailMap[email]) emailMap[email] = [];
+      emailMap[email].push(contact);
+    }
+
+    if (phone) {
+      if (!phoneMap[phone]) phoneMap[phone] = [];
+      phoneMap[phone].push(contact);
+    }
+  });
+
+  const duplicates = [];
+
+  Object.entries(emailMap).forEach(([value, items]) => {
+    if (items.length > 1) duplicates.push({ type: 'email', value, contacts: items });
+  });
+
+  Object.entries(phoneMap).forEach(([value, items]) => {
+    if (items.length > 1) duplicates.push({ type: 'phone', value, contacts: items });
+  });
+
+  res.json(duplicates);
+});
+
 /* ================= NOTES ================= */
 app.post('/api/contacts/:id/note', (req, res) => {
   const contacts = loadContacts();
