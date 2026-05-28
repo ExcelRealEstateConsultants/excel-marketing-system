@@ -8,7 +8,7 @@ require('dotenv').config();
 const app = express();
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '25mb' }));
 app.use(express.static('public'));
 
 /* ================= ROOT ROUTE FOR GODADDY ================= */
@@ -39,6 +39,7 @@ const CAMPAIGN_FILE = path.join(__dirname, 'campaigns.json');
 const TEMPLATE_FILE = path.join(__dirname, 'templates.json');
 const SEGMENT_FILE = path.join(__dirname, 'segments.json');
 const SCHEDULED_CAMPAIGN_FILE = path.join(__dirname, 'scheduled-campaigns.json');
+const EMAIL_IMAGE_FILE = path.join(__dirname, 'email-images.json');
 const SMS_ACTIVITY_FILE = path.join(__dirname, 'sms-activity.json');
 
 const PIPELINE_STAGES = [
@@ -234,12 +235,55 @@ function saveScheduledCampaigns(data) {
   writeJsonFile(SCHEDULED_CAMPAIGN_FILE, data);
 }
 
+function loadEmailImages() {
+  return readJsonFile(EMAIL_IMAGE_FILE, []);
+}
+
+function saveEmailImages(data) {
+  writeJsonFile(EMAIL_IMAGE_FILE, data);
+}
+
 function loadSmsActivity() {
   return readJsonFile(SMS_ACTIVITY_FILE, []);
 }
 
 function saveSmsActivity(data) {
   writeJsonFile(SMS_ACTIVITY_FILE, data);
+}
+
+/* ================= EMAIL IMAGE LIBRARY ================= */
+app.get('/api/email-images', (req, res) => {
+  res.json(loadEmailImages());
+});
+
+app.post('/api/email-images', (req, res) => {
+  const images = loadEmailImages();
+  const image = {
+    id: req.body.id || Date.now(),
+    name: req.body.name || 'Uploaded image',
+    data: req.body.data || '',
+    createdAt: req.body.createdAt || new Date().toISOString()
+  };
+
+  if (!image.data || !String(image.data).startsWith('data:image/')) {
+    return res.status(400).json({ success: false, error: 'Valid image data is required.' });
+  }
+
+  images.unshift(image);
+  saveEmailImages(images.slice(0, 100));
+  res.json({ success: true, image });
+});
+
+app.delete('/api/email-images', (req, res) => {
+  saveEmailImages([]);
+  res.json({ success: true });
+});
+
+function addPreheader(html, preheader) {
+  if (!preheader) return html || '';
+  const hiddenPreheader = `<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${escapeHtml(preheader)}</div>`;
+  if (String(html || '').includes('mso-hide:all')) return html || '';
+  return `${hiddenPreheader}${html || ''}`;
 }
 
 /* ================= EMAIL FOOTER ================= */
@@ -1067,7 +1111,9 @@ app.post('/api/campaigns', (req, res) => {
     id: Date.now(),
     name: req.body.name || 'Untitled',
     subject: req.body.subject || '',
+    preheader: req.body.preheader || '',
     html: req.body.html || '',
+    designData: req.body.designData || null,
     status: 'Draft',
     createdAt: new Date().toISOString()
   };
@@ -1100,7 +1146,9 @@ app.put('/api/campaigns/:id', (req, res) => {
     ...campaigns[index],
     name: req.body.name || campaigns[index].name || 'Untitled',
     subject: req.body.subject || '',
+    preheader: req.body.preheader || '',
     html: req.body.html || '',
+    designData: req.body.designData || null,
     updatedAt: new Date().toISOString()
   };
 
@@ -1138,7 +1186,9 @@ app.post('/api/templates', (req, res) => {
     name: req.body.name || 'Untitled Template',
     category: req.body.category || 'General',
     subject: req.body.subject || '',
+    preheader: req.body.preheader || '',
     html: req.body.html || '',
+    designData: req.body.designData || null,
     createdAt: new Date().toISOString(),
     updatedAt: null
   };
@@ -1162,7 +1212,9 @@ app.put('/api/templates/:id', (req, res) => {
     name: req.body.name || templates[index].name || 'Untitled Template',
     category: req.body.category || 'General',
     subject: req.body.subject || '',
+    preheader: req.body.preheader || '',
     html: req.body.html || '',
+    designData: req.body.designData || null,
     updatedAt: new Date().toISOString()
   };
 
@@ -1279,7 +1331,9 @@ app.post('/api/scheduled-campaigns', (req, res) => {
     id: Date.now(),
     name: req.body.name || req.body.subject || 'Untitled Scheduled Campaign',
     subject: req.body.subject || '',
+    preheader: req.body.preheader || '',
     html: req.body.html || '',
+    designData: req.body.designData || null,
     recipients,
     scheduledAt: scheduledDate.toISOString(),
     status: 'Scheduled',
@@ -1313,7 +1367,7 @@ app.delete('/api/scheduled-campaigns/:id', (req, res) => {
 });
 
 /* ================= SEND CAMPAIGN ================= */
-async function sendCampaignCore({ name, recipients, subject, html, saveCampaignRecord = true, scheduledCampaignId = null }) {
+async function sendCampaignCore({ name, recipients, subject, html, preheader = '', saveCampaignRecord = true, scheduledCampaignId = null }) {
   if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
     throw new Error('Brevo is not configured. Please check BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.');
   }
@@ -1451,6 +1505,7 @@ async function sendCampaignCore({ name, recipients, subject, html, saveCampaignR
       id: Date.now(),
       name: campaignName,
       subject,
+      preheader,
       html,
       status: results.failed.length ? 'Sent with Errors' : 'Sent',
       createdAt: new Date().toISOString(),
@@ -1479,7 +1534,8 @@ app.post('/api/send-campaign', async (req, res) => {
       name: req.body.name,
       recipients: req.body.recipients,
       subject: req.body.subject,
-      html: req.body.html,
+      html: addPreheader(req.body.html, req.body.preheader),
+      preheader: req.body.preheader || '',
       saveCampaignRecord: true
     });
 
@@ -1516,7 +1572,8 @@ async function processDueScheduledCampaigns() {
         name: scheduled.name,
         recipients: scheduled.recipients,
         subject: scheduled.subject,
-        html: scheduled.html,
+        html: addPreheader(scheduled.html, scheduled.preheader),
+        preheader: scheduled.preheader || '',
         saveCampaignRecord: true,
         scheduledCampaignId: scheduled.id
       });
