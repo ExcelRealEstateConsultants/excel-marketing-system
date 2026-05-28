@@ -8,7 +8,7 @@ require('dotenv').config();
 const app = express();
 
 app.use(cors());
-app.use(bodyParser.json({ limit: '25mb' }));
+app.use(bodyParser.json({ limit: '75mb' }));
 app.use(express.static('public'));
 
 /* ================= ROOT ROUTE FOR GODADDY ================= */
@@ -272,6 +272,13 @@ app.post('/api/email-images', (req, res) => {
   images.unshift(image);
   saveEmailImages(images.slice(0, 100));
   res.json({ success: true, image });
+});
+
+app.delete('/api/email-images/:id', (req, res) => {
+  const id = String(req.params.id || '');
+  const images = loadEmailImages().filter(image => String(image.id) !== id);
+  saveEmailImages(images);
+  res.json({ success: true });
 });
 
 app.delete('/api/email-images', (req, res) => {
