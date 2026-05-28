@@ -1602,6 +1602,100 @@ body {
   transition:.2s ease;
 }
 .email-image-placeholder:hover { background:#eef6ff; border-color:#00A143; }
+
+
+/* ===== EMAIL DESIGNER PRO INTERACTION PATCH ===== */
+.email-block-v2 {
+  margin-top:6px;
+  margin-bottom:6px;
+}
+.email-block-v2.drag-drop-target {
+  outline:2px dashed var(--accent);
+  outline-offset:4px;
+  background:rgba(0,161,67,.04);
+}
+.email-block-drag-grip-v2 {
+  position:absolute;
+  left:8px;
+  top:8px;
+  width:28px;
+  height:28px;
+  border:1px solid rgba(4,44,73,.10);
+  background:rgba(255,255,255,.92);
+  color:#64748b;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:15px;
+  opacity:0;
+  pointer-events:none;
+  box-shadow:0 6px 18px rgba(15,23,42,.10);
+  z-index:60;
+}
+.email-block-v2:hover .email-block-drag-grip-v2,
+.email-block-v2.selected .email-block-drag-grip-v2 {
+  opacity:1;
+  pointer-events:auto;
+  cursor:grab;
+}
+.email-block-resize-handle-v2 {
+  position:absolute;
+  right:-10px;
+  bottom:-10px;
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  background:#042C49;
+  border:3px solid #fff;
+  box-shadow:0 4px 14px rgba(0,0,0,.25);
+  cursor:nwse-resize;
+  z-index:75;
+  opacity:0;
+  transition:.15s ease;
+}
+.email-block-v2:hover .email-block-resize-handle-v2,
+.email-block-v2.selected .email-block-resize-handle-v2 { opacity:1; }
+.email-block-resize-handle-v2::after {
+  content:'↘';
+  position:absolute;
+  inset:-4px 0 0 0;
+  text-align:center;
+  color:#fff;
+  font-size:12px;
+  line-height:20px;
+}
+.email-image-action-bar { display:none!important; }
+.email-image-resize-wrap.selected-image {
+  outline:2px solid var(--accent);
+  outline-offset:4px;
+  border-radius:10px;
+}
+.email-image-resize-wrap.selected-image::before {
+  content:'Press Delete to remove image';
+  position:absolute;
+  left:0;
+  top:-28px;
+  background:#042C49;
+  color:#fff;
+  border-radius:999px;
+  padding:4px 9px;
+  font-size:11px;
+  white-space:nowrap;
+  z-index:80;
+}
+.widget-card-v2 { user-select:none; }
+.widget-card-v2::after {
+  content:'Drag';
+  display:inline-block;
+  margin-top:6px;
+  font-size:10px;
+  color:#64748b;
+  background:#eef2f7;
+  border-radius:999px;
+  padding:2px 7px;
+}
+
 @media (max-width: 900px){ .designer-shell-v2{ grid-template-columns:1fr!important; } }
 
 </style>
@@ -1806,7 +1900,7 @@ body {
   </div>
 
   <div class="email-designer-help-strip">
-    <b>How to use this designer:</b> Drag or click widgets on the left, click any block or the pencil icon to open its settings on the right, click any image area to open the image library, drag the green corner handle to scale images proportionally, and use the small trash icon to delete blocks or images.
+    <b>How to use this designer:</b> Drag widgets into the email, drag blocks to reorder them, drag the corner of any block to resize it, click an image placeholder to choose an image, drag image corners to resize, and press Delete to remove the selected block or image.
   </div>
 
   <div class="designer-shell-v2">
@@ -2438,6 +2532,8 @@ function parseCommaList(value){
 /* ================= SEPARATE EMAIL DESIGNER V2 ================= */
 let designerBlocks = [];
 let selectedDesignerBlockId = null;
+let selectedDesignerImageTarget = null;
+let activeDraggedEmailWidgetType = null;
 let designerSortable = null;
 let designerPaletteSortable = null;
 let designerImageLibrary = JSON.parse(localStorage.getItem('excelEmailImageLibrary') || '[]');
@@ -2484,7 +2580,7 @@ function emailBlockDefaults(type){
   const base = {
     id:edId(type), type, bg:'#ffffff', text:'#1f2937', padding:24, radius:0,
     borderWidth:0, borderColor:'#e5e7eb', align:'left', bgImage:'',
-    mediaUrl:'', mediaPosition:'top', mediaWidth:38, mediaRadius:0
+    mediaUrl:'', mediaPosition:'top', mediaWidth:38, mediaRadius:0, blockWidth:100, blockAlign:'center'
   };
   const map = {
     header:{...base,bg:'#042C49',text:'#ffffff',align:'center',title:'Your Campaign Header',subtitle:'A short supporting message goes here.',padding:36},
@@ -2521,7 +2617,7 @@ function renderEmailWidgetPalette(){
   const el = document.getElementById('emailWidgetPalette');
   if(!el) return;
   el.innerHTML = emailWidgetLibrary.map(w=>`
-    <div class="widget-card-v2" data-widget-type="${w.type}" onclick="addDesignerBlock('${w.type}')">
+    <div class="widget-card-v2" draggable="true" data-widget-type="${w.type}" ondragstart="startEmailWidgetDrag(event,'${w.type}')" onclick="addDesignerBlock('${w.type}')">
       <div class="widget-icon-preview"><b>${w.icon}</b></div>
       <b>${w.name}</b><br><small class="text-muted">${w.desc}</small>
     </div>
@@ -2546,6 +2642,7 @@ function setupEmailDesignerDragDrop(){
     group:{ name:'emailDesigner', pull:true, put:true },
     animation:150,
     draggable:'.email-block-v2',
+    handle:'.email-block-drag-grip-v2',
     onAdd(evt){
       const type = evt.item.getAttribute('data-widget-type');
       evt.item.remove();
@@ -2573,6 +2670,7 @@ function addDesignerBlock(type){
 
 function selectDesignerBlock(id){
   selectedDesignerBlockId = id;
+  selectedDesignerImageTarget = null;
   renderEmailDesigner();
 }
 
@@ -2592,6 +2690,7 @@ function editDesignerBlock(id){
 }
 
 function duplicateDesignerBlock(id){
+  selectedDesignerImageTarget = null;
   const index = designerBlocks.findIndex(b=>b.id===id);
   if(index < 0) return;
   const clone = JSON.parse(JSON.stringify(designerBlocks[index]));
@@ -2602,6 +2701,7 @@ function duplicateDesignerBlock(id){
 }
 
 function removeDesignerBlock(id){
+  selectedDesignerImageTarget = null;
   designerBlocks = designerBlocks.filter(b=>b.id!==id);
   if(selectedDesignerBlockId === id) selectedDesignerBlockId = designerBlocks[0]?.id || null;
   renderEmailDesigner();
@@ -2610,7 +2710,7 @@ function removeDesignerBlock(id){
 function updateDesignerBlock(id,key,value){
   const block = designerBlocks.find(b=>b.id===id);
   if(!block) return;
-  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap'].includes(key)) value = Number(value || 0);
+  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap','blockWidth'].includes(key)) value = Number(value || 0);
   block[key] = value;
   renderEmailDesigner(false);
 }
@@ -2631,10 +2731,19 @@ function wrapBlock(block, inner){
 function renderResizableImage({blockId, target='image', src='', alt='', width=100, height=0, fit='contain', radius=0, border='', shadow='', rotate='', extraStyle=''}){
   if(!src) return '';
   const widthStyle = target === 'media' ? 'width:100%;' : `width:${Number(width||100)}%;`;
-  return `<span class="email-image-resize-wrap" data-block-id="${blockId}" data-image-target="${target}">
-    <img onclick="event.stopPropagation();openEmailImagePicker('${blockId}','${target}')" src="${safeAttr(src)}" alt="${safeAttr(alt || '')}" style="${widthStyle}height:auto;object-fit:contain;border-radius:${Number(radius||0)}px;${border || ''}${shadow || ''}${rotate || ''}${extraStyle || ''}display:block;cursor:pointer;max-width:100%;">
+  const isSelected = selectedDesignerImageTarget && String(selectedDesignerImageTarget.blockId) === String(blockId) && selectedDesignerImageTarget.target === target;
+  return `<span class="email-image-resize-wrap ${isSelected ? 'selected-image' : ''}" data-block-id="${blockId}" data-image-target="${target}" onclick="selectDesignerImage(event,'${blockId}','${target}')" ondblclick="event.stopPropagation();openEmailImagePicker('${blockId}','${target}')">
+    <img src="${safeAttr(src)}" alt="${safeAttr(alt || '')}" style="${widthStyle}height:auto!important;object-fit:contain!important;border-radius:${Number(radius||0)}px;${border || ''}${shadow || ''}${rotate || ''}${extraStyle || ''}display:block;cursor:pointer;max-width:100%;">
     <span class="email-img-resize-handle" title="Drag to resize image proportionally" onmousedown="startDesignerImageResize(event,'${blockId}','${target}')"></span>
   </span>`;
+}
+
+function selectDesignerImage(event, blockId, target='image'){
+  event.preventDefault();
+  event.stopPropagation();
+  selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = { blockId, target };
+  renderEmailDesigner(false);
 }
 
 function renderOptionalMedia(block, inner){
@@ -2659,7 +2768,7 @@ function renderDesignerBlockInner(block){
     const shadow = block.imageShadow === 'yes' ? 'box-shadow:0 12px 28px rgba(15,23,42,.20);' : '';
     const border = Number(block.imageBorderWidth||0) > 0 ? `border:${Number(block.imageBorderWidth)}px solid ${block.imageBorderColor || '#e5e7eb'};` : '';
     const rotate = Number(block.imageRotate||0) ? `transform:rotate(${Number(block.imageRotate)}deg);` : '';
-    return url ? `<div style="text-align:${align};">${renderResizableImage({blockId:block.id,target:'image',src:url,alt:block.alt,width:block.imageWidth,height:block.imageHeight,fit:block.imageFit,radius:shapeRadius,border,shadow,rotate,extraStyle:'display:inline-block;'})}<div class="email-image-action-bar"><button onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')">Change Image</button><button onclick="event.stopPropagation();removeDesignerBlockImage('${block.id}','image')">Remove Image</button></div></div>` : `<div class="email-image-placeholder" onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')"><b>Click to choose an image</b><br><small>Upload or select from your image library</small></div>`;
+    return url ? `<div style="text-align:${align};">${renderResizableImage({blockId:block.id,target:'image',src:url,alt:block.alt,width:block.imageWidth,height:block.imageHeight,fit:block.imageFit,radius:shapeRadius,border,shadow,rotate,extraStyle:'display:inline-block;'})}</div>` : `<div class="email-image-placeholder" onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')"><b>Click to choose an image</b><br><small>Upload or select from your image library</small></div>`;
   }
   if(block.type === 'button'){
     const size = block.buttonSize === 'large' ? '15px 28px' : block.buttonSize === 'small' ? '9px 16px' : '12px 22px';
@@ -2711,6 +2820,48 @@ function renderImageGridBlock(block){
   return `<div style="display:grid;grid-template-columns:repeat(${Number(block.columns||4)},1fr);gap:${Number(block.gap||8)}px;">${urls.map(url=>`<img src="${safeAttr(url)}" style="width:100%;height:auto;border-radius:${Number(block.mediaRadius||0)}px;display:block;">`).join('')}</div>`;
 }
 
+function designerBlockOuterStyle(block){
+  const width = Math.max(25, Math.min(100, Number(block.blockWidth || 100)));
+  const align = block.blockAlign || 'center';
+  let margin = '8px auto';
+  if(align === 'left') margin = '8px auto 8px 0';
+  if(align === 'right') margin = '8px 0 8px auto';
+  return `width:${width}%;margin:${margin};`;
+}
+
+function startEmailWidgetDrag(event, type){
+  activeDraggedEmailWidgetType = type;
+  try { event.dataTransfer.setData('text/plain', type); event.dataTransfer.effectAllowed = 'copyMove'; } catch(e) {}
+}
+
+function allowDesignerBlockDrop(event){
+  const type = activeDraggedEmailWidgetType || (event.dataTransfer ? event.dataTransfer.getData('text/plain') : '');
+  if(!type) return;
+  event.preventDefault();
+  event.currentTarget.classList.add('drag-drop-target');
+}
+
+function dropWidgetIntoDesignerBlock(event, blockId){
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.classList.remove('drag-drop-target');
+  const type = activeDraggedEmailWidgetType || (event.dataTransfer ? event.dataTransfer.getData('text/plain') : '');
+  activeDraggedEmailWidgetType = null;
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block || !type) return;
+  selectedDesignerBlockId = block.id;
+  selectedDesignerImageTarget = null;
+  if(type === 'image'){
+    openEmailImagePicker(block.id, block.type === 'image' ? 'image' : 'media');
+    return;
+  }
+  const index = designerBlocks.findIndex(b=>String(b.id)===String(blockId));
+  const newBlock = emailBlockDefaults(type);
+  designerBlocks.splice(index + 1, 0, newBlock);
+  selectedDesignerBlockId = newBlock.id;
+  renderEmailDesigner();
+}
+
 function renderEmailDesigner(autosave=true){
   const canvas = document.getElementById('emailDesignerCanvas');
   if(!canvas) return;
@@ -2732,13 +2883,15 @@ function renderEmailDesigner(autosave=true){
     canvas.innerHTML = `<div class="designer-empty-state" data-widget-type="text">Drag widgets here or click a widget card to start designing.</div>`;
   } else {
     canvas.innerHTML = designerBlocks.map(block=>`
-      <div class="email-block-v2 ${selectedDesignerBlockId===block.id?'selected':''}" data-block-id="${block.id}" onclick="selectDesignerBlock('${block.id}')">
+      <div class="email-block-v2 ${selectedDesignerBlockId===block.id?'selected':''}" data-block-id="${block.id}" style="${designerBlockOuterStyle(block)}" onclick="selectDesignerBlock('${block.id}')" ondragover="allowDesignerBlockDrop(event)" ondragleave="this.classList.remove('drag-drop-target')" ondrop="dropWidgetIntoDesignerBlock(event,'${block.id}')">
+        <div class="email-block-drag-grip-v2" title="Drag block">⋮⋮</div>
         <div class="email-block-toolbar-v2" onclick="event.stopPropagation()" title="Block tools">
           <button class="email-mini-btn-v2 primary" title="Edit block" onclick="editDesignerBlock('${block.id}')">✎</button>
           <button class="email-mini-btn-v2" title="Copy block" onclick="duplicateDesignerBlock('${block.id}')">⧉</button>
           <button class="email-mini-btn-v2 danger" title="Delete block" onclick="removeDesignerBlock('${block.id}')">×</button>
         </div>
         ${wrapBlock(block, renderDesignerBlockInner(block))}
+        <span class="email-block-resize-handle-v2" title="Drag to resize block" onmousedown="startDesignerBlockResize(event,'${block.id}')"></span>
       </div>
     `).join('');
   }
@@ -2778,8 +2931,7 @@ function renderEmailDesignerSettings(){
     <div class="designer-settings-actions">
       <button class="btn btn-sm btn-outline-primary" onclick="duplicateDesignerBlock('${block.id}')">Copy Block</button>
       <button class="btn btn-sm btn-outline-danger" onclick="removeDesignerBlock('${block.id}')">Delete Block</button>
-      <button class="btn btn-sm btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Add Image to Block</button>
-      <button class="btn btn-sm btn-outline-danger" onclick="removeDesignerBlockImage('${block.id}','media')">Remove Block Image</button>
+      
     </div>
     <div class="designer-simple-section"><div class="designer-simple-section-title">Block Style</div>
     <div class="setting-grid-v2">
@@ -2789,11 +2941,13 @@ function renderEmailDesignerSettings(){
       ${setInput(block,'radius','Radius','number')}
       ${setInput(block,'borderWidth','Border','number')}
       ${setInput(block,'borderColor','Border Color','color')}
-      ${setSelect('align','Align',['left','center','right'])}
+      ${setSelect('align','Text Align',['left','center','right'])}
+      ${setInput(block,'blockWidth','Block Width %','number')}
+      ${setSelect('blockAlign','Block Position',['left','center','right'])}
       ${setInput(block,'bgImage','Block BG Image')}
     </div></div>
     <div class="designer-simple-section">
-    <div class="designer-panel-title">Image Inside This Block</div>
+    <div class="designer-panel-title">Optional Block Image</div>
     <div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Library</button></div></div>
     <div class="setting-grid-v2 mt-2">
       ${setSelect('mediaPosition','Position',['top','bottom','left','right'])}
@@ -3001,6 +3155,7 @@ function applyImageToTarget(url){
     }
   }
   closeEmailImagePicker();
+  selectedDesignerImageTarget = (target.blockId && !['canvasBg','outerBg'].includes(target.blockId)) ? { blockId: target.blockId, target: target.target } : null;
   renderEmailDesigner();
 }
 
@@ -3041,6 +3196,7 @@ async function clearEmailImageLibrary(){
 
 
 function removeDesignerBlockImage(id, target='image'){
+  selectedDesignerImageTarget = null;
   const block = designerBlocks.find(b=>b.id===id);
   if(!block) return;
   if(target === 'media'){
@@ -3071,6 +3227,7 @@ function startDesignerImageResize(event, blockId, target='image'){
   const block = designerBlocks.find(b=>String(b.id)===String(blockId));
   if(!block) return;
   selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = { blockId, target };
   const startX = event.clientX;
   const startWidth = target === 'media' ? Number(block.mediaWidth || 38) : Number(block.imageWidth || 100);
   const img = event.target.closest('.email-image-resize-wrap')?.querySelector('img');
@@ -3095,6 +3252,55 @@ function startDesignerImageResize(event, blockId, target='image'){
   };
   document.addEventListener('mousemove', move);
   document.addEventListener('mouseup', up);
+}
+
+function startDesignerBlockResize(event, blockId){
+  event.preventDefault();
+  event.stopPropagation();
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = null;
+  const startX = event.clientX;
+  const startWidth = Number(block.blockWidth || 100);
+  const canvas = document.getElementById('emailDesignerCanvas');
+  const canvasWidth = Math.max(280, canvas ? canvas.getBoundingClientRect().width : 680);
+  const move = (e)=>{
+    const delta = ((e.clientX - startX) / canvasWidth) * 100;
+    block.blockWidth = Math.max(25, Math.min(100, Math.round(startWidth + delta)));
+    const el = document.querySelector(`.email-block-v2[data-block-id="${blockId}"]`);
+    if(el) el.style.cssText += ';' + designerBlockOuterStyle(block);
+  };
+  const up = ()=>{
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    renderEmailDesigner(false);
+    saveEmailDesignLocal(false);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+function handleEmailDesignerKeyboard(event){
+  const tag = (event.target && event.target.tagName || '').toLowerCase();
+  if(['input','textarea','select'].includes(tag) || event.target?.isContentEditable) return;
+  const designerTab = document.getElementById('emailDesignerTab');
+  if(!designerTab || designerTab.style.display === 'none') return;
+  if(event.key !== 'Delete' && event.key !== 'Backspace') return;
+  if(selectedDesignerImageTarget){
+    event.preventDefault();
+    removeDesignerBlockImage(selectedDesignerImageTarget.blockId, selectedDesignerImageTarget.target);
+    selectedDesignerImageTarget = null;
+    return;
+  }
+  if(selectedDesignerBlockId){
+    event.preventDefault();
+    removeDesignerBlock(selectedDesignerBlockId);
+  }
+}
+if(!window.__excelEmailDesignerKeyboardBound){
+  document.addEventListener('keydown', handleEmailDesignerKeyboard);
+  window.__excelEmailDesignerKeyboardBound = true;
 }
 
 function syncDesignerMetaFromInputs(){
