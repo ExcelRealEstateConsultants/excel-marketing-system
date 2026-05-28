@@ -575,6 +575,21 @@ body {
   border-radius:16px;
   padding:14px;
   box-shadow:0 4px 12px rgba(15,23,42,0.04);
+  transition:0.18s ease;
+}
+
+.pipeline-summary-card.clickable {
+  cursor:pointer;
+}
+
+.pipeline-summary-card.clickable:hover {
+  transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(15,23,42,0.10);
+  border-color:rgba(0,161,67,0.35);
+}
+
+.pipeline-summary-card .small-muted {
+  margin-top:4px;
 }
 
 .pipeline-summary-number {
@@ -3147,14 +3162,132 @@ function renderPipelineSummary(filteredContacts){
   const openTasks = filteredContacts.reduce((sum, c)=>sum + getOpenTasksForContact(c).length, 0);
   const overdueTasks = filteredContacts.reduce((sum, c)=>sum + getOverdueTasksForContact(c).length, 0);
   const activeStages = new Set(filteredContacts.map(c=>inferStageFromContact(c))).size;
-  const hotContacts = filteredContacts.filter(c=>getOverdueTasksForContact(c).length > 0 || getOpenTasksForContact(c).length > 0).length;
 
   pipelineSummary.innerHTML = `
-    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${filteredContacts.length}</div><div class="kpi-label">Pipeline Contacts</div></div>
-    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${activeStages}</div><div class="kpi-label">Active Stages</div></div>
-    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${openTasks}</div><div class="kpi-label">Open Tasks</div></div>
-    <div class="pipeline-summary-card"><div class="pipeline-summary-number">${overdueTasks}</div><div class="kpi-label">Overdue Tasks</div></div>
+    <div class="pipeline-summary-card clickable" onclick="openPipelineSummaryDrilldown('contacts')">
+      <div class="pipeline-summary-number">${filteredContacts.length}</div>
+      <div class="kpi-label">Pipeline Contacts</div>
+      <div class="small-muted">Click to view contacts</div>
+    </div>
+    <div class="pipeline-summary-card clickable" onclick="openPipelineSummaryDrilldown('stages')">
+      <div class="pipeline-summary-number">${activeStages}</div>
+      <div class="kpi-label">Active Stages</div>
+      <div class="small-muted">Click to view stages</div>
+    </div>
+    <div class="pipeline-summary-card clickable" onclick="openPipelineSummaryDrilldown('openTasks')">
+      <div class="pipeline-summary-number">${openTasks}</div>
+      <div class="kpi-label">Open Tasks</div>
+      <div class="small-muted">Click to view tasks</div>
+    </div>
+    <div class="pipeline-summary-card clickable" onclick="openPipelineSummaryDrilldown('overdueTasks')">
+      <div class="pipeline-summary-number">${overdueTasks}</div>
+      <div class="kpi-label">Overdue Tasks</div>
+      <div class="small-muted">Click to view overdue</div>
+    </div>
   `;
+}
+
+function openPipelineSummaryDrilldown(type){
+  const filteredContacts = getPipelineFilteredContacts();
+
+  const titleMap = {
+    contacts:'Pipeline Contacts',
+    stages:'Active Pipeline Stages',
+    openTasks:'Open Pipeline Tasks',
+    overdueTasks:'Overdue Pipeline Tasks'
+  };
+
+  dashboardDrilldownTitle.innerText = titleMap[type] || 'Pipeline Detail';
+  dashboardDrilldownSubtitle.innerText = 'Pipeline details based on the current search and type filters.';
+  dashboardDrilldownContent.innerHTML = buildPipelineSummaryDrilldownHtml(type, filteredContacts);
+  dashboardDrilldownPanel.classList.add('open');
+}
+
+function buildPipelineSummaryDrilldownHtml(type, filteredContacts){
+  if(type === 'contacts'){
+    if(!filteredContacts.length) return '<div class="text-muted">No contacts match the current pipeline filters.</div>';
+
+    return filteredContacts
+      .slice()
+      .sort((a,b)=>contactName(a).localeCompare(contactName(b)))
+      .map(contact=>`
+        <div class="drilldown-row" onclick="openContact(${contact.id})">
+          <b>${contactName(contact)}</b><br>
+          <small>${contact.email || ''} | ${formatPhone(contact.phone || '')}</small><br>
+          <small>${contact.type || 'Unassigned'} | ${inferStageFromContact(contact)}</small>
+          ${renderTags(contact.tags)}
+        </div>
+      `).join('');
+  }
+
+  if(type === 'stages'){
+    const stages = pipelineStagesCache.length ? pipelineStagesCache : getFallbackPipelineStages();
+    const activeStageRows = stages
+      .map(stage=>({
+        stage,
+        contacts: filteredContacts.filter(contact=>inferStageFromContact(contact) === stage)
+      }))
+      .filter(row=>row.contacts.length > 0);
+
+    if(!activeStageRows.length) return '<div class="text-muted">No active stages match the current filters.</div>';
+
+    return activeStageRows.map(row=>`
+      <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="widget-title m-0">${row.stage}</h6>
+          <span class="pipeline-count">${row.contacts.length}</span>
+        </div>
+        ${row.contacts
+          .slice()
+          .sort((a,b)=>contactName(a).localeCompare(contactName(b)))
+          .map(contact=>`
+            <div class="drilldown-row" onclick="openContact(${contact.id})">
+              <b>${contactName(contact)}</b><br>
+              <small>${contact.email || ''} | ${formatPhone(contact.phone || '')} | ${contact.type || 'Unassigned'}</small>
+            </div>
+          `).join('')}
+      </div>
+    `).join('');
+  }
+
+  if(type === 'openTasks' || type === 'overdueTasks'){
+    const rows = [];
+
+    filteredContacts.forEach(contact=>{
+      const tasks = type === 'overdueTasks' ? getOverdueTasksForContact(contact) : getOpenTasksForContact(contact);
+
+      tasks.forEach(task=>{
+        rows.push({ contact, task });
+      });
+    });
+
+    rows.sort((a,b)=>new Date(a.task.due || '9999-12-31') - new Date(b.task.due || '9999-12-31'));
+
+    if(!rows.length){
+      return type === 'overdueTasks'
+        ? '<div class="text-muted">No overdue tasks match the current pipeline filters.</div>'
+        : '<div class="text-muted">No open tasks match the current pipeline filters.</div>';
+    }
+
+    return rows.map(row=>`
+      <div class="drilldown-row" onclick="openContact(${row.contact.id})">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div>
+            <b>${row.task.title || 'Untitled Task'}</b><br>
+            <small>Contact: ${contactName(row.contact)}</small><br>
+            <small>${row.contact.email || ''} | ${inferStageFromContact(row.contact)}</small>
+          </div>
+          <div class="text-end">
+            <span class="priority-pill ${priorityClass(row.task.priority)}">${row.task.priority || 'Normal'}</span><br>
+            <small>${row.task.due ? formatShortDate(row.task.due) : 'No due date'}</small>
+          </div>
+        </div>
+        ${row.task.notes ? `<div class="small-muted mt-2">${row.task.notes}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  return '<div class="text-muted">No detail available.</div>';
 }
 
 async function loadPipeline(){
