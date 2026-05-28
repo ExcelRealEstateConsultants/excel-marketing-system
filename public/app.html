@@ -1083,6 +1083,83 @@ body {
   }
 }
 
+
+.contact-management-grid {
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:14px;
+}
+
+.contact-filter-row {
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr auto;
+  gap:10px;
+  align-items:end;
+}
+
+.bulk-toolbar {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  margin-top:12px;
+}
+
+.bulk-action-row {
+  display:grid;
+  grid-template-columns:1fr 1fr 1.5fr auto auto;
+  gap:10px;
+  align-items:end;
+}
+
+.contact-checkbox {
+  margin-right:10px;
+  transform:scale(1.1);
+  accent-color:var(--accent);
+}
+
+.saved-filter-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:999px;
+  margin:4px;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.saved-filter-pill:hover {
+  background:#f3f4f6;
+}
+
+.duplicate-group {
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  margin-bottom:10px;
+}
+
+.duplicate-contact-row {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  border-top:1px solid var(--border);
+  padding-top:8px;
+  margin-top:8px;
+}
+
+@media (max-width: 992px) {
+  .contact-management-grid,
+  .contact-filter-row,
+  .bulk-action-row {
+    grid-template-columns:1fr;
+  }
+}
+
 </style>
 </head>
 
@@ -1488,7 +1565,77 @@ body {
     </div>
   </div>
 
-  <input id="contactSearch" class="form-control mb-2" placeholder="Search by name, email, phone, type, stage, tag, unsubscribed, or bounced...">
+  <div class="modern-card mb-3">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+      <div>
+        <h5 class="mb-1">Contact Filters & Bulk Actions</h5>
+        <div class="small-muted">Search, save views, select multiple contacts, and update contacts in batches.</div>
+      </div>
+      <div>
+        <button class="btn btn-sm btn-outline-primary" onclick="saveCurrentContactFilter()">Save Current Filter</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="clearContactFilters()">Clear Filters</button>
+      </div>
+    </div>
+
+    <div class="contact-filter-row">
+      <div>
+        <label class="form-label small fw-bold">Search Contacts</label>
+        <input id="contactSearch" class="form-control" placeholder="Search name, email, phone, type, stage, tag, unsubscribed, or bounced...">
+      </div>
+      <div>
+        <label class="form-label small fw-bold">Type</label>
+        <select id="contactTypeFilter" class="form-control" onchange="loadContacts()"><option value="">All Types</option></select>
+      </div>
+      <div>
+        <label class="form-label small fw-bold">Stage</label>
+        <select id="contactStageFilter" class="form-control" onchange="loadContacts()"><option value="">All Stages</option></select>
+      </div>
+      <div>
+        <label class="form-label small fw-bold">Tag</label>
+        <select id="contactTagFilter" class="form-control" onchange="loadContacts()"><option value="">All Tags</option></select>
+      </div>
+      <div>
+        <button class="btn btn-outline-primary w-100" onclick="selectVisibleContacts()">Select Visible</button>
+      </div>
+    </div>
+
+    <div id="savedContactFilters" class="mt-3"></div>
+
+    <div class="bulk-toolbar">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <b>Bulk Actions</b>
+        <span id="bulkSelectedCount" class="status-badge">0 selected</span>
+      </div>
+      <div class="bulk-action-row">
+        <div>
+          <label class="form-label small fw-bold">Set Type</label>
+          <select id="bulkTypeSelect" class="form-control"><option value="">Do not change</option></select>
+        </div>
+        <div>
+          <label class="form-label small fw-bold">Set Stage</label>
+          <select id="bulkStageSelect" class="form-control"><option value="">Do not change</option></select>
+        </div>
+        <div>
+          <label class="form-label small fw-bold">Add Tags</label>
+          <input id="bulkTagsInput" class="form-control" placeholder="Example: Hot Lead, Imported">
+        </div>
+        <button class="btn btn-success" onclick="applyBulkContactUpdate()">Apply</button>
+        <button class="btn btn-outline-danger" onclick="deleteSelectedContacts()">Delete</button>
+      </div>
+      <div class="small-muted mt-2">Bulk updates only affect selected contacts. Tags are added without removing existing tags.</div>
+    </div>
+  </div>
+
+  <div class="modern-card mb-3">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+      <div>
+        <h5 class="mb-1">Duplicate Detection</h5>
+        <div class="small-muted">Find likely duplicates by matching email addresses or phone numbers.</div>
+      </div>
+      <button class="btn btn-sm btn-outline-primary" onclick="renderDuplicateContacts()">Refresh Duplicates</button>
+    </div>
+    <div id="duplicateContactList" class="mt-3"></div>
+  </div>
 
   <div id="contactList"></div>
 </div>
@@ -1713,6 +1860,9 @@ let pipelineSortables = [];
 let currentPipelineView = localStorage.getItem('excelMarketingPipelineView') || 'kanban';
 let calendarDate = new Date();
 let selectedCampaignContactIds = new Set(JSON.parse(localStorage.getItem('selectedCampaignContactIds') || '[]'));
+let selectedBulkContactIds = new Set();
+let lastFilteredContactIds = [];
+let savedContactFiltersCache = JSON.parse(localStorage.getItem('savedContactFilters') || '[]');
 
 let contactTypes = JSON.parse(localStorage.getItem('contactTypes') || '["Buyer","Seller","CPA","Agent","Prospect"]');
 
@@ -1804,6 +1954,7 @@ function renderTypes(){
     contactType.innerHTML += `<option>${t}</option>`;
     editType.innerHTML += `<option>${t}</option>`;
   });
+  populateContactFilterControls();
 }
 
 async function loadPipelineStages(){
@@ -1829,6 +1980,7 @@ function renderStageSelects(){
     editStage.innerHTML += `<option>${stage}</option>`;
   });
   syncImportDefaultSelects();
+  populateContactFilterControls();
 }
 
 function addContactType(){
@@ -2446,6 +2598,7 @@ async function loadTags(){
   const res = await fetch('/api/tags');
   allTagsCache = await res.json();
   renderRecipientTags();
+  populateContactFilterControls();
   renderTextCampaignTags();
 }
 
@@ -3817,13 +3970,17 @@ async function loadContacts(){
   const data = await res.json();
 
   contactsCache = data;
+  populateContactFilterControls();
+  renderSavedContactFilters();
 
   const s = (contactSearch.value||'').toLowerCase();
+  const typeFilter = document.getElementById('contactTypeFilter')?.value || '';
+  const stageFilter = document.getElementById('contactStageFilter')?.value || '';
+  const tagFilter = document.getElementById('contactTagFilter')?.value || '';
 
   let filtered = data.filter(c=>{
     const tagText = Array.isArray(c.tags) ? c.tags.join(' ') : '';
-
-    return (
+    const textMatch = (
       (c.firstName||'')+
       (c.lastName||'')+
       (c.email||'')+
@@ -3834,25 +3991,39 @@ async function loadContacts(){
       (c.unsubscribed ? 'unsubscribed' : 'subscribed')+
       (c.bounced ? 'bounced invalid' : 'valid')
     ).toLowerCase().includes(s);
+
+    const typeMatch = !typeFilter || (c.type || '') === typeFilter;
+    const stageMatch = !stageFilter || inferStageFromContact(c) === stageFilter;
+    const tagMatch = !tagFilter || (Array.isArray(c.tags) && c.tags.includes(tagFilter));
+
+    return textMatch && typeMatch && stageMatch && tagMatch;
   });
+
+  lastFilteredContactIds = filtered.map(c=>String(c.id));
 
   const grouped = {};
 
   filtered.forEach(c=>{
-    const letter = (c.lastName||'#')[0].toUpperCase();
+    const letter = (c.lastName||c.firstName||'#')[0].toUpperCase();
     if(!grouped[letter]) grouped[letter]=[];
     grouped[letter].push(c);
   });
 
   contactList.innerHTML='';
 
+  if(filtered.length === 0){
+    contactList.innerHTML = '<div class="modern-card text-muted">No contacts match the current filters.</div>';
+  }
+
   Object.keys(grouped).sort().forEach(l=>{
     contactList.innerHTML += `<div class="contact-letter">${l}</div>`;
 
     grouped[l].forEach(c=>{
+      const checked = selectedBulkContactIds.has(String(c.id)) ? 'checked' : '';
       contactList.innerHTML += `
         <div class="contact-item" onclick="openContact(${c.id})">
           <div class="contact-name">
+            <input type="checkbox" class="contact-checkbox" ${checked} onclick="event.stopPropagation(); toggleBulkContactSelection('${c.id}', this.checked)">
             ${c.firstName || ''} ${c.lastName || ''}
             ${c.unsubscribed ? '<span class="unsubscribed-badge">Unsubscribed</span>' : ''}
             ${c.bounced ? '<span class="bounced-badge">Bounced</span>' : ''}
@@ -3866,9 +4037,267 @@ async function loadContacts(){
     });
   });
 
+  updateBulkSelectedCount();
+  renderDuplicateContacts(false);
   renderRecipientBuilder();
   renderTextCampaignBuilder();
 }
+
+function populateContactFilterControls(){
+  const typeFilter = document.getElementById('contactTypeFilter');
+  const bulkType = document.getElementById('bulkTypeSelect');
+  const stageFilter = document.getElementById('contactStageFilter');
+  const bulkStage = document.getElementById('bulkStageSelect');
+  const tagFilter = document.getElementById('contactTagFilter');
+
+  if(typeFilter){
+    const current = typeFilter.value;
+    typeFilter.innerHTML = '<option value="">All Types</option>';
+    contactTypes.slice().sort().forEach(type=> typeFilter.innerHTML += `<option value="${type}">${type}</option>`);
+    typeFilter.value = current;
+  }
+
+  if(bulkType){
+    const current = bulkType.value;
+    bulkType.innerHTML = '<option value="">Do not change</option>';
+    contactTypes.slice().sort().forEach(type=> bulkType.innerHTML += `<option value="${type}">${type}</option>`);
+    bulkType.value = current;
+  }
+
+  if(stageFilter){
+    const current = stageFilter.value;
+    stageFilter.innerHTML = '<option value="">All Stages</option>';
+    pipelineStagesCache.forEach(stage=> stageFilter.innerHTML += `<option value="${stage}">${stage}</option>`);
+    stageFilter.value = current;
+  }
+
+  if(bulkStage){
+    const current = bulkStage.value;
+    bulkStage.innerHTML = '<option value="">Do not change</option>';
+    pipelineStagesCache.forEach(stage=> bulkStage.innerHTML += `<option value="${stage}">${stage}</option>`);
+    bulkStage.value = current;
+  }
+
+  if(tagFilter){
+    const current = tagFilter.value;
+    tagFilter.innerHTML = '<option value="">All Tags</option>';
+    allTagsCache.slice().sort().forEach(tag=> tagFilter.innerHTML += `<option value="${tag}">${tag}</option>`);
+    tagFilter.value = current;
+  }
+}
+
+function toggleBulkContactSelection(id, checked){
+  if(checked) selectedBulkContactIds.add(String(id));
+  else selectedBulkContactIds.delete(String(id));
+  updateBulkSelectedCount();
+}
+
+function updateBulkSelectedCount(){
+  const count = selectedBulkContactIds.size;
+  const el = document.getElementById('bulkSelectedCount');
+  if(el) el.innerText = count === 1 ? '1 selected' : `${count} selected`;
+}
+
+function selectVisibleContacts(){
+  lastFilteredContactIds.forEach(id=>selectedBulkContactIds.add(String(id)));
+  loadContacts();
+}
+
+function clearBulkSelection(){
+  selectedBulkContactIds.clear();
+  loadContacts();
+}
+
+async function applyBulkContactUpdate(){
+  const ids = Array.from(selectedBulkContactIds);
+  if(ids.length === 0){
+    alert('Please select at least one contact first.');
+    return;
+  }
+
+  const payload = {
+    ids,
+    type: document.getElementById('bulkTypeSelect')?.value || '',
+    stage: document.getElementById('bulkStageSelect')?.value || '',
+    addTags: parseCommaList(document.getElementById('bulkTagsInput')?.value || '')
+  };
+
+  if(!payload.type && !payload.stage && payload.addTags.length === 0){
+    alert('Choose a type, stage, or tags before applying a bulk update.');
+    return;
+  }
+
+  const res = await fetch('/api/contacts/bulk-update', {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(payload)
+  });
+  const data = await res.json();
+
+  if(data.success){
+    alert(`Updated ${data.updated || ids.length} contact(s).`);
+    document.getElementById('bulkTagsInput').value = '';
+    selectedBulkContactIds.clear();
+    await loadContacts();
+    loadTags();
+    loadPipeline();
+    loadDashboard();
+  } else {
+    alert(data.error || 'Bulk update failed.');
+  }
+}
+
+async function deleteSelectedContacts(){
+  const ids = Array.from(selectedBulkContactIds);
+  if(ids.length === 0){
+    alert('Please select at least one contact first.');
+    return;
+  }
+  if(!confirm(`Delete ${ids.length} selected contact(s)? This cannot be undone.`)) return;
+
+  const res = await fetch('/api/contacts/bulk-delete', {
+    method:'DELETE',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ ids })
+  });
+  const data = await res.json();
+
+  if(data.success){
+    selectedBulkContactIds.clear();
+    await loadContacts();
+    loadDashboard();
+    loadPipeline();
+  } else {
+    alert(data.error || 'Bulk delete failed.');
+  }
+}
+
+function clearContactFilters(){
+  contactSearch.value = '';
+  if(document.getElementById('contactTypeFilter')) contactTypeFilter.value = '';
+  if(document.getElementById('contactStageFilter')) contactStageFilter.value = '';
+  if(document.getElementById('contactTagFilter')) contactTagFilter.value = '';
+  loadContacts();
+}
+
+function getCurrentContactFilterState(){
+  return {
+    search: contactSearch.value || '',
+    type: document.getElementById('contactTypeFilter')?.value || '',
+    stage: document.getElementById('contactStageFilter')?.value || '',
+    tag: document.getElementById('contactTagFilter')?.value || ''
+  };
+}
+
+function saveCurrentContactFilter(){
+  const state = getCurrentContactFilterState();
+  if(!state.search && !state.type && !state.stage && !state.tag){
+    alert('Set at least one filter before saving a saved search.');
+    return;
+  }
+
+  const name = prompt('Name this saved search:', state.search || state.type || state.stage || state.tag || 'Saved Search');
+  if(!name) return;
+
+  savedContactFiltersCache.push({ id:Date.now(), name, ...state });
+  localStorage.setItem('savedContactFilters', JSON.stringify(savedContactFiltersCache));
+  renderSavedContactFilters();
+}
+
+function renderSavedContactFilters(){
+  const container = document.getElementById('savedContactFilters');
+  if(!container) return;
+
+  if(!savedContactFiltersCache.length){
+    container.innerHTML = '<div class="small-muted">No saved searches yet.</div>';
+    return;
+  }
+
+  container.innerHTML = savedContactFiltersCache.map(filter=>`
+    <span class="saved-filter-pill" onclick="applySavedContactFilter(${filter.id})">
+      ${filter.name}
+      <button class="btn btn-sm btn-link p-0" onclick="event.stopPropagation(); deleteSavedContactFilter(${filter.id})">×</button>
+    </span>
+  `).join('');
+}
+
+function applySavedContactFilter(id){
+  const filter = savedContactFiltersCache.find(f=>f.id == id);
+  if(!filter) return;
+
+  contactSearch.value = filter.search || '';
+  if(document.getElementById('contactTypeFilter')) contactTypeFilter.value = filter.type || '';
+  if(document.getElementById('contactStageFilter')) contactStageFilter.value = filter.stage || '';
+  if(document.getElementById('contactTagFilter')) contactTagFilter.value = filter.tag || '';
+  loadContacts();
+}
+
+function deleteSavedContactFilter(id){
+  savedContactFiltersCache = savedContactFiltersCache.filter(f=>f.id != id);
+  localStorage.setItem('savedContactFilters', JSON.stringify(savedContactFiltersCache));
+  renderSavedContactFilters();
+}
+
+function renderDuplicateContacts(showAlert){
+  const container = document.getElementById('duplicateContactList');
+  if(!container) return;
+
+  const emailMap = {};
+  const phoneMap = {};
+
+  contactsCache.forEach(c=>{
+    const email = String(c.email || '').trim().toLowerCase();
+    const phoneDigits = String(c.phone || '').replace(/\D/g,'');
+    if(email){
+      if(!emailMap[email]) emailMap[email] = [];
+      emailMap[email].push(c);
+    }
+    if(phoneDigits){
+      if(!phoneMap[phoneDigits]) phoneMap[phoneDigits] = [];
+      phoneMap[phoneDigits].push(c);
+    }
+  });
+
+  const groups = [];
+  Object.entries(emailMap).forEach(([key, items])=>{ if(items.length > 1) groups.push({type:'Email', key, items}); });
+  Object.entries(phoneMap).forEach(([key, items])=>{ if(items.length > 1) groups.push({type:'Phone', key:formatPhone(key), items}); });
+
+  if(groups.length === 0){
+    container.innerHTML = '<div class="text-muted small">No likely duplicates found.</div>';
+    if(showAlert) alert('No likely duplicates found.');
+    return;
+  }
+
+  container.innerHTML = groups.map(group=>`
+    <div class="duplicate-group">
+      <div class="d-flex justify-content-between align-items-center">
+        <b>${group.type} Match: ${group.key}</b>
+        <span class="status-badge">${group.items.length} records</span>
+      </div>
+      ${group.items.map(c=>`
+        <div class="duplicate-contact-row">
+          <div>
+            <b>${contactName(c)}</b><br>
+            <small>${c.email || ''} | ${formatPhone(c.phone || '')} | ${c.type || ''} | ${inferStageFromContact(c)}</small>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-outline-primary" onclick="openContact(${c.id})">Open</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteSingleDuplicateContact(${c.id})">Delete</button>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+async function deleteSingleDuplicateContact(id){
+  if(!confirm('Delete this duplicate contact?')) return;
+  await fetch('/api/contacts/' + id, { method:'DELETE' });
+  await loadContacts();
+  loadDashboard();
+  loadPipeline();
+}
+
 
 
 /* CONTACT IMPORT / EXPORT */
@@ -4926,6 +5355,7 @@ document.addEventListener('click', function(event){
 });
 
 contactSearch.addEventListener('input', loadContacts);
+['contactTypeFilter','contactStageFilter','contactTagFilter'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('change', loadContacts); });
 if(document.getElementById('recipientSearch')) recipientSearch.addEventListener('input', renderRecipientContacts);
 extraRecipients.addEventListener('input', updateRecipientCount);
 ['importDefaultType','importDefaultStage','importDefaultTags'].forEach(id=>{
