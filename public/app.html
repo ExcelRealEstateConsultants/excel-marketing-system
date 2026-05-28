@@ -1317,6 +1317,117 @@ body {
 .email-media-flex.reverse { flex-direction:row-reverse; }
 .email-media-flex .media-side { flex:0 0 var(--media-width, 40%); }
 .email-media-flex .content-side { flex:1; }
+
+.designer-meta-card {
+  background:#ffffff;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+  margin-bottom:16px;
+}
+.designer-meta-grid {
+  display:grid;
+  grid-template-columns:1.2fr 1.2fr 1fr;
+  gap:10px;
+}
+.designer-meta-grid label {
+  font-size:11px;
+  color:var(--muted);
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  margin-bottom:3px;
+}
+.image-picker-overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(15,23,42,.55);
+  z-index:10050;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+.image-picker-modal {
+  width:min(920px, 96vw);
+  max-height:88vh;
+  overflow:auto;
+  background:white;
+  border-radius:22px;
+  box-shadow:0 24px 70px rgba(0,0,0,.28);
+  padding:22px;
+}
+.image-picker-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));
+  gap:12px;
+  margin-top:14px;
+}
+.image-picker-card {
+  border:1px solid var(--border);
+  border-radius:14px;
+  overflow:hidden;
+  background:#f9fafb;
+  cursor:pointer;
+  transition:.15s;
+}
+.image-picker-card:hover {
+  transform:translateY(-2px);
+  border-color:var(--accent);
+  box-shadow:0 8px 18px rgba(15,23,42,.12);
+}
+.image-picker-card img {
+  width:100%;
+  height:105px;
+  object-fit:cover;
+  display:block;
+}
+.image-picker-card div {
+  padding:7px;
+  font-size:11px;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.email-image-placeholder {
+  border:2px dashed #94a3b8;
+  border-radius:16px;
+  padding:34px;
+  text-align:center;
+  background:#f8fafc;
+  color:#475569;
+  cursor:pointer;
+}
+.email-image-placeholder:hover {
+  border-color:var(--accent);
+  color:var(--primary);
+  background:#f0fdf4;
+}
+.email-test-panel {
+  margin-top:14px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  background:#f9fafb;
+}
+.email-test-issue {
+  border-left:5px solid #94a3b8;
+  background:white;
+  border-radius:10px;
+  padding:10px 12px;
+  margin-bottom:8px;
+  box-shadow:0 2px 8px rgba(15,23,42,.04);
+}
+.email-test-issue.good { border-left-color:#16a34a; }
+.email-test-issue.warning { border-left-color:#f59e0b; }
+.email-test-issue.danger { border-left-color:#dc2626; }
+.image-shape-preview-row { display:flex; gap:6px; flex-wrap:wrap; }
+.image-shape-button { border:1px solid var(--border); border-radius:10px; padding:5px 8px; background:#fff; font-size:12px; }
+.image-shape-button:hover { border-color:var(--accent); }
+@media (max-width: 760px){ .designer-meta-grid { grid-template-columns:1fr; } }
+
 @media (max-width: 1200px){ .designer-shell-v2 { grid-template-columns:1fr; } }
 @media (max-width: 760px){ .email-media-flex, .email-media-flex.reverse { flex-direction:column; } .widget-card-grid { grid-template-columns:1fr; } }
 
@@ -1504,9 +1615,21 @@ body {
     </div>
     <div class="d-flex gap-2 flex-wrap">
       <button class="btn btn-sm btn-outline-primary" onclick="loadEmailDesignerStarter()">Starter Layout</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="runEmailDesignTest()">Test</button>
       <button class="btn btn-sm btn-outline-danger" onclick="clearEmailDesigner()">Clear</button>
-      <button class="btn btn-sm btn-success" onclick="applyEmailDesignToCampaign()">Use Design in Email Campaign</button>
+      <button class="btn btn-sm btn-success" onclick="saveDesignerAsCampaign()">Save as Campaign</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="applyEmailDesignToCampaign()">Use in Email Campaign</button>
     </div>
+  </div>
+
+  <div class="designer-meta-card">
+    <div class="designer-panel-title">Campaign Details</div>
+    <div class="designer-meta-grid">
+      <div><label>Design / Campaign Title</label><input id="designerCampaignTitle" class="form-control form-control-sm" placeholder="Example: Spring Seller Newsletter"></div>
+      <div><label>Email Subject</label><input id="designerEmailSubject" class="form-control form-control-sm" maxlength="120" placeholder="Subject line shown in inbox"></div>
+      <div><label>Preheader</label><input id="designerEmailPreheader" class="form-control form-control-sm" maxlength="180" placeholder="Preview text after the subject"></div>
+    </div>
+    <div id="emailDesignTestResults" class="email-test-panel" style="display:none;"></div>
   </div>
 
   <div class="designer-shell-v2">
@@ -1562,7 +1685,8 @@ body {
     </div>
 
     <input id="campaignName" class="form-control mb-3" placeholder="Campaign Name">
-    <input id="subject" class="form-control mb-3" placeholder="Subject">
+    <input id="subject" class="form-control mb-2" placeholder="Subject">
+    <input id="preheader" class="form-control mb-3" placeholder="Preheader / inbox preview text (optional)">
 
     <div class="feature-card mb-3">
       <div class="d-flex justify-content-between align-items-center mb-2"><div><div class="feature-title mb-1">Email Content</div><div class="small-muted">Use the separate Email Designer tab for advanced layouts, or type a simple email here.</div></div><button class="btn btn-sm btn-outline-primary" onclick="showTab('emailDesigner')">Open Email Designer</button></div>
@@ -2051,6 +2175,26 @@ body {
   <div id="dashboardDrilldownContent"></div>
 </div>
 
+
+<!-- EMAIL IMAGE PICKER MODAL -->
+<div id="emailImagePickerOverlay" class="image-picker-overlay">
+  <div class="image-picker-modal">
+    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap mb-2">
+      <div>
+        <h5 class="mb-1">Choose Image</h5>
+        <div class="small-muted">Select an uploaded image, upload new images, or paste an image URL.</div>
+      </div>
+      <button class="btn btn-sm btn-secondary" onclick="closeEmailImagePicker()">Close</button>
+    </div>
+    <div class="row g-2 align-items-end">
+      <div class="col-md-5"><label class="form-label small">Upload Images</label><input id="emailImagePickerUpload" type="file" class="form-control form-control-sm" accept="image/*" multiple onchange="handleEmailImageUpload(event)"></div>
+      <div class="col-md-5"><label class="form-label small">Paste Image URL</label><input id="emailImagePickerUrl" class="form-control form-control-sm" placeholder="https://..."></div>
+      <div class="col-md-2"><button class="btn btn-sm btn-primary w-100" onclick="usePickerImageUrl()">Use URL</button></div>
+    </div>
+    <div id="emailImagePickerGrid" class="image-picker-grid"></div>
+  </div>
+</div>
+
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
@@ -2120,6 +2264,8 @@ let selectedDesignerBlockId = null;
 let designerSortable = null;
 let designerPaletteSortable = null;
 let designerImageLibrary = JSON.parse(localStorage.getItem('excelEmailImageLibrary') || '[]');
+let activeImageTarget = null;
+let designerMeta = JSON.parse(localStorage.getItem('excelEmailDesignerMeta') || '{"title":"","subject":"","preheader":""}');
 let designerSettings = JSON.parse(localStorage.getItem('excelEmailDesignerSettings') || '{"outerBg":"#f4f6f8","canvasBg":"#ffffff","emailWidth":680,"fontFamily":"Arial, sans-serif","outerBgImage":"","canvasBgImage":""}');
 
 const socialBrandColors = {
@@ -2167,7 +2313,7 @@ function emailBlockDefaults(type){
     header:{...base,bg:'#042C49',text:'#ffffff',align:'center',title:'Your Campaign Header',subtitle:'A short supporting message goes here.',padding:36},
     heading:{...base,title:'Section Heading',subtitle:'Optional supporting text.',padding:18},
     text:{...base,body:'Write your email copy here. Everything in this block can be customized.',fontSize:16,lineHeight:1.6},
-    image:{...base,imageUrl:'',alt:'Email image',imageWidth:100,imageRadius:8,align:'center'},
+    image:{...base,imageUrl:'',alt:'Email image',imageWidth:100,imageHeight:0,imageFit:'cover',imageRadius:8,imageShape:'rounded',imageBorderWidth:0,imageBorderColor:'#e5e7eb',imageShadow:'no',imageRotate:0,align:'center'},
     button:{...base,label:'Click Here',url:'#',buttonBg:'#00A143',buttonText:'#ffffff',buttonRadius:8,buttonSize:'medium',fullWidth:'no',align:'center'},
     divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:18},
     spacer:{...base,height:32,padding:0},
@@ -2187,7 +2333,9 @@ function emailBlockDefaults(type){
 function initEmailDesignerIfNeeded(){
   renderEmailWidgetPalette();
   loadSavedEmailDesignerDraft();
+  hydrateDesignerMetaInputs();
   renderEmailImageLibrary();
+  loadEmailImagesFromServer();
   renderEmailDesigner();
   setupEmailDesignerDragDrop();
 }
@@ -2270,7 +2418,7 @@ function removeDesignerBlock(id){
 function updateDesignerBlock(id,key,value){
   const block = designerBlocks.find(b=>b.id===id);
   if(!block) return;
-  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','thickness','lineWidth','height','iconSize','gap'].includes(key)) value = Number(value || 0);
+  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap'].includes(key)) value = Number(value || 0);
   block[key] = value;
   renderEmailDesigner(false);
 }
@@ -2290,7 +2438,11 @@ function wrapBlock(block, inner){
 
 function renderOptionalMedia(block, inner){
   if(!block.mediaUrl || ['image','imageGrid'].includes(block.type)) return inner;
-  const img = `<div class="media-side" style="--media-width:${Number(block.mediaWidth||38)}%;"><img src="${safeAttr(block.mediaUrl)}" style="width:100%;border-radius:${Number(block.mediaRadius||0)}px;display:block;"></div>`;
+  const mediaRadius = Number(block.mediaRadius||0);
+  const mediaShadow = block.mediaShadow === 'yes' ? 'box-shadow:0 10px 24px rgba(15,23,42,.18);' : '';
+  const mediaFit = block.mediaFit || 'cover';
+  const mediaHeight = Number(block.mediaHeight||0) > 0 ? `height:${Number(block.mediaHeight)}px;object-fit:${mediaFit};` : '';
+  const img = `<div class="media-side" style="--media-width:${Number(block.mediaWidth||38)}%;"><img onclick="event.stopPropagation();openEmailImagePicker('${block.id}','media')" src="${safeAttr(block.mediaUrl)}" style="width:100%;${mediaHeight}border-radius:${mediaRadius}px;display:block;cursor:pointer;${mediaShadow}"></div>`;
   if(block.mediaPosition === 'left') return `<div class="email-media-flex">${img}<div class="content-side">${inner}</div></div>`;
   if(block.mediaPosition === 'right') return `<div class="email-media-flex reverse">${img}<div class="content-side">${inner}</div></div>`;
   if(block.mediaPosition === 'bottom') return `<div>${inner}<div style="height:14px"></div>${img}</div>`;
@@ -2304,7 +2456,12 @@ function renderDesignerBlockInner(block){
   if(block.type === 'text') return `<div style="text-align:${align};font-size:${Number(block.fontSize||16)}px;line-height:${Number(block.lineHeight||1.6)};">${safeHtml(block.body).replace(/\n/g,'<br>')}</div>`;
   if(block.type === 'image'){
     const url = block.imageUrl || block.mediaUrl || '';
-    return url ? `<div style="text-align:${align};"><img src="${safeAttr(url)}" alt="${safeAttr(block.alt)}" style="width:${Number(block.imageWidth||100)}%;border-radius:${Number(block.imageRadius||0)}px;display:inline-block;"></div>` : `<div class="designer-empty-state">Select an image from the image library or paste an image URL.</div>`;
+    const shapeRadius = block.imageShape === 'circle' ? 999 : block.imageShape === 'pill' ? 999 : block.imageShape === 'square' ? 0 : Number(block.imageRadius||8);
+    const shadow = block.imageShadow === 'yes' ? 'box-shadow:0 12px 28px rgba(15,23,42,.20);' : '';
+    const height = Number(block.imageHeight||0) > 0 ? `height:${Number(block.imageHeight)}px;object-fit:${block.imageFit || 'cover'};` : '';
+    const border = Number(block.imageBorderWidth||0) > 0 ? `border:${Number(block.imageBorderWidth)}px solid ${block.imageBorderColor || '#e5e7eb'};` : '';
+    const rotate = Number(block.imageRotate||0) ? `transform:rotate(${Number(block.imageRotate)}deg);` : '';
+    return url ? `<div style="text-align:${align};"><img onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')" src="${safeAttr(url)}" alt="${safeAttr(block.alt)}" style="width:${Number(block.imageWidth||100)}%;${height}border-radius:${shapeRadius}px;${border}${shadow}${rotate}display:inline-block;cursor:pointer;"></div>` : `<div class="email-image-placeholder" onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')"><b>Click to choose an image</b><br><small>Upload or select from your image library</small></div>`;
   }
   if(block.type === 'button'){
     const size = block.buttonSize === 'large' ? '15px 28px' : block.buttonSize === 'small' ? '9px 16px' : '12px 22px';
@@ -2408,8 +2565,8 @@ function renderEmailDesignerSettings(){
         ${['Arial, sans-serif','Georgia, serif','Verdana, sans-serif','Tahoma, sans-serif','Trebuchet MS, sans-serif'].map(f=>`<option value="${f}" ${designerSettings.fontFamily===f?'selected':''}>${f.split(',')[0]}</option>`).join('')}
       </select></div>
     </div>
-    <div class="setting-full-v2 mt-2"><label>Outer Background Image URL</label><input class="form-control form-control-sm" value="${safeAttr(designerSettings.outerBgImage)}" onchange="updateDesignerSetting('outerBgImage',this.value)"></div>
-    <div class="setting-full-v2 mt-2"><label>Email Background Image URL</label><input class="form-control form-control-sm" value="${safeAttr(designerSettings.canvasBgImage)}" onchange="updateDesignerSetting('canvasBgImage',this.value)"></div>
+    <div class="setting-full-v2 mt-2"><label>Outer Background Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(designerSettings.outerBgImage)}" onchange="updateDesignerSetting('outerBgImage',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('outerBg','background')">Library</button></div></div>
+    <div class="setting-full-v2 mt-2"><label>Email Background Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(designerSettings.canvasBgImage)}" onchange="updateDesignerSetting('canvasBgImage',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('canvasBg','background')">Library</button></div></div>
     <hr>
   `;
 
@@ -2431,18 +2588,18 @@ function renderEmailDesignerSettings(){
     </div>
     <hr>
     <div class="designer-panel-title">Image Inside This Block</div>
-    <div class="setting-full-v2"><label>Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"></div>
+    <div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Library</button></div></div>
     <div class="setting-grid-v2 mt-2">
       ${setSelect('mediaPosition','Position',['top','bottom','left','right'])}
       ${setInput(block,'mediaWidth','Image %','number')}
-      ${setInput(block,'mediaRadius','Image Radius','number')}
+      ${setInput(block,'mediaRadius','Image Radius','number')}${setInput(block,'mediaHeight','Height px','number')}${setSelect('mediaFit','Fit',['cover','contain','fill'])}${setSelect('mediaShadow','Shadow',['no','yes'])}
     </div>
     <hr>
   `;
 
   if(['header','heading'].includes(block.type)) html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Subtitle</label><input class="form-control form-control-sm" value="${safeAttr(block.subtitle)}" onchange="updateDesignerBlock('${block.id}','subtitle',this.value)"></div>`;
   if(block.type === 'text') html += `${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'fontSize','Font Size','number')}${setInput(block,'lineHeight','Line Height','number')}</div>`;
-  if(block.type === 'image') html += `<div class="setting-full-v2"><label>Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'imageWidth','Image Width %','number')}${setInput(block,'imageRadius','Image Radius','number')}</div>`;
+  if(block.type === 'image') html += `<div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','image')">Library</button></div></div><div class="setting-grid-v2 mt-2">${setInput(block,'alt','Alt Text')}${setInput(block,'imageWidth','Width %','number')}${setInput(block,'imageHeight','Height px','number')}${setSelect('imageFit','Fit',['cover','contain','fill'])}${setSelect('imageShape','Shape',['rounded','square','circle','pill','custom'])}${setInput(block,'imageRadius','Custom Radius','number')}${setInput(block,'imageBorderWidth','Border px','number')}${setInput(block,'imageBorderColor','Border Color','color')}${setSelect('imageShadow','Shadow',['no','yes'])}${setInput(block,'imageRotate','Rotate Degrees','number')}</div>`;
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
   if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
@@ -2459,15 +2616,22 @@ function renderEmailDesignerSettings(){
 }
 
 function renderFinalEmailDesignerHtml(){
-  const encoded = encodeURIComponent(JSON.stringify({settings:designerSettings,blocks:designerBlocks}));
+  syncDesignerMetaFromInputs();
+  const encoded = encodeURIComponent(JSON.stringify({settings:designerSettings,blocks:designerBlocks,meta:designerMeta}));
   const outerBgImage = designerSettings.outerBgImage ? `background-image:url('${safeAttr(designerSettings.outerBgImage)}');background-size:cover;background-position:center;` : '';
   const canvasBgImage = designerSettings.canvasBgImage ? `background-image:url('${safeAttr(designerSettings.canvasBgImage)}');background-size:cover;background-position:center;` : '';
-  return `<!--EXCEL_EMAIL_DESIGN_V2:${encoded}--><div style="margin:0;padding:0;background:${designerSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(designerSettings.emailWidth||680)}px;margin:0 auto;background:${designerSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${designerSettings.fontFamily || 'Arial, sans-serif'};">${designerBlocks.map(b=>wrapBlock(b, renderDesignerBlockInner(b))).join('')}</div></div>`;
+  const preheaderHtml = designerMeta.preheader ? `<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${safeHtml(designerMeta.preheader)}</div>` : '';
+  return `<!--EXCEL_EMAIL_DESIGN_V2:${encoded}-->${preheaderHtml}<div style="margin:0;padding:0;background:${designerSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(designerSettings.emailWidth||680)}px;margin:0 auto;background:${designerSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${designerSettings.fontFamily || 'Arial, sans-serif'};">${designerBlocks.map(b=>wrapBlock(b, renderDesignerBlockInner(b))).join('')}</div></div>`;
 }
 
 function applyEmailDesignToCampaign(){
   if(!designerBlocks.length){ alert('Add at least one email design block first.'); return; }
-  quill.root.innerHTML = renderFinalEmailDesignerHtml();
+  const pkg = getEmailDesignPackage();
+  campaignName.value = pkg.name || '';
+  subject.value = pkg.subject || '';
+  const preheaderField = document.getElementById('preheader');
+  if(preheaderField) preheaderField.value = pkg.preheader || '';
+  quill.root.innerHTML = pkg.html;
   alert('Design copied into Email Campaigns. Add your recipients and send when ready.');
   showTab('campaigns');
 }
@@ -2498,7 +2662,8 @@ function clearEmailDesigner(){
 }
 
 function saveEmailDesignLocal(showAlert=true){
-  localStorage.setItem('excelEmailDesignerDraft', JSON.stringify({settings:designerSettings,blocks:designerBlocks}));
+  syncDesignerMetaFromInputs();
+  localStorage.setItem('excelEmailDesignerDraft', JSON.stringify({settings:designerSettings,blocks:designerBlocks,meta:designerMeta}));
   if(showAlert) alert('Email design draft saved in this browser.');
 }
 
@@ -2508,8 +2673,38 @@ function loadSavedEmailDesignerDraft(){
   if(saved && Array.isArray(saved.blocks)){
     designerSettings = {...designerSettings, ...(saved.settings || {})};
     designerBlocks = saved.blocks;
+    designerMeta = {...designerMeta, ...(saved.meta || {})};
+    hydrateDesignerMetaInputs();
     selectedDesignerBlockId = designerBlocks[0]?.id || null;
   }
+}
+
+async function loadEmailImagesFromServer(){
+  try {
+    const res = await fetch('/api/email-images');
+    if(!res.ok) throw new Error('Image library unavailable');
+    const data = await res.json();
+    if(Array.isArray(data)) {
+      designerImageLibrary = data;
+      localStorage.setItem('excelEmailImageLibrary', JSON.stringify(designerImageLibrary.slice(0,60)));
+    }
+  } catch(e) {
+    designerImageLibrary = JSON.parse(localStorage.getItem('excelEmailImageLibrary') || '[]');
+  }
+  renderEmailImageLibrary();
+  renderEmailImagePickerGrid();
+}
+
+async function saveImageToServer(image){
+  try {
+    const res = await fetch('/api/email-images', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(image)
+    });
+    if(res.ok) return await res.json();
+  } catch(e) {}
+  return { success:false };
 }
 
 function handleEmailImageUpload(event){
@@ -2518,13 +2713,16 @@ function handleEmailImageUpload(event){
   let remaining = files.length;
   files.forEach(file=>{
     const reader = new FileReader();
-    reader.onload = e=>{
-      designerImageLibrary.unshift({ id:edId('img'), name:file.name, data:e.target.result });
+    reader.onload = async e=>{
+      const image = { id:edId('img'), name:file.name, data:e.target.result, createdAt:new Date().toISOString() };
+      designerImageLibrary.unshift(image);
+      await saveImageToServer(image);
       remaining--;
       if(remaining === 0){
-        localStorage.setItem('excelEmailImageLibrary', JSON.stringify(designerImageLibrary.slice(0,30)));
-        designerImageLibrary = designerImageLibrary.slice(0,30);
+        designerImageLibrary = designerImageLibrary.slice(0,60);
+        localStorage.setItem('excelEmailImageLibrary', JSON.stringify(designerImageLibrary));
         renderEmailImageLibrary();
+        renderEmailImagePickerGrid();
       }
     };
     reader.readAsDataURL(file);
@@ -2536,40 +2734,191 @@ function renderEmailImageLibrary(){
   const el = document.getElementById('emailImageLibrary');
   if(!el) return;
   if(!designerImageLibrary.length){ el.innerHTML = '<div class="text-muted small">No images uploaded yet.</div>'; return; }
-  el.innerHTML = designerImageLibrary.map(img=>`<div class="image-library-item" title="Click to add to selected block" onclick="useLibraryImage('${img.id}')"><img src="${img.data}"></div>`).join('');
+  el.innerHTML = designerImageLibrary.slice(0,18).map(img=>`<div class="image-library-item" title="Click to add to selected block" onclick="useLibraryImage('${img.id}')"><img src="${img.data}"></div>`).join('');
+}
+
+function openEmailImagePicker(blockId=null,target='image'){
+  activeImageTarget = { blockId, target };
+  const overlay = document.getElementById('emailImagePickerOverlay');
+  if(overlay) overlay.style.display = 'flex';
+  renderEmailImagePickerGrid();
+}
+
+function closeEmailImagePicker(){
+  const overlay = document.getElementById('emailImagePickerOverlay');
+  if(overlay) overlay.style.display = 'none';
+  activeImageTarget = null;
+}
+
+function renderEmailImagePickerGrid(){
+  const grid = document.getElementById('emailImagePickerGrid');
+  if(!grid) return;
+  if(!designerImageLibrary.length){
+    grid.innerHTML = '<div class="text-muted">No images in the library yet. Upload one above.</div>';
+    return;
+  }
+  grid.innerHTML = designerImageLibrary.map(img=>`
+    <div class="image-picker-card" onclick="chooseImageForActiveTarget('${img.id}')">
+      <img src="${img.data}">
+      <div>${safeHtml(img.name || 'Image')}</div>
+    </div>
+  `).join('');
+}
+
+function applyImageToTarget(url){
+  if(!url) return;
+  const target = activeImageTarget || { blockId:selectedDesignerBlockId, target:'image' };
+  if(target.blockId === 'canvasBg') {
+    designerSettings.canvasBgImage = url;
+  } else if(target.blockId === 'outerBg') {
+    designerSettings.outerBgImage = url;
+  } else {
+    const block = designerBlocks.find(b=>b.id===target.blockId) || designerBlocks.find(b=>b.id===selectedDesignerBlockId);
+    if(!block){
+      designerSettings.canvasBgImage = url;
+    } else if(block.type === 'image' || target.target === 'image') {
+      block.imageUrl = url;
+    } else if(block.type === 'imageGrid') {
+      block.imageUrls = [block.imageUrls || '', url].filter(Boolean).join('\n');
+    } else {
+      block.mediaUrl = url;
+    }
+  }
+  closeEmailImagePicker();
+  renderEmailDesigner();
+}
+
+function chooseImageForActiveTarget(id){
+  const img = designerImageLibrary.find(i=>i.id===id);
+  if(!img) return;
+  applyImageToTarget(img.data);
+}
+
+function usePickerImageUrl(){
+  const input = document.getElementById('emailImagePickerUrl');
+  const url = (input?.value || '').trim();
+  if(!url) return;
+  applyImageToTarget(url);
+  if(input) input.value = '';
 }
 
 function useLibraryImage(id){
   const img = designerImageLibrary.find(i=>i.id===id);
-  const block = designerBlocks.find(b=>b.id===selectedDesignerBlockId);
   if(!img){ return; }
-  if(!block){
-    designerSettings.canvasBgImage = img.data;
-  } else if(block.type === 'image'){
-    block.imageUrl = img.data;
-  } else if(block.type === 'imageGrid'){
-    block.imageUrls = [block.imageUrls || '', img.data].filter(Boolean).join('\n');
-  } else {
-    block.mediaUrl = img.data;
-  }
-  renderEmailDesigner();
+  applyImageToTarget(img.data);
 }
 
 function setSelectedBlockImageFromPrompt(){
   const url = prompt('Paste image URL:');
   if(!url) return;
-  const block = designerBlocks.find(b=>b.id===selectedDesignerBlockId);
-  if(!block){ designerSettings.canvasBgImage = url; }
-  else if(block.type === 'image') block.imageUrl = url;
-  else block.mediaUrl = url;
-  renderEmailDesigner();
+  applyImageToTarget(url);
 }
 
-function clearEmailImageLibrary(){
-  if(!confirm('Clear uploaded image library from this browser?')) return;
+async function clearEmailImageLibrary(){
+  if(!confirm('Clear uploaded image library from this browser and server storage?')) return;
   designerImageLibrary = [];
   localStorage.removeItem('excelEmailImageLibrary');
+  try { await fetch('/api/email-images', { method:'DELETE' }); } catch(e) {}
   renderEmailImageLibrary();
+  renderEmailImagePickerGrid();
+}
+
+function syncDesignerMetaFromInputs(){
+  designerMeta = {
+    title: document.getElementById('designerCampaignTitle')?.value || '',
+    subject: document.getElementById('designerEmailSubject')?.value || '',
+    preheader: document.getElementById('designerEmailPreheader')?.value || ''
+  };
+  localStorage.setItem('excelEmailDesignerMeta', JSON.stringify(designerMeta));
+}
+
+function hydrateDesignerMetaInputs(){
+  const title = document.getElementById('designerCampaignTitle');
+  const subjectEl = document.getElementById('designerEmailSubject');
+  const preheaderEl = document.getElementById('designerEmailPreheader');
+  if(title) title.value = designerMeta.title || '';
+  if(subjectEl) subjectEl.value = designerMeta.subject || '';
+  if(preheaderEl) preheaderEl.value = designerMeta.preheader || '';
+  [title, subjectEl, preheaderEl].forEach(el=>{ if(el && !el.dataset.bound){ el.addEventListener('input', syncDesignerMetaFromInputs); el.dataset.bound='1'; } });
+}
+
+function getEmailDesignPackage(){
+  syncDesignerMetaFromInputs();
+  const html = renderFinalEmailDesignerHtml();
+  return { name:designerMeta.title || 'Untitled Email Design', subject:designerMeta.subject || '', preheader:designerMeta.preheader || '', html, designData:{ settings:designerSettings, blocks:designerBlocks, meta:designerMeta } };
+}
+
+async function saveDesignerAsCampaign(){
+  const pkg = getEmailDesignPackage();
+  if(!designerBlocks.length){ alert('Add at least one block before saving a campaign.'); return; }
+  if(!pkg.name.trim()){ alert('Please add a design/campaign title.'); return; }
+  if(!pkg.subject.trim()){ alert('Please add an email subject.'); return; }
+  const issues = getEmailDesignIssues(pkg);
+  const blockers = issues.filter(i=>i.level === 'danger');
+  if(blockers.length && !confirm('The email test found serious issues. Save anyway?')) return;
+  const res = await fetch('/api/campaigns', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(pkg) });
+  const data = await res.json();
+  if(data.success){ alert('Email design saved as a campaign. You can use it now or later from Email Campaigns.'); loadCampaigns(); loadDashboard(); }
+  else alert(data.error || 'Campaign could not be saved.');
+}
+
+function extractLinksFromHtml(html){
+  return Array.from(String(html||'').matchAll(/href=["']([^"']+)["']/gi)).map(m=>m[1]);
+}
+
+function getEmailDesignIssues(pkg){
+  const issues = [];
+  const subjectText = pkg.subject || '';
+  const preheaderText = pkg.preheader || '';
+  const html = pkg.html || '';
+  const plain = html.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
+  const links = extractLinksFromHtml(html);
+  const spamWords = ['free money','guaranteed','act now','risk free','winner','urgent','limited time','cash bonus','100% free','click here!!!'];
+
+  if(!pkg.name.trim()) issues.push({level:'danger',title:'Missing campaign title',detail:'Add a title so this design can be saved and reused.'});
+  if(!subjectText.trim()) issues.push({level:'danger',title:'Missing subject line',detail:'Add a subject before sending.'});
+  else if(subjectText.length > 60) issues.push({level:'warning',title:'Subject may be too long',detail:`${subjectText.length} characters. Try to keep it near 35–60 characters.`});
+  else issues.push({level:'good',title:'Subject length looks good',detail:`${subjectText.length} characters.`});
+
+  if(preheaderText.length > 100) issues.push({level:'warning',title:'Preheader may be too long',detail:`${preheaderText.length} characters. Aim for about 40–100 characters.`});
+  else if(preheaderText.trim()) issues.push({level:'good',title:'Preheader length looks good',detail:`${preheaderText.length} characters.`});
+  else issues.push({level:'warning',title:'No preheader',detail:'A preheader can improve inbox appearance and open rate.'});
+
+  if(designerBlocks.length === 0) issues.push({level:'danger',title:'No email content',detail:'Add at least one block to the design.'});
+  if(plain.length < 80) issues.push({level:'warning',title:'Very little text content',detail:'Emails with only images or very little copy can look suspicious to filters.'});
+
+  const badLinks = links.filter(url => !url || url === '#' || (!/^https?:\/\//i.test(url) && !/^mailto:/i.test(url) && !/^tel:/i.test(url)));
+  if(badLinks.length) issues.push({level:'danger',title:'Broken or placeholder links',detail:`Found ${badLinks.length} link(s) that are blank, #, or missing https://.`});
+  else if(links.length) issues.push({level:'good',title:'Links are formatted',detail:`Found ${links.length} link(s) with valid-looking formats. This does not guarantee the websites are live.`});
+  else issues.push({level:'warning',title:'No links found',detail:'That may be fine, but most campaign emails include at least one clear call-to-action.'});
+
+  const missingImages = designerBlocks.filter(b => b.type === 'image' && !(b.imageUrl || b.mediaUrl)).length;
+  if(missingImages) issues.push({level:'danger',title:'Image block missing image',detail:`${missingImages} image block(s) need an image selected.`});
+
+  const missingAlt = designerBlocks.filter(b => b.type === 'image' && (b.imageUrl || b.mediaUrl) && !String(b.alt || '').trim()).length;
+  if(missingAlt) issues.push({level:'warning',title:'Missing image alt text',detail:`${missingAlt} image(s) should have alt text for accessibility and deliverability.`});
+
+  const lower = `${subjectText} ${preheaderText} ${plain}`.toLowerCase();
+  const foundSpam = spamWords.filter(w => lower.includes(w));
+  if(foundSpam.length) issues.push({level:'warning',title:'Possible spammy wording',detail:`Review these words/phrases: ${foundSpam.join(', ')}.`});
+
+  const repeated = plain.match(/\b(\w+)\s+\1\b/ig) || [];
+  if(repeated.length) issues.push({level:'warning',title:'Possible repeated words',detail:`Found: ${Array.from(new Set(repeated)).slice(0,5).join(', ')}`});
+
+  if((html.match(/data:image\//g)||[]).length > 6) issues.push({level:'warning',title:'Many embedded images',detail:'Large embedded images can make emails heavy. Hosted image URLs are better long-term.'});
+
+  if(!issues.some(i=>i.level==='danger' || i.level==='warning')) issues.push({level:'good',title:'Email test passed',detail:'No obvious issues found. Still send a real test email to yourself before sending to a list.'});
+  return issues;
+}
+
+function runEmailDesignTest(){
+  const pkg = getEmailDesignPackage();
+  const issues = getEmailDesignIssues(pkg);
+  const panel = document.getElementById('emailDesignTestResults');
+  if(!panel) return;
+  panel.style.display = 'block';
+  const counts = { danger:issues.filter(i=>i.level==='danger').length, warning:issues.filter(i=>i.level==='warning').length, good:issues.filter(i=>i.level==='good').length };
+  panel.innerHTML = `<div class="d-flex justify-content-between align-items-center mb-2"><b>Email Test Results</b><span class="small-muted">${counts.danger} serious / ${counts.warning} warnings / ${counts.good} passed</span></div>` + issues.map(i=>`<div class="email-test-issue ${i.level}"><b>${safeHtml(i.title)}</b><br><small>${safeHtml(i.detail)}</small></div>`).join('');
 }
 
 function tryLoadDesignFromHtml(html){
@@ -2579,6 +2928,8 @@ function tryLoadDesignFromHtml(html){
     const data = JSON.parse(decodeURIComponent(match[1]));
     designerSettings = {...designerSettings, ...(data.settings || {})};
     designerBlocks = Array.isArray(data.blocks) ? data.blocks : [];
+    designerMeta = {...designerMeta, ...(data.meta || {})};
+    hydrateDesignerMetaInputs();
     selectedDesignerBlockId = designerBlocks[0]?.id || null;
     saveEmailDesignLocal(false);
     return true;
@@ -3098,7 +3449,7 @@ function buildDashboardDrilldownHtml(type){
     return campaignsCache.map(c=>`
       <div class="drilldown-row" onclick="openCampaignPanel(${c.id})">
         <b>${c.name || 'Untitled Campaign'}</b><br>
-        <small>Subject: ${c.subject || ''}</small><br>
+        <small>Subject: ${c.subject || ''}</small><br>${c.preheader ? `<small>Preheader: ${c.preheader}</small><br>` : ''}
         <small>Created: ${formatDate(c.createdAt)}${c.updatedAt ? ' | Updated: ' + formatDate(c.updatedAt) : ''}</small>
       </div>
     `).join('');
@@ -3400,7 +3751,7 @@ async function loadScheduledCampaigns(){
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <b>${c.name || 'Untitled Scheduled Campaign'}</b><br>
-              <small>Subject: ${c.subject || ''}</small><br>
+              <small>Subject: ${c.subject || ''}</small><br>${c.preheader ? `<small>Preheader: ${c.preheader}</small><br>` : ''}
               <small>Scheduled: ${formatDate(c.scheduledAt)}</small><br>
               <small>Status: ${c.status || 'Scheduled'}</small>
             </div>
@@ -3954,6 +4305,7 @@ async function saveCampaign(){
   const payload = {
     name: campaignName.value,
     subject: subject.value,
+    preheader: document.getElementById('preheader') ? preheader.value : '',
     html: quill.root.innerHTML
   };
 
@@ -3996,6 +4348,7 @@ async function editCampaign(id){
 
   campaignName.value = campaign.name || '';
   subject.value = campaign.subject || '';
+  if(document.getElementById('preheader')) preheader.value = campaign.preheader || '';
   quill.root.innerHTML = campaign.html || '';
   tryLoadDesignFromHtml(campaign.html || '');
 
@@ -4011,6 +4364,7 @@ function cancelCampaignEdit(){
   editingCampaignId = null;
   campaignName.value = '';
   subject.value = '';
+  if(document.getElementById('preheader')) preheader.value = '';
   quill.root.innerHTML = '';
   editingCampaignNotice.style.display = 'none';
   saveCampaignButton.innerText = 'Save Campaign';
@@ -4111,7 +4465,7 @@ async function loadCampaigns(){
         <div class="d-flex justify-content-between align-items-start">
           <div>
             <b>${c.name || 'Untitled Campaign'}</b><br>
-            <small>Subject: ${c.subject || ''}</small><br>
+            <small>Subject: ${c.subject || ''}</small><br>${c.preheader ? `<small>Preheader: ${c.preheader}</small><br>` : ''}
             <small>Created: ${formatDate(c.createdAt)}</small>
             ${c.updatedAt ? `<br><small>Updated: ${formatDate(c.updatedAt)}</small>` : ''}
           </div>
