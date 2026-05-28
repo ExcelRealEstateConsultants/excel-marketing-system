@@ -1444,26 +1444,73 @@ body {
   font-size:13px;
 }
 .email-designer-help-strip b { color:var(--primary); }
-.email-block-v2 { position:relative; }
-.email-block-v2.selected { outline:3px solid rgba(0,161,67,.35); outline-offset:4px; }
-.email-block-toolbar-v2 {
-  display:flex;
-  gap:6px;
-  flex-wrap:wrap;
+.email-block-v2 {
+  position:relative;
+  border:1px solid transparent;
+  border-radius:16px;
+  transition:box-shadow .18s ease, border-color .18s ease, transform .18s ease;
 }
-.email-mini-btn-v2.danger { background:#fee2e2; color:#991b1b; border-color:#fecaca; }
-.email-mini-btn-v2.primary { background:#e0f2fe; color:#075985; border-color:#bae6fd; }
+.email-block-v2:hover {
+  border-color:rgba(4,44,73,.14);
+  box-shadow:0 10px 28px rgba(15,23,42,.08);
+}
+.email-block-v2.selected {
+  border-color:rgba(0,161,67,.45);
+  box-shadow:0 0 0 3px rgba(0,161,67,.13), 0 14px 34px rgba(15,23,42,.10);
+}
+.email-block-toolbar-v2 {
+  position:absolute;
+  top:8px;
+  right:8px;
+  display:flex;
+  gap:4px;
+  opacity:0;
+  transform:translateY(-4px);
+  pointer-events:none;
+  transition:opacity .15s ease, transform .15s ease;
+  z-index:60;
+}
+.email-block-v2:hover .email-block-toolbar-v2,
+.email-block-v2.selected .email-block-toolbar-v2 {
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+.email-mini-btn-v2 {
+  width:28px;
+  height:28px;
+  border:1px solid rgba(4,44,73,.10);
+  background:rgba(255,255,255,.92);
+  color:var(--primary);
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  line-height:1;
+  box-shadow:0 6px 18px rgba(15,23,42,.12);
+  backdrop-filter:blur(6px);
+}
+.email-mini-btn-v2:hover { transform:translateY(-1px); background:#fff; }
+.email-mini-btn-v2.danger { color:#b91c1c; border-color:#fecaca; }
+.email-mini-btn-v2.primary { color:#075985; border-color:#bae6fd; }
 .email-image-resize-wrap {
   position:relative;
   display:inline-block;
   max-width:100%;
   vertical-align:top;
+  overflow:visible;
 }
 .email-media-flex .email-image-resize-wrap { display:block; width:100%; }
+.email-image-resize-wrap img {
+  height:auto!important;
+  object-fit:contain!important;
+  max-width:100%;
+}
 .email-img-resize-handle {
   position:absolute;
-  right:-8px;
-  bottom:-8px;
+  right:-9px;
+  bottom:-9px;
   width:18px;
   height:18px;
   border-radius:50%;
@@ -1471,7 +1518,7 @@ body {
   border:3px solid #fff;
   box-shadow:0 3px 12px rgba(0,0,0,.25);
   cursor:nwse-resize;
-  z-index:50;
+  z-index:70;
 }
 .email-img-resize-handle::after {
   content:'↘';
@@ -1488,6 +1535,7 @@ body {
   justify-content:center;
   flex-wrap:wrap;
   margin-top:8px;
+  opacity:.88;
 }
 .email-image-action-bar button {
   border:1px solid var(--border);
@@ -1496,6 +1544,14 @@ body {
   padding:4px 9px;
   font-size:11px;
   color:var(--primary);
+}
+.email-designer-edit-flash {
+  animation: designerEditFlash 1.1s ease;
+}
+@keyframes designerEditFlash {
+  0% { box-shadow:0 0 0 0 rgba(0,161,67,.45); }
+  50% { box-shadow:0 0 0 6px rgba(0,161,67,.15); }
+  100% { box-shadow:none; }
 }
 .image-library-card-wrap { position:relative; }
 .image-library-delete {
@@ -1750,7 +1806,7 @@ body {
   </div>
 
   <div class="email-designer-help-strip">
-    <b>How to use this designer:</b> Drag or click widgets on the left, click any block to edit it on the right, click any image area to open the image library, drag the green corner handle to resize images, and use Delete when you do not like a block or image.
+    <b>How to use this designer:</b> Drag or click widgets on the left, click any block or the pencil icon to open its settings on the right, click any image area to open the image library, drag the green corner handle to scale images proportionally, and use the small trash icon to delete blocks or images.
   </div>
 
   <div class="designer-shell-v2">
@@ -2520,6 +2576,21 @@ function selectDesignerBlock(id){
   renderEmailDesigner();
 }
 
+function editDesignerBlock(id){
+  selectedDesignerBlockId = id;
+  renderEmailDesigner();
+  setTimeout(()=>{
+    const panel = document.getElementById('emailDesignerSettings');
+    if(panel){
+      panel.scrollIntoView({ behavior:'smooth', block:'start' });
+      panel.classList.add('email-designer-edit-flash');
+      setTimeout(()=>panel.classList.remove('email-designer-edit-flash'), 1200);
+    }
+    const firstField = document.querySelector('#emailDesignerSettings input, #emailDesignerSettings textarea, #emailDesignerSettings select');
+    if(firstField) firstField.focus({ preventScroll:true });
+  }, 80);
+}
+
 function duplicateDesignerBlock(id){
   const index = designerBlocks.findIndex(b=>b.id===id);
   if(index < 0) return;
@@ -2557,13 +2628,12 @@ function wrapBlock(block, inner){
   return `<div style="${style}">${renderOptionalMedia(block, inner)}</div>`;
 }
 
-function renderResizableImage({blockId, target='image', src='', alt='', width=100, height=0, fit='cover', radius=0, border='', shadow='', rotate='', extraStyle=''}){
+function renderResizableImage({blockId, target='image', src='', alt='', width=100, height=0, fit='contain', radius=0, border='', shadow='', rotate='', extraStyle=''}){
   if(!src) return '';
-  const heightStyle = Number(height||0) > 0 ? `height:${Number(height)}px;object-fit:${fit || 'cover'};` : '';
   const widthStyle = target === 'media' ? 'width:100%;' : `width:${Number(width||100)}%;`;
   return `<span class="email-image-resize-wrap" data-block-id="${blockId}" data-image-target="${target}">
-    <img onclick="event.stopPropagation();openEmailImagePicker('${blockId}','${target}')" src="${safeAttr(src)}" alt="${safeAttr(alt || '')}" style="${widthStyle}${heightStyle}border-radius:${Number(radius||0)}px;${border || ''}${shadow || ''}${rotate || ''}${extraStyle || ''}display:block;cursor:pointer;max-width:100%;">
-    <span class="email-img-resize-handle" title="Drag to resize image" onmousedown="startDesignerImageResize(event,'${blockId}','${target}')"></span>
+    <img onclick="event.stopPropagation();openEmailImagePicker('${blockId}','${target}')" src="${safeAttr(src)}" alt="${safeAttr(alt || '')}" style="${widthStyle}height:auto;object-fit:contain;border-radius:${Number(radius||0)}px;${border || ''}${shadow || ''}${rotate || ''}${extraStyle || ''}display:block;cursor:pointer;max-width:100%;">
+    <span class="email-img-resize-handle" title="Drag to resize image proportionally" onmousedown="startDesignerImageResize(event,'${blockId}','${target}')"></span>
   </span>`;
 }
 
@@ -2587,7 +2657,6 @@ function renderDesignerBlockInner(block){
     const url = block.imageUrl || block.mediaUrl || '';
     const shapeRadius = block.imageShape === 'circle' ? 999 : block.imageShape === 'pill' ? 999 : block.imageShape === 'square' ? 0 : Number(block.imageRadius||8);
     const shadow = block.imageShadow === 'yes' ? 'box-shadow:0 12px 28px rgba(15,23,42,.20);' : '';
-    const height = Number(block.imageHeight||0) > 0 ? `height:${Number(block.imageHeight)}px;object-fit:${block.imageFit || 'cover'};` : '';
     const border = Number(block.imageBorderWidth||0) > 0 ? `border:${Number(block.imageBorderWidth)}px solid ${block.imageBorderColor || '#e5e7eb'};` : '';
     const rotate = Number(block.imageRotate||0) ? `transform:rotate(${Number(block.imageRotate)}deg);` : '';
     return url ? `<div style="text-align:${align};">${renderResizableImage({blockId:block.id,target:'image',src:url,alt:block.alt,width:block.imageWidth,height:block.imageHeight,fit:block.imageFit,radius:shapeRadius,border,shadow,rotate,extraStyle:'display:inline-block;'})}<div class="email-image-action-bar"><button onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')">Change Image</button><button onclick="event.stopPropagation();removeDesignerBlockImage('${block.id}','image')">Remove Image</button></div></div>` : `<div class="email-image-placeholder" onclick="event.stopPropagation();openEmailImagePicker('${block.id}','image')"><b>Click to choose an image</b><br><small>Upload or select from your image library</small></div>`;
@@ -2664,10 +2733,10 @@ function renderEmailDesigner(autosave=true){
   } else {
     canvas.innerHTML = designerBlocks.map(block=>`
       <div class="email-block-v2 ${selectedDesignerBlockId===block.id?'selected':''}" data-block-id="${block.id}" onclick="selectDesignerBlock('${block.id}')">
-        <div class="email-block-toolbar-v2" onclick="event.stopPropagation()">
-          <button class="email-mini-btn-v2 primary" onclick="selectDesignerBlock('${block.id}')">Edit</button>
-          <button class="email-mini-btn-v2" onclick="duplicateDesignerBlock('${block.id}')">Copy</button>
-          <button class="email-mini-btn-v2 danger" onclick="removeDesignerBlock('${block.id}')">Delete</button>
+        <div class="email-block-toolbar-v2" onclick="event.stopPropagation()" title="Block tools">
+          <button class="email-mini-btn-v2 primary" title="Edit block" onclick="editDesignerBlock('${block.id}')">✎</button>
+          <button class="email-mini-btn-v2" title="Copy block" onclick="duplicateDesignerBlock('${block.id}')">⧉</button>
+          <button class="email-mini-btn-v2 danger" title="Delete block" onclick="removeDesignerBlock('${block.id}')">×</button>
         </div>
         ${wrapBlock(block, renderDesignerBlockInner(block))}
       </div>
@@ -2705,7 +2774,7 @@ function renderEmailDesignerSettings(){
     return;
   }
 
-  html += `<div class="designer-panel-title">Selected: ${block.type}</div>
+  html += `<div class="designer-panel-title">Editing ${block.type.charAt(0).toUpperCase() + block.type.slice(1)} Block</div>
     <div class="designer-settings-actions">
       <button class="btn btn-sm btn-outline-primary" onclick="duplicateDesignerBlock('${block.id}')">Copy Block</button>
       <button class="btn btn-sm btn-outline-danger" onclick="removeDesignerBlock('${block.id}')">Delete Block</button>
@@ -3001,26 +3070,27 @@ function startDesignerImageResize(event, blockId, target='image'){
   event.stopPropagation();
   const block = designerBlocks.find(b=>String(b.id)===String(blockId));
   if(!block) return;
-  selectDesignerBlock(blockId);
+  selectedDesignerBlockId = blockId;
   const startX = event.clientX;
-  const startY = event.clientY;
   const startWidth = target === 'media' ? Number(block.mediaWidth || 38) : Number(block.imageWidth || 100);
-  const startHeight = target === 'media' ? Number(block.mediaHeight || 0) : Number(block.imageHeight || 0);
+  const img = event.target.closest('.email-image-resize-wrap')?.querySelector('img');
+
   const move = (e)=>{
     const deltaX = e.clientX - startX;
-    const deltaY = e.clientY - startY;
+    const nextWidth = Math.max(target === 'media' ? 18 : 12, Math.min(100, Math.round(startWidth + deltaX / 5)));
     if(target === 'media'){
-      block.mediaWidth = Math.max(15, Math.min(90, Math.round(startWidth + deltaX / 5)));
-      if(startHeight > 0 || Math.abs(deltaY) > 12) block.mediaHeight = Math.max(40, Math.round((startHeight || 180) + deltaY));
+      block.mediaWidth = nextWidth;
+      block.mediaHeight = 0;
     } else {
-      block.imageWidth = Math.max(10, Math.min(100, Math.round(startWidth + deltaX / 5)));
-      if(startHeight > 0 || Math.abs(deltaY) > 12) block.imageHeight = Math.max(40, Math.round((startHeight || 220) + deltaY));
+      block.imageWidth = nextWidth;
+      block.imageHeight = 0;
     }
-    renderEmailDesigner(false);
+    if(img && target !== 'media') img.style.width = nextWidth + '%';
   };
   const up = ()=>{
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', up);
+    renderEmailDesigner(false);
     saveEmailDesignLocal(false);
   };
   document.addEventListener('mousemove', move);
