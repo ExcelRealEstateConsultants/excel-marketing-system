@@ -1696,6 +1696,81 @@ body {
   padding:2px 7px;
 }
 
+
+
+/* ===== EMAIL DESIGNER RESIZE + SOCIAL UX PATCH ===== */
+.email-block-inner-shell-v2 {
+  box-sizing:border-box;
+  width:100%;
+  position:relative;
+  overflow:visible;
+}
+.email-block-resize-side-v2,
+.email-block-resize-bottom-v2 {
+  position:absolute;
+  background:rgba(4,44,73,.72);
+  opacity:0;
+  transition:.15s ease;
+  z-index:76;
+}
+.email-block-resize-side-v2 {
+  right:-4px;
+  top:36px;
+  bottom:18px;
+  width:8px;
+  border-radius:999px;
+  cursor:ew-resize;
+}
+.email-block-resize-bottom-v2 {
+  left:36px;
+  right:18px;
+  bottom:-4px;
+  height:8px;
+  border-radius:999px;
+  cursor:ns-resize;
+}
+.email-block-v2:hover .email-block-resize-side-v2,
+.email-block-v2:hover .email-block-resize-bottom-v2,
+.email-block-v2.selected .email-block-resize-side-v2,
+.email-block-v2.selected .email-block-resize-bottom-v2 { opacity:.75; }
+.email-block-resize-handle-v2 { cursor:nwse-resize; }
+.social-icon-tray-v2 {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+.social-icon-chip-v2 {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  text-decoration:none!important;
+  font-weight:800;
+  line-height:1;
+  box-shadow:0 8px 20px rgba(15,23,42,.16);
+  cursor:pointer;
+  user-select:none;
+  transition:.15s ease;
+}
+.social-icon-chip-v2:hover { transform:translateY(-1px) scale(1.03); }
+.social-icon-chip-v2.empty { opacity:.65; outline:2px dashed rgba(255,255,255,.75); outline-offset:-5px; }
+.embedded-social-row-v2 {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+  align-items:center;
+}
+.embedded-social-row-v2.center { justify-content:center; }
+.embedded-social-row-v2.right { justify-content:flex-end; }
+.social-drop-hint-v2 {
+  font-size:12px;
+  color:#64748b;
+  text-align:center;
+  margin-top:10px;
+}
+
 @media (max-width: 900px){ .designer-shell-v2{ grid-template-columns:1fr!important; } }
 
 </style>
@@ -1900,7 +1975,7 @@ body {
   </div>
 
   <div class="email-designer-help-strip">
-    <b>How to use this designer:</b> Drag widgets into the email, drag blocks to reorder them, drag the corner of any block to resize it, click an image placeholder to choose an image, drag image corners to resize, and press Delete to remove the selected block or image.
+    <b>How to use this designer:</b> Drag widgets into the email, drag blocks to reorder them, drag the side, bottom, or corner of any block to resize width and height, click an image placeholder to choose an image, drag image corners to resize, and press Delete to remove the selected block or image.
   </div>
 
   <div class="designer-shell-v2">
@@ -2580,7 +2655,7 @@ function emailBlockDefaults(type){
   const base = {
     id:edId(type), type, bg:'#ffffff', text:'#1f2937', padding:24, radius:0,
     borderWidth:0, borderColor:'#e5e7eb', align:'left', bgImage:'',
-    mediaUrl:'', mediaPosition:'top', mediaWidth:38, mediaRadius:0, blockWidth:100, blockAlign:'center'
+    mediaUrl:'', mediaPosition:'top', mediaWidth:38, mediaRadius:0, blockWidth:100, blockHeight:0, blockAlign:'center', socialIcons:[]
   };
   const map = {
     header:{...base,bg:'#042C49',text:'#ffffff',align:'center',title:'Your Campaign Header',subtitle:'A short supporting message goes here.',padding:36},
@@ -2590,7 +2665,7 @@ function emailBlockDefaults(type){
     button:{...base,label:'Click Here',url:'#',buttonBg:'#00A143',buttonText:'#ffffff',buttonRadius:8,buttonSize:'medium',fullWidth:'no',align:'center'},
     divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:18},
     spacer:{...base,height:32,padding:0},
-    social:{...base,facebook:'',instagram:'',linkedin:'',youtube:'',x:'',website:'',useBrandColors:'yes',customBg:'#042C49',customText:'#ffffff',iconShape:'circle',iconSize:36,showLabels:'no',align:'center'},
+    social:{...base,facebook:'',instagram:'',linkedin:'',youtube:'',x:'',website:'',useBrandColors:'yes',customBg:'#042C49',customText:'#ffffff',iconShape:'circle',iconSize:40,showLabels:'no',align:'center'},
     video:{...base,title:'Watch the Video',videoUrl:'#',imageUrl:'',buttonLabel:'Watch Video',buttonBg:'#00A143'},
     table:{...base,title:'Data Table',headers:'Item,Details,Status',rows:'Open House,Saturday 11-2,Scheduled\nFollow Up,Call interested buyer,Pending'},
     article:{...base,title:'Feature Article',body:'Use this for a market update, listing highlight, newsletter story, or client education.',buttonLabel:'Read More',buttonUrl:'',mediaUrl:'',mediaPosition:'top',mediaWidth:40,borderWidth:1,radius:12},
@@ -2710,7 +2785,7 @@ function removeDesignerBlock(id){
 function updateDesignerBlock(id,key,value){
   const block = designerBlocks.find(b=>b.id===id);
   if(!block) return;
-  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap','blockWidth'].includes(key)) value = Number(value || 0);
+  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap','blockWidth','blockHeight','mediaHeight'].includes(key)) value = Number(value || 0);
   block[key] = value;
   renderEmailDesigner(false);
 }
@@ -2724,8 +2799,9 @@ function updateDesignerSetting(key,value){
 
 function wrapBlock(block, inner){
   const bgImage = block.bgImage ? `background-image:url('${safeAttr(block.bgImage)}');background-size:cover;background-position:center;` : '';
-  const style = `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${Number(block.padding||0)}px;border:${Number(block.borderWidth||0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius||0)}px;${bgImage}`;
-  return `<div style="${style}">${renderOptionalMedia(block, inner)}</div>`;
+  const heightStyle = Number(block.blockHeight || 0) > 0 ? `min-height:${Number(block.blockHeight)}px;` : '';
+  const style = `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${Number(block.padding||0)}px;border:${Number(block.borderWidth||0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius||0)}px;${heightStyle}${bgImage}`;
+  return `<div class="email-block-inner-shell-v2" style="${style}">${renderOptionalMedia(block, inner)}${renderEmbeddedSocialIcons(block)}</div>`;
 }
 
 function renderResizableImage({blockId, target='image', src='', alt='', width=100, height=0, fit='contain', radius=0, border='', shadow='', rotate='', extraStyle=''}){
@@ -2795,17 +2871,73 @@ function renderDesignerBlockInner(block){
   return safeHtml(block.body || '');
 }
 
-function renderSocialBlock(block){
-  const items = [
-    ['facebook','f','Facebook'],['instagram','◎','Instagram'],['linkedin','in','LinkedIn'],['youtube','▶','YouTube'],['x','X','X'],['website','🌐','Website']
-  ];
-  const links = items.filter(([key])=>block[key]);
-  if(!links.length) return `<div style="text-align:center;color:#6b7280;">Add social media links in settings.</div>`;
-  return `<div style="text-align:${block.align || 'center'};">${links.map(([key,label,name])=>{
-    const bg = block.useBrandColors === 'yes' ? socialBrandColors[key] : block.customBg;
-    const radius = block.iconShape === 'square' ? 6 : block.iconShape === 'rounded' ? 12 : 999;
-    return `<a href="${safeAttr(block[key])}" class="social-icon-preview" style="background:${bg};color:${block.customText || '#ffffff'};width:${Number(block.iconSize||36)}px;height:${Number(block.iconSize||36)}px;border-radius:${radius}px;">${label}</a>${block.showLabels==='yes'?`<span style="margin-right:8px;">${name}</span>`:''}`;
+const socialIconMeta = [
+  ['facebook','f','Facebook'],
+  ['instagram','◎','Instagram'],
+  ['linkedin','in','LinkedIn'],
+  ['youtube','▶','YouTube'],
+  ['x','X','X'],
+  ['website','🌐','Website']
+];
+
+function socialIconStyle(block, key){
+  const bg = block.useBrandColors === 'no' ? (block.customBg || '#042C49') : (socialBrandColors[key] || '#042C49');
+  const text = block.customText || '#ffffff';
+  const size = Number(block.iconSize || 38);
+  const radius = block.iconShape === 'square' ? 7 : block.iconShape === 'rounded' ? 12 : 999;
+  return `background:${bg};color:${text};width:${size}px;height:${size}px;border-radius:${radius}px;`;
+}
+
+function setSocialIconUrl(blockId, network){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  const current = block[network] || '';
+  const url = prompt(`Enter ${network === 'x' ? 'X' : network.charAt(0).toUpperCase()+network.slice(1)} URL:`, current);
+  if(url === null) return;
+  block[network] = url.trim();
+  renderEmailDesigner();
+}
+
+function addSocialIconToBlock(blockId, network){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
+  if(!block.socialIcons.find(i=>i.network===network)){
+    block.socialIcons.push({ network, url:'' });
+  }
+  selectedDesignerBlockId = block.id;
+  renderEmailDesigner();
+}
+
+function editEmbeddedSocialIcon(blockId, network){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block || !Array.isArray(block.socialIcons)) return;
+  const icon = block.socialIcons.find(i=>i.network===network);
+  if(!icon) return;
+  const current = icon.url || '';
+  const url = prompt(`Enter ${network === 'x' ? 'X' : network.charAt(0).toUpperCase()+network.slice(1)} URL:`, current);
+  if(url === null) return;
+  icon.url = url.trim();
+  renderEmailDesigner();
+}
+
+function renderEmbeddedSocialIcons(block){
+  if(block.type === 'social' || !Array.isArray(block.socialIcons) || block.socialIcons.length === 0) return '';
+  return `<div class="embedded-social-row-v2 ${block.align || 'left'}">${block.socialIcons.map(item=>{
+    const meta = socialIconMeta.find(m=>m[0]===item.network) || [item.network,'★',item.network];
+    const tmp = { useBrandColors:'yes', iconSize:28, iconShape:'circle', customText:'#ffffff' };
+    return `<span class="social-icon-chip-v2 ${item.url ? '' : 'empty'}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${item.network}')" onclick="event.stopPropagation();editEmbeddedSocialIcon('${block.id}','${item.network}')" title="Click to set URL" style="${socialIconStyle(tmp,item.network)}">${meta[1]}</span>`;
   }).join('')}</div>`;
+}
+
+function renderSocialBlock(block){
+  return `<div style="text-align:${block.align || 'center'};">
+    <div class="social-icon-tray-v2">${socialIconMeta.map(([key,label,name])=>{
+      const hasUrl = !!block[key];
+      return `<span class="social-icon-chip-v2 ${hasUrl ? '' : 'empty'}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${key}')" onclick="event.stopPropagation();setSocialIconUrl('${block.id}','${key}')" title="Click to set ${name} URL, or drag this icon to another block" style="${socialIconStyle(block,key)}">${label}</span>`;
+    }).join('')}</div>
+    <div class="social-drop-hint-v2">Click an icon to set its URL. Drag individual icons into any block.</div>
+  </div>`;
 }
 
 function renderTableBlock(block){
@@ -2855,6 +2987,11 @@ function dropWidgetIntoDesignerBlock(event, blockId){
     openEmailImagePicker(block.id, block.type === 'image' ? 'image' : 'media');
     return;
   }
+  if(String(type).startsWith('socialIcon:')){
+    const network = String(type).split(':')[1];
+    addSocialIconToBlock(block.id, network);
+    return;
+  }
   const index = designerBlocks.findIndex(b=>String(b.id)===String(blockId));
   const newBlock = emailBlockDefaults(type);
   designerBlocks.splice(index + 1, 0, newBlock);
@@ -2891,7 +3028,9 @@ function renderEmailDesigner(autosave=true){
           <button class="email-mini-btn-v2 danger" title="Delete block" onclick="removeDesignerBlock('${block.id}')">×</button>
         </div>
         ${wrapBlock(block, renderDesignerBlockInner(block))}
-        <span class="email-block-resize-handle-v2" title="Drag to resize block" onmousedown="startDesignerBlockResize(event,'${block.id}')"></span>
+        <span class="email-block-resize-side-v2" title="Drag to change block width" onmousedown="startDesignerBlockWidthResize(event,'${block.id}')"></span>
+        <span class="email-block-resize-bottom-v2" title="Drag to change block height" onmousedown="startDesignerBlockHeightResize(event,'${block.id}')"></span>
+        <span class="email-block-resize-handle-v2" title="Drag to resize block width and height" onmousedown="startDesignerBlockResize(event,'${block.id}')"></span>
       </div>
     `).join('');
   }
@@ -2910,15 +3049,15 @@ function renderEmailDesignerSettings(){
 
   let html = `
     <div class="setting-grid-v2">
-      ${setInput(designerSettings,'outerBg','Outer BG','color')}
-      ${setInput(designerSettings,'canvasBg','Email BG','color')}
-      ${setInput(designerSettings,'emailWidth','Width','number')}
+      ${setInput(designerSettings,'outerBg','Page Background','color')}
+      ${setInput(designerSettings,'canvasBg','Email Background','color')}
+      ${setInput(designerSettings,'emailWidth','Email Max Width','number')}
       <div><label>Font</label><select class="form-control form-control-sm" onchange="updateDesignerSetting('fontFamily',this.value)">
         ${['Arial, sans-serif','Georgia, serif','Verdana, sans-serif','Tahoma, sans-serif','Trebuchet MS, sans-serif'].map(f=>`<option value="${f}" ${designerSettings.fontFamily===f?'selected':''}>${f.split(',')[0]}</option>`).join('')}
       </select></div>
     </div>
-    <div class="setting-full-v2 mt-2"><label>Outer Background Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(designerSettings.outerBgImage)}" onchange="updateDesignerSetting('outerBgImage',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('outerBg','background')">Library</button></div></div>
-    <div class="setting-full-v2 mt-2"><label>Email Background Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(designerSettings.canvasBgImage)}" onchange="updateDesignerSetting('canvasBgImage',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('canvasBg','background')">Library</button></div></div>
+    <div class="setting-full-v2 mt-2"><label>Page Background Image</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(designerSettings.outerBgImage)}" onchange="updateDesignerSetting('outerBgImage',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('outerBg','background')">Library</button></div></div>
+    <div class="setting-full-v2 mt-2"><label>Email Background Image</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(designerSettings.canvasBgImage)}" onchange="updateDesignerSetting('canvasBgImage',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('canvasBg','background')">Library</button></div></div>
     <hr>
   `;
 
@@ -2935,25 +3074,21 @@ function renderEmailDesignerSettings(){
     </div>
     <div class="designer-simple-section"><div class="designer-simple-section-title">Block Style</div>
     <div class="setting-grid-v2">
-      ${setInput(block,'bg','Block BG','color')}
+      ${setInput(block,'bg','Background Color','color')}
       ${setInput(block,'text','Text Color','color')}
       ${setInput(block,'padding','Padding','number')}
       ${setInput(block,'radius','Radius','number')}
       ${setInput(block,'borderWidth','Border','number')}
       ${setInput(block,'borderColor','Border Color','color')}
       ${setSelect('align','Text Align',['left','center','right'])}
-      ${setInput(block,'blockWidth','Block Width %','number')}
       ${setSelect('blockAlign','Block Position',['left','center','right'])}
-      ${setInput(block,'bgImage','Block BG Image')}
+      ${setInput(block,'blockHeight','Minimum Height','number')}
+      ${setInput(block,'bgImage','Block Background Image')}
     </div></div>
     <div class="designer-simple-section">
-    <div class="designer-panel-title">Optional Block Image</div>
-    <div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Library</button></div></div>
-    <div class="setting-grid-v2 mt-2">
-      ${setSelect('mediaPosition','Position',['top','bottom','left','right'])}
-      ${setInput(block,'mediaWidth','Image %','number')}
-      ${setInput(block,'mediaRadius','Image Radius','number')}${setInput(block,'mediaHeight','Height px','number')}${setSelect('mediaFit','Fit',['cover','contain','fill'])}${setSelect('mediaShadow','Shadow',['no','yes'])}
-    </div></div>
+      <div class="designer-simple-section-title">Tip</div>
+      <div class="small-muted">Drag an Image widget onto this block to place an image inside it. Drag a Social Icons block's icon onto this block to add that icon here.</div>
+    </div>
     <hr>
   `;
 
@@ -2963,7 +3098,7 @@ function renderEmailDesignerSettings(){
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
   if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
-  if(block.type === 'social') html += `<div class="setting-grid-v2">${setInput(block,'facebook','Facebook URL')}${setInput(block,'instagram','Instagram URL')}${setInput(block,'linkedin','LinkedIn URL')}${setInput(block,'youtube','YouTube URL')}${setInput(block,'x','X URL')}${setInput(block,'website','Website URL')}${setSelect('useBrandColors','Use Brand Colors',['yes','no'])}${setInput(block,'customBg','Custom Icon BG','color')}${setInput(block,'customText','Icon Text','color')}${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div>`;
+  if(block.type === 'social') html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Tray</div><div class="small-muted mb-2">Click an icon in the canvas to add or edit its URL. Drag an icon from the Social Icons block onto another block to place it there.</div><div class="setting-grid-v2">${setSelect('useBrandColors','Icon Colors',['yes','no'])}${setInput(block,'customBg','Custom Icon Color','color')}${setInput(block,'customText','Icon Text Color','color')}${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}</div></div>`;
   if(block.type === 'video') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Video URL</label><input class="form-control form-control-sm" value="${safeAttr(block.videoUrl)}" onchange="updateDesignerBlock('${block.id}','videoUrl',this.value)"></div><div class="setting-full-v2 mt-2"><label>Preview Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div>`;
   if(block.type === 'table') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('headers','Headers, comma separated')}${setArea('rows','Rows, one per line, comma separated')}`;
   if(block.type === 'article') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'buttonLabel','Button Label')}${setInput(block,'buttonUrl','Button URL')}</div>`;
@@ -3254,7 +3389,7 @@ function startDesignerImageResize(event, blockId, target='image'){
   document.addEventListener('mouseup', up);
 }
 
-function startDesignerBlockResize(event, blockId){
+function startDesignerBlockWidthResize(event, blockId){
   event.preventDefault();
   event.stopPropagation();
   const block = designerBlocks.find(b=>String(b.id)===String(blockId));
@@ -3267,9 +3402,67 @@ function startDesignerBlockResize(event, blockId){
   const canvasWidth = Math.max(280, canvas ? canvas.getBoundingClientRect().width : 680);
   const move = (e)=>{
     const delta = ((e.clientX - startX) / canvasWidth) * 100;
-    block.blockWidth = Math.max(25, Math.min(100, Math.round(startWidth + delta)));
+    block.blockWidth = Math.max(20, Math.min(100, Math.round(startWidth + delta)));
     const el = document.querySelector(`.email-block-v2[data-block-id="${blockId}"]`);
-    if(el) el.style.cssText += ';' + designerBlockOuterStyle(block);
+    if(el) el.setAttribute('style', designerBlockOuterStyle(block));
+  };
+  const up = ()=>{
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    renderEmailDesigner(false);
+    saveEmailDesignLocal(false);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+function startDesignerBlockHeightResize(event, blockId){
+  event.preventDefault();
+  event.stopPropagation();
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = null;
+  const startY = event.clientY;
+  const currentEl = document.querySelector(`.email-block-v2[data-block-id="${blockId}"] .email-block-inner-shell-v2`);
+  const startHeight = Number(block.blockHeight || 0) || (currentEl ? Math.round(currentEl.getBoundingClientRect().height) : 80);
+  const move = (e)=>{
+    const delta = e.clientY - startY;
+    block.blockHeight = Math.max(8, Math.round(startHeight + delta));
+    if(currentEl) currentEl.style.minHeight = block.blockHeight + 'px';
+  };
+  const up = ()=>{
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    renderEmailDesigner(false);
+    saveEmailDesignLocal(false);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+function startDesignerBlockResize(event, blockId){
+  event.preventDefault();
+  event.stopPropagation();
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = null;
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const startWidth = Number(block.blockWidth || 100);
+  const canvas = document.getElementById('emailDesignerCanvas');
+  const canvasWidth = Math.max(280, canvas ? canvas.getBoundingClientRect().width : 680);
+  const currentEl = document.querySelector(`.email-block-v2[data-block-id="${blockId}"] .email-block-inner-shell-v2`);
+  const startHeight = Number(block.blockHeight || 0) || (currentEl ? Math.round(currentEl.getBoundingClientRect().height) : 80);
+  const move = (e)=>{
+    const deltaX = ((e.clientX - startX) / canvasWidth) * 100;
+    const deltaY = e.clientY - startY;
+    block.blockWidth = Math.max(20, Math.min(100, Math.round(startWidth + deltaX)));
+    block.blockHeight = Math.max(8, Math.round(startHeight + deltaY));
+    const el = document.querySelector(`.email-block-v2[data-block-id="${blockId}"]`);
+    if(el) el.setAttribute('style', designerBlockOuterStyle(block));
+    if(currentEl) currentEl.style.minHeight = block.blockHeight + 'px';
   };
   const up = ()=>{
     document.removeEventListener('mousemove', move);
