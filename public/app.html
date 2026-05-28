@@ -1160,6 +1160,139 @@ body {
   }
 }
 
+
+
+/* ADVANCED EMAIL DESIGNER */
+.email-designer-shell {
+  display:grid;
+  grid-template-columns: 270px minmax(0, 1fr) 310px;
+  gap:16px;
+  align-items:start;
+}
+.email-block-palette,
+.email-settings-panel,
+.email-canvas-panel {
+  background:#ffffff;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+}
+.email-block-palette,
+.email-settings-panel {
+  position:sticky;
+  top:12px;
+}
+.email-palette-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.email-widget-button {
+  border:1px solid var(--border);
+  background:#f9fafb;
+  border-radius:12px;
+  padding:9px 8px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--primary);
+  text-align:left;
+  cursor:pointer;
+}
+.email-widget-button:hover {
+  background:#eef9f1;
+  border-color:var(--accent);
+}
+.email-canvas-toolbar {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.email-canvas {
+  background:#eef2f7;
+  border:1px dashed #cbd5e1;
+  border-radius:16px;
+  padding:18px;
+  min-height:420px;
+  overflow:auto;
+}
+.email-preview-frame {
+  max-width:680px;
+  margin:auto;
+  background:white;
+  border-radius:12px;
+  overflow:hidden;
+  box-shadow:0 8px 24px rgba(15,23,42,.10);
+}
+.email-builder-block {
+  position:relative;
+  border:2px solid transparent;
+}
+.email-builder-block:hover,
+.email-builder-block.selected {
+  border-color:var(--accent);
+}
+.email-block-tools {
+  position:absolute;
+  top:6px;
+  right:6px;
+  display:none;
+  gap:4px;
+  z-index:20;
+}
+.email-builder-block:hover .email-block-tools,
+.email-builder-block.selected .email-block-tools {
+  display:flex;
+}
+.email-block-tools button {
+  font-size:11px;
+  border:0;
+  border-radius:8px;
+  padding:4px 7px;
+  background:var(--primary);
+  color:white;
+}
+.email-block-tools button.delete-tool {
+  background:#dc2626;
+}
+.email-field-label {
+  font-size:11px;
+  font-weight:800;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  margin-top:9px;
+  margin-bottom:4px;
+}
+.email-settings-panel input,
+.email-settings-panel textarea,
+.email-settings-panel select {
+  font-size:13px;
+}
+.email-mini-row {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.email-help-box {
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  color:var(--muted);
+  font-size:12px;
+}
+#editorFallbackWrap {
+  display:none;
+}
+@media(max-width:1200px){
+  .email-designer-shell { grid-template-columns:1fr; }
+  .email-block-palette,
+  .email-settings-panel { position:static; }
+}
+
 </style>
 </head>
 
@@ -1347,8 +1480,71 @@ body {
     <input id="subject" class="form-control mb-3" placeholder="Subject">
 
     <div class="feature-card mb-3">
-      <div class="feature-title mb-2">Email Content</div>
-      <div id="editor"></div>
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+        <div>
+          <div class="feature-title mb-1">Advanced Email Designer</div>
+          <div class="small-muted">Build polished email campaigns with movable content blocks, images, buttons, sections, columns, tables, RSVP/feedback blocks, dividers, spacers, and social links.</div>
+        </div>
+        <div>
+          <button class="btn btn-sm btn-outline-primary" onclick="previewGeneratedEmail()">Preview HTML</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="clearEmailDesigner()">Clear Design</button>
+        </div>
+      </div>
+
+      <div class="email-designer-shell">
+        <div class="email-block-palette">
+          <h6 class="widget-title mb-2">Add Widgets</h6>
+          <div class="email-palette-grid">
+            <button class="email-widget-button" onclick="addEmailBlock('header')">Header</button>
+            <button class="email-widget-button" onclick="addEmailBlock('heading')">Section Heading</button>
+            <button class="email-widget-button" onclick="addEmailBlock('text')">Text</button>
+            <button class="email-widget-button" onclick="addEmailBlock('image')">Image</button>
+            <button class="email-widget-button" onclick="addEmailBlock('button')">Button / Link</button>
+            <button class="email-widget-button" onclick="addEmailBlock('divider')">Divider</button>
+            <button class="email-widget-button" onclick="addEmailBlock('spacer')">Spacer</button>
+            <button class="email-widget-button" onclick="addEmailBlock('social')">Social Icons</button>
+            <button class="email-widget-button" onclick="addEmailBlock('video')">Video Link</button>
+            <button class="email-widget-button" onclick="addEmailBlock('table')">Data Table</button>
+            <button class="email-widget-button" onclick="addEmailBlock('rsvp')">RSVP</button>
+            <button class="email-widget-button" onclick="addEmailBlock('feedback')">Feedback</button>
+            <button class="email-widget-button" onclick="addEmailBlock('article')">Feature Article</button>
+            <button class="email-widget-button" onclick="addEmailBlock('borderedArticle')">Bordered Article</button>
+            <button class="email-widget-button" onclick="addEmailBlock('twoColumn')">Two Columns</button>
+            <button class="email-widget-button" onclick="addEmailBlock('twoColumnBorder')">Bordered Columns</button>
+            <button class="email-widget-button" onclick="addEmailBlock('sidebarLeft')">Left Sidebar</button>
+            <button class="email-widget-button" onclick="addEmailBlock('sidebarRight')">Right Sidebar</button>
+            <button class="email-widget-button" onclick="addEmailBlock('splitFeature')">Split Feature</button>
+            <button class="email-widget-button" onclick="addEmailBlock('imageGrid')">Image Grid</button>
+            <button class="email-widget-button" onclick="addEmailBlock('calendarInvite')">Calendar Invite</button>
+          </div>
+          <div class="email-help-box mt-3">
+            Tip: click any block in the email preview to edit it. Use ↑ / ↓ to move blocks.
+          </div>
+        </div>
+
+        <div class="email-canvas-panel">
+          <div class="email-canvas-toolbar">
+            <div>
+              <b>Email Canvas</b><br>
+              <span class="small-muted">This is the email your recipients will receive.</span>
+            </div>
+            <div>
+              <button class="btn btn-sm btn-outline-primary" onclick="loadStarterEmailLayout()">Starter Layout</button>
+            </div>
+          </div>
+          <div id="emailCanvas" class="email-canvas"></div>
+        </div>
+
+        <div class="email-settings-panel">
+          <h6 class="widget-title mb-2">Block Settings</h6>
+          <div id="emailBlockSettings" class="small-muted">Select a block to edit its settings.</div>
+        </div>
+      </div>
+
+      <div id="editorFallbackWrap" class="mt-3">
+        <div class="small-muted mb-1">Fallback rich text editor</div>
+        <div id="editor"></div>
+      </div>
     </div>
 
     <div class="recipient-builder mb-3">
@@ -1840,6 +2036,321 @@ body {
 
 <script>
 const quill = new Quill('#editor', { theme:'snow' });
+
+/* ================= ADVANCED EMAIL DESIGNER ================= */
+let emailDesignBlocks = [];
+let selectedEmailBlockId = null;
+
+function uid(prefix='block'){
+  return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 100000);
+}
+
+function escapeAttr(value){
+  return String(value || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escapeText(value){
+  return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function nl2br(value){
+  return escapeText(value || '').replace(/\n/g,'<br>');
+}
+
+function getDefaultEmailBlock(type){
+  const id = uid(type);
+  const base = { id, type, bg:'#ffffff', text:'#1f2937', padding:24, borderColor:'#e5e7eb', borderWidth:0, radius:0 };
+
+  const defaults = {
+    header:{ ...base, bg:'#042C49', text:'#ffffff', title:'Your Campaign Header', subtitle:'Add a short supporting line here.', align:'center', padding:34 },
+    heading:{ ...base, title:'Section Heading', subtitle:'Optional section intro text.', align:'left', padding:18 },
+    text:{ ...base, body:'Write your email copy here. You can use this for introductions, updates, offers, newsletters, and follow-up messages.', fontSize:16, lineHeight:1.6, align:'left' },
+    image:{ ...base, imageUrl:'https://via.placeholder.com/1200x650.png?text=Your+Image', alt:'Image', width:100, align:'center', shape:'square', link:'' },
+    button:{ ...base, label:'Click Here', url:'https://example.com', buttonColor:'#00A143', buttonText:'#ffffff', align:'center', radius:8 },
+    divider:{ ...base, color:'#00A143', thickness:2, width:100, padding:18 },
+    spacer:{ ...base, height:32 },
+    social:{ ...base, facebook:'', instagram:'', linkedin:'', youtube:'', x:'', website:'', align:'center' },
+    video:{ ...base, title:'Watch the Video', videoUrl:'https://example.com', imageUrl:'https://via.placeholder.com/1200x650.png?text=Video+Preview', buttonLabel:'Watch Video' },
+    table:{ ...base, title:'Data Table', headers:'Item, Details, Status', rows:'Open House, Saturday 11-2, Scheduled\nFollow Up, Call interested buyers, Pending' },
+    rsvp:{ ...base, title:'Will you be attending?', yesUrl:'https://example.com/yes', noUrl:'https://example.com/no', maybeUrl:'https://example.com/maybe' },
+    feedback:{ ...base, title:'How did we do?', goodUrl:'https://example.com/good', okUrl:'https://example.com/ok', badUrl:'https://example.com/bad' },
+    article:{ ...base, title:'Feature Article', body:'Use this block for a newsletter story, market update, listing highlight, or educational article.', imageUrl:'https://via.placeholder.com/900x500.png?text=Feature+Image', imagePosition:'top', buttonLabel:'Read More', buttonUrl:'' },
+    borderedArticle:{ ...base, title:'Bordered Feature Article', body:'This feature article has a border for emphasis.', imageUrl:'https://via.placeholder.com/900x500.png?text=Feature+Image', borderWidth:1, radius:12, buttonLabel:'Learn More', buttonUrl:'' },
+    twoColumn:{ ...base, leftTitle:'Left Column', leftBody:'Left column content.', rightTitle:'Right Column', rightBody:'Right column content.', columnBg:'#ffffff' },
+    twoColumnBorder:{ ...base, leftTitle:'Bordered Left Column', leftBody:'Left column content.', rightTitle:'Bordered Right Column', rightBody:'Right column content.', borderWidth:1, radius:12 },
+    sidebarLeft:{ ...base, sidebarTitle:'Sidebar', sidebarBody:'Quick details, links, or summary.', mainTitle:'Main Article', mainBody:'Main article body content goes here.', sidebarBg:'#f1f5f9', borderWidth:0 },
+    sidebarRight:{ ...base, sidebarTitle:'Sidebar', sidebarBody:'Quick details, links, or summary.', mainTitle:'Main Article', mainBody:'Main article body content goes here.', sidebarBg:'#f1f5f9', borderWidth:0 },
+    splitFeature:{ ...base, title:'Split Column Feature', body:'Use this for listing features, promotions, or service highlights.', imageUrl:'https://via.placeholder.com/700x600.png?text=Feature', imageSide:'left', buttonLabel:'View Details', buttonUrl:'' },
+    imageGrid:{ ...base, columns:4, imageUrls:'https://via.placeholder.com/500x350.png?text=Image+1\nhttps://via.placeholder.com/500x350.png?text=Image+2\nhttps://via.placeholder.com/500x350.png?text=Image+3\nhttps://via.placeholder.com/500x350.png?text=Image+4', gap:8 },
+    calendarInvite:{ ...base, title:'Add this event to your calendar', date:'Saturday, June 1', time:'11:00 AM - 2:00 PM', location:'Property Address', link:'https://calendar.google.com', buttonLabel:'Add to Calendar' }
+  };
+
+  return defaults[type] || { ...base, body:'New block' };
+}
+
+function loadStarterEmailLayout(){
+  emailDesignBlocks = [
+    { ...getDefaultEmailBlock('header'), title:'Excel Real Estate Update', subtitle:'Market news, listings, and helpful resources' },
+    { ...getDefaultEmailBlock('heading'), title:'Featured Update', subtitle:'Here is what you need to know this week.' },
+    getDefaultEmailBlock('article'),
+    { ...getDefaultEmailBlock('button'), label:'Schedule a Consultation', url:'https://excelrealestateconsultants.com' },
+    getDefaultEmailBlock('divider'),
+    getDefaultEmailBlock('social')
+  ];
+  selectedEmailBlockId = emailDesignBlocks[0]?.id || null;
+  renderEmailDesigner();
+}
+
+function addEmailBlock(type){
+  const block = getDefaultEmailBlock(type);
+  emailDesignBlocks.push(block);
+  selectedEmailBlockId = block.id;
+  renderEmailDesigner();
+}
+
+function selectEmailBlock(id){
+  selectedEmailBlockId = id;
+  renderEmailDesigner();
+}
+
+function moveEmailBlock(id, direction){
+  const index = emailDesignBlocks.findIndex(b => b.id === id);
+  if(index < 0) return;
+  const newIndex = index + direction;
+  if(newIndex < 0 || newIndex >= emailDesignBlocks.length) return;
+  const [block] = emailDesignBlocks.splice(index, 1);
+  emailDesignBlocks.splice(newIndex, 0, block);
+  renderEmailDesigner();
+}
+
+function duplicateEmailBlock(id){
+  const index = emailDesignBlocks.findIndex(b => b.id === id);
+  if(index < 0) return;
+  const clone = JSON.parse(JSON.stringify(emailDesignBlocks[index]));
+  clone.id = uid(clone.type);
+  emailDesignBlocks.splice(index + 1, 0, clone);
+  selectedEmailBlockId = clone.id;
+  renderEmailDesigner();
+}
+
+function deleteEmailBlock(id){
+  emailDesignBlocks = emailDesignBlocks.filter(b => b.id !== id);
+  if(selectedEmailBlockId === id) selectedEmailBlockId = emailDesignBlocks[0]?.id || null;
+  renderEmailDesigner();
+}
+
+function updateEmailBlock(id, key, value){
+  const block = emailDesignBlocks.find(b => b.id === id);
+  if(!block) return;
+  if(['padding','borderWidth','radius','height','fontSize','thickness','width','columns','gap'].includes(key)){
+    value = Number(value || 0);
+  }
+  block[key] = value;
+  renderEmailDesigner(false);
+}
+
+function blockShell(block, inner){
+  return `
+    <div class="email-builder-block ${selectedEmailBlockId === block.id ? 'selected' : ''}" onclick="selectEmailBlock('${block.id}')">
+      <div class="email-block-tools" onclick="event.stopPropagation()">
+        <button onclick="moveEmailBlock('${block.id}', -1)">↑</button>
+        <button onclick="moveEmailBlock('${block.id}', 1)">↓</button>
+        <button onclick="duplicateEmailBlock('${block.id}')">Copy</button>
+        <button class="delete-tool" onclick="deleteEmailBlock('${block.id}')">Delete</button>
+      </div>
+      ${inner}
+    </div>
+  `;
+}
+
+function sharedStyle(block){
+  return `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${Number(block.padding ?? 24)}px;border:${Number(block.borderWidth || 0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius || 0)}px;`;
+}
+
+function renderEmailBlockContent(block){
+  const style = sharedStyle(block);
+  const align = block.align || 'left';
+  const button = (label, url, bg='#00A143', color='#ffffff') => `<a href="${escapeAttr(url || '#')}" style="display:inline-block;background:${bg};color:${color};padding:12px 20px;border-radius:${Number(block.radius || 8)}px;text-decoration:none;font-weight:bold;">${escapeText(label || 'Click Here')}</a>`;
+
+  if(block.type === 'header') return `<div style="${style}text-align:${align};"><h1 style="margin:0 0 8px 0;font-size:32px;line-height:1.15;">${escapeText(block.title)}</h1><div style="font-size:16px;opacity:.95;">${escapeText(block.subtitle)}</div></div>`;
+  if(block.type === 'heading') return `<div style="${style}text-align:${align};"><h2 style="margin:0 0 6px 0;font-size:24px;">${escapeText(block.title)}</h2><div style="font-size:14px;color:${block.text || '#6b7280'};">${escapeText(block.subtitle)}</div></div>`;
+  if(block.type === 'text') return `<div style="${style}text-align:${align};font-size:${Number(block.fontSize || 16)}px;line-height:${block.lineHeight || 1.6};">${nl2br(block.body)}</div>`;
+  if(block.type === 'image'){
+    const radius = block.shape === 'rounded' ? '16px' : block.shape === 'circle' ? '999px' : '0';
+    const img = `<img src="${escapeAttr(block.imageUrl)}" alt="${escapeAttr(block.alt)}" style="max-width:${Number(block.width || 100)}%;height:auto;border-radius:${radius};display:inline-block;">`;
+    return `<div style="${style}text-align:${align};">${block.link ? `<a href="${escapeAttr(block.link)}">${img}</a>` : img}</div>`;
+  }
+  if(block.type === 'button') return `<div style="${style}text-align:${align};">${button(block.label, block.url, block.buttonColor, block.buttonText)}</div>`;
+  if(block.type === 'divider') return `<div style="${style}"><div style="height:0;border-top:${Number(block.thickness || 2)}px solid ${block.color || '#00A143'};width:${Number(block.width || 100)}%;margin:auto;"></div></div>`;
+  if(block.type === 'spacer') return `<div style="height:${Number(block.height || 32)}px;background:${block.bg || 'transparent'};"></div>`;
+  if(block.type === 'social'){
+    const items = [ ['Website',block.website], ['Facebook',block.facebook], ['Instagram',block.instagram], ['LinkedIn',block.linkedin], ['YouTube',block.youtube], ['X',block.x] ].filter(x=>x[1]);
+    const links = items.length ? items.map(([name,url])=>`<a href="${escapeAttr(url)}" style="display:inline-block;margin:4px;padding:8px 10px;background:#f1f5f9;border-radius:999px;color:#042C49;text-decoration:none;font-weight:bold;font-size:12px;">${name}</a>`).join('') : '<span style="color:#6b7280;font-size:13px;">Add social links in block settings.</span>';
+    return `<div style="${style}text-align:${align};">${links}</div>`;
+  }
+  if(block.type === 'video') return `<div style="${style}text-align:center;"><a href="${escapeAttr(block.videoUrl)}"><img src="${escapeAttr(block.imageUrl)}" alt="Video" style="max-width:100%;height:auto;border-radius:12px;"></a><h3>${escapeText(block.title)}</h3>${button(block.buttonLabel || 'Watch Video', block.videoUrl)}</div>`;
+  if(block.type === 'table'){
+    const headers = String(block.headers || '').split(',').map(h=>h.trim()).filter(Boolean);
+    const rows = String(block.rows || '').split('\n').filter(Boolean).map(r=>r.split(',').map(c=>c.trim()));
+    return `<div style="${style}"><h3 style="margin-top:0;">${escapeText(block.title)}</h3><table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr>${headers.map(h=>`<th style="border:1px solid #e5e7eb;padding:8px;background:#f8fafc;text-align:left;">${escapeText(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${headers.map((_,i)=>`<td style="border:1px solid #e5e7eb;padding:8px;">${escapeText(r[i] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  }
+  if(block.type === 'rsvp') return `<div style="${style}text-align:center;"><h3>${escapeText(block.title)}</h3>${button('Yes', block.yesUrl)} <span>&nbsp;</span>${button('Maybe', block.maybeUrl, '#64748b')} <span>&nbsp;</span>${button('No', block.noUrl, '#dc2626')}</div>`;
+  if(block.type === 'feedback') return `<div style="${style}text-align:center;"><h3>${escapeText(block.title)}</h3>${button('Great', block.goodUrl)} <span>&nbsp;</span>${button('Okay', block.okUrl, '#64748b')} <span>&nbsp;</span>${button('Needs Work', block.badUrl, '#dc2626')}</div>`;
+  if(block.type === 'article' || block.type === 'borderedArticle'){
+    const border = block.type === 'borderedArticle' ? `border:1px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius || 12)}px;padding:${Number(block.padding || 24)}px;` : '';
+    return `<div style="background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:16px;"><div style="${border}">${block.imageUrl ? `<img src="${escapeAttr(block.imageUrl)}" style="max-width:100%;height:auto;border-radius:10px;margin-bottom:14px;">` : ''}<h3 style="margin-top:0;">${escapeText(block.title)}</h3><div style="line-height:1.6;">${nl2br(block.body)}</div>${block.buttonUrl ? `<div style="margin-top:16px;">${button(block.buttonLabel, block.buttonUrl)}</div>` : ''}</div></div>`;
+  }
+  if(block.type === 'twoColumn' || block.type === 'twoColumnBorder'){
+    const box = block.type === 'twoColumnBorder' ? `border:1px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius || 12)}px;` : '';
+    return `<div style="${style}"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td width="50%" style="vertical-align:top;padding:10px;${box}"><h3>${escapeText(block.leftTitle)}</h3><div>${nl2br(block.leftBody)}</div></td><td width="50%" style="vertical-align:top;padding:10px;${box}"><h3>${escapeText(block.rightTitle)}</h3><div>${nl2br(block.rightBody)}</div></td></tr></table></div>`;
+  }
+  if(block.type === 'sidebarLeft' || block.type === 'sidebarRight'){
+    const side = `<td width="32%" style="vertical-align:top;padding:14px;background:${block.sidebarBg || '#f1f5f9'};"><h4>${escapeText(block.sidebarTitle)}</h4><div>${nl2br(block.sidebarBody)}</div></td>`;
+    const main = `<td width="68%" style="vertical-align:top;padding:14px;"><h3>${escapeText(block.mainTitle)}</h3><div>${nl2br(block.mainBody)}</div></td>`;
+    return `<div style="${style}"><table role="presentation" width="100%"><tr>${block.type === 'sidebarLeft' ? side + main : main + side}</tr></table></div>`;
+  }
+  if(block.type === 'splitFeature'){
+    const img = `<td width="45%" style="vertical-align:top;padding:12px;"><img src="${escapeAttr(block.imageUrl)}" style="max-width:100%;border-radius:12px;"></td>`;
+    const copy = `<td width="55%" style="vertical-align:top;padding:12px;"><h3>${escapeText(block.title)}</h3><div style="line-height:1.6;">${nl2br(block.body)}</div>${block.buttonUrl ? `<div style="margin-top:14px;">${button(block.buttonLabel, block.buttonUrl)}</div>` : ''}</td>`;
+    return `<div style="${style}"><table role="presentation" width="100%"><tr>${block.imageSide === 'right' ? copy + img : img + copy}</tr></table></div>`;
+  }
+  if(block.type === 'imageGrid'){
+    const urls = String(block.imageUrls || '').split('\n').map(u=>u.trim()).filter(Boolean);
+    const cols = Math.max(1, Math.min(8, Number(block.columns || 4)));
+    const width = Math.floor(100 / cols);
+    return `<div style="${style}"><table role="presentation" width="100%">${urls.reduce((html,u,i)=>html + (i%cols===0?'<tr>':'') + `<td width="${width}%" style="padding:${Number(block.gap || 8)}px;"><img src="${escapeAttr(u)}" style="width:100%;height:auto;border-radius:8px;"></td>` + (i%cols===cols-1?'</tr>':''),'')}${urls.length%cols?'</tr>':''}</table></div>`;
+  }
+  if(block.type === 'calendarInvite') return `<div style="${style}text-align:center;"><h3>${escapeText(block.title)}</h3><div><b>Date:</b> ${escapeText(block.date)}<br><b>Time:</b> ${escapeText(block.time)}<br><b>Location:</b> ${escapeText(block.location)}</div><div style="margin-top:14px;">${button(block.buttonLabel, block.link)}</div></div>`;
+  return `<div style="${style}">${escapeText(block.body || '')}</div>`;
+}
+
+function renderEmailDesigner(updateSettings = true){
+  const canvas = document.getElementById('emailCanvas');
+  if(!canvas) return;
+
+  if(emailDesignBlocks.length === 0){
+    canvas.innerHTML = '<div class="email-help-box text-center">No email widgets yet. Choose a widget on the left or click Starter Layout.</div>';
+  } else {
+    canvas.innerHTML = `<div class="email-preview-frame">${emailDesignBlocks.map(b => blockShell(b, renderEmailBlockContent(b))).join('')}</div>`;
+  }
+
+  if(updateSettings) renderEmailBlockSettings();
+}
+
+function renderEmailBlockSettings(){
+  const panel = document.getElementById('emailBlockSettings');
+  if(!panel) return;
+  const block = emailDesignBlocks.find(b => b.id === selectedEmailBlockId);
+  if(!block){
+    panel.innerHTML = 'Select a block to edit its settings.';
+    return;
+  }
+
+  function input(label, key, type='text'){
+    return `<div class="email-field-label">${label}</div><input class="form-control" type="${type}" value="${escapeAttr(block[key] ?? '')}" oninput="updateEmailBlock('${block.id}','${key}',this.value)">`;
+  }
+  function textarea(label, key, rows=4){
+    return `<div class="email-field-label">${label}</div><textarea class="form-control" rows="${rows}" oninput="updateEmailBlock('${block.id}','${key}',this.value)">${escapeText(block[key] ?? '')}</textarea>`;
+  }
+  function color(label, key){
+    return `<div><div class="email-field-label">${label}</div><input class="form-control form-control-color w-100" type="color" value="${escapeAttr(block[key] || '#ffffff')}" oninput="updateEmailBlock('${block.id}','${key}',this.value)"></div>`;
+  }
+  function select(label, key, options){
+    return `<div class="email-field-label">${label}</div><select class="form-control" onchange="updateEmailBlock('${block.id}','${key}',this.value)">${options.map(o=>`<option value="${o}" ${String(block[key])===String(o)?'selected':''}>${o}</option>`).join('')}</select>`;
+  }
+
+  let specific = '';
+  const t = block.type;
+  if(['header','heading'].includes(t)) specific = input('Title','title') + input('Subtitle','subtitle') + select('Alignment','align',['left','center','right']);
+  else if(t === 'text') specific = textarea('Body','body',8) + input('Font Size','fontSize','number') + input('Line Height','lineHeight','number') + select('Alignment','align',['left','center','right']);
+  else if(t === 'image') specific = input('Image URL','imageUrl') + input('Alt Text','alt') + input('Link URL','link') + input('Width %','width','number') + select('Alignment','align',['left','center','right']) + select('Shape','shape',['square','rounded','circle']);
+  else if(t === 'button') specific = input('Button Label','label') + input('Button URL','url') + color('Button Color','buttonColor') + color('Button Text','buttonText') + select('Alignment','align',['left','center','right']) + input('Button Roundness','radius','number');
+  else if(t === 'divider') specific = color('Line Color','color') + input('Thickness','thickness','number') + input('Width %','width','number');
+  else if(t === 'spacer') specific = input('Spacer Height','height','number') + color('Background','bg');
+  else if(t === 'social') specific = input('Website URL','website') + input('Facebook URL','facebook') + input('Instagram URL','instagram') + input('LinkedIn URL','linkedin') + input('YouTube URL','youtube') + input('X URL','x') + select('Alignment','align',['left','center','right']);
+  else if(t === 'video') specific = input('Title','title') + input('Video URL','videoUrl') + input('Preview Image URL','imageUrl') + input('Button Label','buttonLabel');
+  else if(t === 'table') specific = input('Table Title','title') + textarea('Headers, comma separated','headers',2) + textarea('Rows, one row per line, comma separated','rows',7);
+  else if(t === 'rsvp') specific = input('Question','title') + input('Yes URL','yesUrl') + input('Maybe URL','maybeUrl') + input('No URL','noUrl');
+  else if(t === 'feedback') specific = input('Question','title') + input('Great URL','goodUrl') + input('Okay URL','okUrl') + input('Needs Work URL','badUrl');
+  else if(['article','borderedArticle'].includes(t)) specific = input('Title','title') + textarea('Body','body',7) + input('Image URL','imageUrl') + input('Button Label','buttonLabel') + input('Button URL','buttonUrl');
+  else if(['twoColumn','twoColumnBorder'].includes(t)) specific = input('Left Title','leftTitle') + textarea('Left Body','leftBody',4) + input('Right Title','rightTitle') + textarea('Right Body','rightBody',4);
+  else if(['sidebarLeft','sidebarRight'].includes(t)) specific = input('Sidebar Title','sidebarTitle') + textarea('Sidebar Body','sidebarBody',4) + input('Main Title','mainTitle') + textarea('Main Body','mainBody',5) + color('Sidebar Background','sidebarBg');
+  else if(t === 'splitFeature') specific = input('Title','title') + textarea('Body','body',5) + input('Image URL','imageUrl') + select('Image Side','imageSide',['left','right']) + input('Button Label','buttonLabel') + input('Button URL','buttonUrl');
+  else if(t === 'imageGrid') specific = input('Columns 2/4/6/8','columns','number') + textarea('Image URLs, one per line','imageUrls',8) + input('Gap','gap','number');
+  else if(t === 'calendarInvite') specific = input('Title','title') + input('Date','date') + input('Time','time') + input('Location','location') + input('Calendar Link','link') + input('Button Label','buttonLabel');
+
+  panel.innerHTML = `
+    <div class="mb-2"><span class="status-badge">${escapeText(t)}</span></div>
+    ${specific}
+    <div class="email-mini-row mt-2">
+      ${color('Background','bg')}
+      ${color('Text','text')}
+    </div>
+    <div class="email-mini-row">
+      <div>${input('Padding','padding','number')}</div>
+      <div>${input('Border Width','borderWidth','number')}</div>
+    </div>
+    <div class="email-mini-row">
+      ${color('Border Color','borderColor')}
+      <div>${input('Radius','radius','number')}</div>
+    </div>
+  `;
+}
+
+function getCampaignHtml(){
+  if(emailDesignBlocks.length > 0){
+    const content = emailDesignBlocks.map(renderEmailBlockContent).join('');
+    const encodedDesign = encodeURIComponent(JSON.stringify(emailDesignBlocks));
+    return `<!--EXCEL_EMAIL_DESIGN:${encodedDesign}--><div style="margin:0;padding:0;background:#f4f6f8;"><div style="max-width:680px;margin:0 auto;background:#ffffff;font-family:Arial,sans-serif;">${content}</div></div>`;
+  }
+  return quill.root.innerHTML;
+}
+
+function getCampaignDesignBlocks(){
+  return emailDesignBlocks;
+}
+
+function loadEmailDesignFromHtml(html){
+  const match = String(html || '').match(/<!--EXCEL_EMAIL_DESIGN:([\s\S]*?)-->/);
+  if(match){
+    try {
+      emailDesignBlocks = JSON.parse(decodeURIComponent(match[1]));
+      selectedEmailBlockId = emailDesignBlocks[0]?.id || null;
+      renderEmailDesigner();
+      return true;
+    } catch(e) {
+      console.warn('Could not load email design data.', e);
+    }
+  }
+  emailDesignBlocks = [];
+  selectedEmailBlockId = null;
+  renderEmailDesigner();
+  quill.root.innerHTML = html || '';
+  return false;
+}
+
+function clearEmailDesigner(){
+  if(!confirm('Clear the current email design?')) return;
+  emailDesignBlocks = [];
+  selectedEmailBlockId = null;
+  quill.root.innerHTML = '';
+  renderEmailDesigner();
+}
+
+function previewGeneratedEmail(){
+  const html = getCampaignHtml();
+  const win = window.open('', '_blank');
+  if(!win){ alert('Please allow popups to preview the email.'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+setTimeout(()=>{
+  if(document.getElementById('emailCanvas') && emailDesignBlocks.length === 0){
+    loadStarterEmailLayout();
+  }
+}, 300);
+
 
 let contactsCache = [];
 let campaignsCache = [];
@@ -2540,7 +3051,8 @@ async function saveTemplateFromCampaign(){
     name: templateName.value.trim() || campaignName.value.trim() || 'Untitled Template',
     category: templateCategory.value.trim() || 'General',
     subject: subject.value,
-    html: quill.root.innerHTML
+    html: getCampaignHtml(),
+    designBlocks: getCampaignDesignBlocks()
   };
 
   if(!payload.subject.trim()){
@@ -2571,7 +3083,13 @@ function loadTemplateIntoCampaign(id){
   if(!template) return;
 
   subject.value = template.subject || '';
-  quill.root.innerHTML = template.html || '';
+  if(Array.isArray(template.designBlocks) && template.designBlocks.length){
+    emailDesignBlocks = template.designBlocks;
+    selectedEmailBlockId = emailDesignBlocks[0]?.id || null;
+    renderEmailDesigner();
+  } else {
+    loadEmailDesignFromHtml(template.html || '');
+  }
 
   if(!campaignName.value.trim()){
     campaignName.value = template.name || '';
@@ -2722,7 +3240,8 @@ async function scheduleCampaign(){
     name: campaignName.value,
     recipients: selectedRecipients,
     subject: subject.value,
-    html: quill.root.innerHTML,
+    html: getCampaignHtml(),
+    designBlocks: getCampaignDesignBlocks(),
     scheduledAt: scheduleDateTime.value
   };
 
@@ -3255,7 +3774,8 @@ async function saveCampaign(){
   const payload = {
     name: campaignName.value,
     subject: subject.value,
-    html: quill.root.innerHTML
+    html: getCampaignHtml(),
+    designBlocks: getCampaignDesignBlocks()
   };
 
   let url = '/api/campaigns';
@@ -3297,7 +3817,13 @@ async function editCampaign(id){
 
   campaignName.value = campaign.name || '';
   subject.value = campaign.subject || '';
-  quill.root.innerHTML = campaign.html || '';
+  if(Array.isArray(campaign.designBlocks)){
+    emailDesignBlocks = campaign.designBlocks;
+    selectedEmailBlockId = emailDesignBlocks[0]?.id || null;
+    renderEmailDesigner();
+  } else {
+    loadEmailDesignFromHtml(campaign.html || '');
+  }
 
   editingCampaignNotice.style.display = 'block';
   saveCampaignButton.innerText = 'Update Campaign';
@@ -3312,6 +3838,9 @@ function cancelCampaignEdit(){
   campaignName.value = '';
   subject.value = '';
   quill.root.innerHTML = '';
+  emailDesignBlocks = [];
+  selectedEmailBlockId = null;
+  renderEmailDesigner();
   editingCampaignNotice.style.display = 'none';
   saveCampaignButton.innerText = 'Save Campaign';
 }
@@ -3340,7 +3869,8 @@ async function sendCampaign(){
     name: campaignName.value,
     recipients: selectedRecipients,
     subject: subject.value,
-    html: quill.root.innerHTML
+    html: getCampaignHtml(),
+    designBlocks: getCampaignDesignBlocks()
   };
 
   if(payload.recipients.length === 0){
