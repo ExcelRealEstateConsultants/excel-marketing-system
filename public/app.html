@@ -867,6 +867,174 @@ body {
   background:#eef2f7;
 }
 
+
+/* APP TOP BAR / NAVBAR EVOLUTION */
+.app-toolbar {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:14px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:14px;
+  align-items:center;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+  margin-bottom:16px;
+}
+
+.global-search-wrap {
+  position:relative;
+}
+
+.global-search-input {
+  padding-left:42px;
+  height:44px;
+  border-radius:14px;
+}
+
+.global-search-icon {
+  position:absolute;
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+  color:var(--muted);
+  font-size:16px;
+}
+
+.global-search-results {
+  position:absolute;
+  top:52px;
+  left:0;
+  right:0;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 14px 34px rgba(15,23,42,0.15);
+  z-index:9000;
+  max-height:420px;
+  overflow:auto;
+  display:none;
+}
+
+.global-search-results.open {
+  display:block;
+}
+
+.global-result-row {
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+}
+
+.global-result-row:hover {
+  background:#f9fafb;
+}
+
+.toolbar-actions {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.icon-button {
+  width:42px;
+  height:42px;
+  border:1px solid var(--border);
+  background:white;
+  border-radius:14px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--primary);
+  font-weight:800;
+  position:relative;
+}
+
+.icon-button:hover {
+  background:#f9fafb;
+}
+
+.notification-dot {
+  position:absolute;
+  top:-6px;
+  right:-6px;
+  background:#dc2626;
+  color:white;
+  border-radius:999px;
+  min-width:20px;
+  height:20px;
+  font-size:11px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 5px;
+}
+
+.toolbar-menu {
+  position:absolute;
+  right:0;
+  top:50px;
+  min-width:280px;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  box-shadow:0 14px 34px rgba(15,23,42,0.15);
+  z-index:9001;
+  display:none;
+  padding:10px;
+}
+
+.toolbar-menu.open {
+  display:block;
+}
+
+.toolbar-menu-wrap {
+  position:relative;
+}
+
+.quick-add-grid {
+  display:grid;
+  gap:8px;
+}
+
+.quick-add-item {
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px;
+  cursor:pointer;
+  background:#fff;
+}
+
+.quick-add-item:hover {
+  background:#f9fafb;
+}
+
+.stat-split-row {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.stat-mini {
+  flex:1;
+  min-width:120px;
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+}
+
+@media (max-width: 992px) {
+  .app-toolbar {
+    grid-template-columns:1fr;
+  }
+  .toolbar-actions {
+    justify-content:flex-start;
+  }
+}
+
 </style>
 </head>
 
@@ -892,6 +1060,38 @@ body {
   <li class="nav-item"><button class="nav-link" id="tabCalendar" onclick="showTab('calendar')">Calendar</button></li>
 </ul>
 
+<div class="app-toolbar">
+  <div class="global-search-wrap">
+    <span class="global-search-icon">⌕</span>
+    <input id="globalSearchInput" class="form-control global-search-input" placeholder="Search contacts, campaigns, tags, stages, phone numbers, or emails..." oninput="handleGlobalSearch()" onfocus="handleGlobalSearch()">
+    <div id="globalSearchResults" class="global-search-results"></div>
+  </div>
+
+  <div class="toolbar-actions">
+    <button class="btn btn-success" onclick="quickAddContact()">+ Quick Add</button>
+
+    <div class="toolbar-menu-wrap">
+      <button class="icon-button" onclick="toggleNotificationMenu()" title="Notifications">
+        🔔
+        <span id="notificationBadge" class="notification-dot" style="display:none;">0</span>
+      </button>
+      <div id="notificationMenu" class="toolbar-menu"></div>
+    </div>
+
+    <div class="toolbar-menu-wrap">
+      <button class="icon-button" onclick="toggleSettingsMenu()" title="Settings">⚙</button>
+      <div id="settingsMenu" class="toolbar-menu">
+        <div class="small-muted mb-2">System Shortcuts</div>
+        <div class="quick-add-grid">
+          <div class="quick-add-item" onclick="showTab('contacts')"><b>Contacts</b><br><small>Manage database and follow-ups</small></div>
+          <div class="quick-add-item" onclick="showTab('campaigns')"><b>Email Campaigns</b><br><small>Create and review email campaigns</small></div>
+          <div class="quick-add-item" onclick="showTab('pipeline')"><b>Pipeline</b><br><small>Review active opportunities</small></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- DASHBOARD -->
 <div id="dashboardTab" class="mt-4">
 
@@ -911,10 +1111,16 @@ body {
       <div class="kpi-label">Contacts in database</div>
     </div>
 
-    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalCampaigns">
-      <div class="widget-title-row"><h6 class="widget-title">Campaigns</h6><span class="drag-handle">⋮⋮</span></div>
-      <div id="dashTotalCampaigns" class="kpi-number">0</div>
-      <div class="kpi-label">Campaigns created</div>
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalEmailCampaigns">
+      <div class="widget-title-row"><h6 class="widget-title">Email Campaigns</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalEmailCampaigns" class="kpi-number">0</div>
+      <div class="kpi-label">Saved email campaigns</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalTextCampaigns">
+      <div class="widget-title-row"><h6 class="widget-title">Text Campaigns</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalTextCampaigns" class="kpi-number">0</div>
+      <div class="kpi-label">Text campaign sends</div>
     </div>
 
     <div class="dashboard-widget dashboard-widget-small" data-widget-id="openRate">
@@ -933,6 +1139,12 @@ body {
       <div class="widget-title-row"><h6 class="widget-title">Emails Sent</h6><span class="drag-handle">⋮⋮</span></div>
       <div id="dashTotalSent" class="kpi-number">0</div>
       <div class="kpi-label">Total emails sent</div>
+    </div>
+
+    <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalTextsSent">
+      <div class="widget-title-row"><h6 class="widget-title">Texts Sent</h6><span class="drag-handle">⋮⋮</span></div>
+      <div id="dashTotalTextsSent" class="kpi-number">0</div>
+      <div class="kpi-label">Total outbound texts</div>
     </div>
 
     <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalOpened">
@@ -973,7 +1185,7 @@ body {
     </div>
 
     <div class="dashboard-widget dashboard-widget-medium" data-widget-id="campaignPerformance">
-      <div class="widget-title-row"><h6 class="widget-title">Campaign Performance</h6><span class="drag-handle">⋮⋮</span></div>
+      <div class="widget-title-row"><h6 class="widget-title">Email Campaign Performance</h6><span class="drag-handle">⋮⋮</span></div>
       <div class="chart-wrap"><canvas id="campaignPerformanceChart"></canvas></div>
     </div>
 
@@ -1394,6 +1606,7 @@ const quill = new Quill('#editor', { theme:'snow' });
 let contactsCache = [];
 let campaignsCache = [];
 let activityCache = [];
+let smsActivityCache = [];
 let templatesCache = [];
 let segmentsCache = [];
 let scheduledCampaignsCache = [];
@@ -1607,7 +1820,7 @@ function initDashboardDrag(){
 }
 
 function initDashboardDrilldowns(){
-  const drilldownWidgets = ['totalContacts','totalCampaigns','openRate','clickRate','totalSent','totalOpened','totalClicks','listHealth','dueToday','overdue','recentActivity','topLinks','campaignPerformance','activityTrend','engagementBreakdown'];
+  const drilldownWidgets = ['totalContacts','totalEmailCampaigns','totalTextCampaigns','openRate','clickRate','totalSent','totalTextsSent','totalOpened','totalClicks','listHealth','dueToday','overdue','recentActivity','topLinks','campaignPerformance','activityTrend','engagementBreakdown'];
 
   drilldownWidgets.forEach(widgetId=>{
     const widget = dashboardWidgetGrid.querySelector(`[data-widget-id="${widgetId}"]`);
@@ -1786,21 +1999,37 @@ function renderEngagementBreakdownChart(data){
 }
 
 async function loadDashboard(){
-  const [statsRes, campaignsRes, activityRes, taskStatsRes] = await Promise.all([
+  const [statsRes, campaignsRes, activityRes, smsRes, taskStatsRes] = await Promise.all([
     fetch('/api/dashboard-stats'),
     fetch('/api/campaigns'),
     fetch('/api/activity'),
+    fetch('/api/sms-activity').catch(()=>null),
     fetch('/api/task-stats').catch(()=>null)
   ]);
 
   const data = await statsRes.json();
   const campaigns = await campaignsRes.json();
   const activity = await activityRes.json();
+  const smsActivity = smsRes ? await smsRes.json() : [];
   const taskStats = taskStatsRes ? await taskStatsRes.json() : { dueToday:0, overdue:0 };
 
+  campaignsCache = Array.isArray(campaigns) ? campaigns : [];
+  activityCache = Array.isArray(activity) ? activity : [];
+  smsActivityCache = Array.isArray(smsActivity) ? smsActivity : [];
+
+  const textCampaignNames = new Set(
+    smsActivityCache
+      .filter(item => item.type === 'text-campaign' || item.campaignName)
+      .map(item => item.campaignName || item.name || 'Text Campaign')
+  );
+
+  const totalTextsSent = smsActivityCache.filter(item => item.status === 'queued' || item.status === 'sent' || item.status === 'delivered').length;
+
   dashTotalContacts.innerText = data.totalContacts || 0;
-  dashTotalCampaigns.innerText = data.totalCampaigns || 0;
+  dashTotalEmailCampaigns.innerText = campaignsCache.length || data.totalCampaigns || 0;
+  dashTotalTextCampaigns.innerText = textCampaignNames.size || 0;
   dashTotalSent.innerText = data.totalSent || 0;
+  dashTotalTextsSent.innerText = totalTextsSent || 0;
   dashTotalOpened.innerText = data.totalOpened || 0;
   dashTotalClicks.innerText = data.totalClicks || 0;
   dashTotalUnsubscribed.innerText = data.totalUnsubscribed || 0;
@@ -1810,14 +2039,30 @@ async function loadDashboard(){
   dashDueToday.innerText = taskStats.dueToday || 0;
   dashOverdue.innerText = taskStats.overdue || 0;
 
+  updateNotificationBadge(taskStats);
+
   recentActivityList.innerHTML = '';
 
-  if(!data.recentActivity || data.recentActivity.length === 0){
+  const combinedRecent = [
+    ...(data.recentActivity || []).map(item => ({...item, channel:'Email'})),
+    ...smsActivityCache.slice(0,10).map(item => ({
+      type:item.status || 'Text',
+      email:item.to || '',
+      campaignName:item.campaignName || item.contactName || 'Text Message',
+      date:item.sentAt || item.createdAt,
+      error:item.error || '',
+      url:'',
+      channel:'Text'
+    }))
+  ].filter(item=>item.date).sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,10);
+
+  if(combinedRecent.length === 0){
     recentActivityList.innerHTML = '<div class="text-muted">No activity yet.</div>';
   } else {
-    data.recentActivity.forEach(a=>{
+    combinedRecent.forEach(a=>{
       recentActivityList.innerHTML += `
         <div class="border-bottom py-2">
+          <span class="status-badge">${a.channel || 'Activity'}</span>
           <b>${a.email || ''}</b> ${(a.type || a.status || 'activity').toLowerCase()} <b>${a.campaignName || ''}</b>
           ${a.url ? `<br><small>Link: ${a.url}</small>` : ''}
           ${a.error ? `<br><small class="text-danger">Error: ${a.error}</small>` : ''}
@@ -1842,21 +2087,24 @@ async function loadDashboard(){
     });
   }
 
-  renderActivityTrendChart(activity);
-  renderCampaignPerformanceChart(campaigns, activity);
+  renderActivityTrendChart(activityCache);
+  renderCampaignPerformanceChart(campaignsCache, activityCache);
   renderEngagementBreakdownChart(data);
   initDashboardDrag();
   initDashboardDrilldowns();
 }
 
 
+
 function openDashboardDrilldown(type){
   const titleMap = {
     totalContacts:'All Contacts',
-    totalCampaigns:'All Campaigns',
+    totalEmailCampaigns:'Email Campaigns',
+    totalTextCampaigns:'Text Campaigns',
     openRate:'Opened Emails',
     clickRate:'Clicked Links',
     totalSent:'Emails Sent',
+    totalTextsSent:'Texts Sent',
     totalOpened:'Total Opens',
     totalClicks:'Total Clicks',
     listHealth:'List Health',
@@ -1864,7 +2112,7 @@ function openDashboardDrilldown(type){
     overdue:'Overdue Tasks',
     recentActivity:'Recent Activity',
     topLinks:'Top Links Clicked',
-    campaignPerformance:'Campaign Performance',
+    campaignPerformance:'Email Campaign Performance',
     activityTrend:'Email Activity Trend',
     engagementBreakdown:'Engagement Breakdown'
   };
@@ -1903,13 +2151,28 @@ function buildDashboardDrilldownHtml(type){
       `).join('');
   }
 
-  if(type === 'totalCampaigns' || type === 'campaignPerformance'){
+  if(type === 'totalEmailCampaigns' || type === 'campaignPerformance'){
     if(!campaignsCache.length) return '<div class="text-muted">No campaigns yet.</div>';
     return campaignsCache.map(c=>`
       <div class="drilldown-row" onclick="openCampaignPanel(${c.id})">
         <b>${c.name || 'Untitled Campaign'}</b><br>
         <small>Subject: ${c.subject || ''}</small><br>
         <small>Created: ${formatDate(c.createdAt)}${c.updatedAt ? ' | Updated: ' + formatDate(c.updatedAt) : ''}</small>
+      </div>
+    `).join('');
+  }
+
+
+  if(type === 'totalTextCampaigns' || type === 'totalTextsSent'){
+    if(!smsActivityCache.length) return '<div class="text-muted">No text campaign or one-on-one text activity yet.</div>';
+    const rows = smsActivityCache.slice().sort((a,b)=>new Date(b.sentAt || b.createdAt || 0) - new Date(a.sentAt || a.createdAt || 0));
+    return rows.map(item=>`
+      <div class="drilldown-row">
+        <b>${item.campaignName || item.contactName || 'Text Message'}</b><br>
+        <small>To: ${formatPhone(item.to || '')} | Status: ${item.status || ''}</small><br>
+        <small>${formatDate(item.sentAt || item.createdAt)}</small>
+        <div class="mt-2">${item.message || ''}</div>
+        ${item.error ? `<div class="text-danger small mt-1">${item.error}</div>` : ''}
       </div>
     `).join('');
   }
@@ -4051,6 +4314,7 @@ async function quickMoveStage(stage){
 async function loadTasks(){
   const res = await fetch('/api/tasks');
   allTasksCache = await res.json();
+  updateNotificationBadge();
 
   taskList.innerHTML = '';
 
@@ -4142,6 +4406,135 @@ function renderCalendar(){
 }
 
 /* INIT */
+
+
+/* HEADER / GLOBAL SEARCH / NOTIFICATIONS */
+function closeToolbarMenus(){
+  document.getElementById('notificationMenu')?.classList.remove('open');
+  document.getElementById('settingsMenu')?.classList.remove('open');
+}
+
+function toggleNotificationMenu(){
+  const menu = document.getElementById('notificationMenu');
+  if(!menu) return;
+  document.getElementById('settingsMenu')?.classList.remove('open');
+  renderNotificationMenu();
+  menu.classList.toggle('open');
+}
+
+function toggleSettingsMenu(){
+  const menu = document.getElementById('settingsMenu');
+  if(!menu) return;
+  document.getElementById('notificationMenu')?.classList.remove('open');
+  menu.classList.toggle('open');
+}
+
+function updateNotificationBadge(taskStats = null){
+  const badge = document.getElementById('notificationBadge');
+  if(!badge) return;
+  const overdue = taskStats ? (taskStats.overdue || 0) : allTasksCache.filter(taskIsOverdue).length;
+  const dueToday = taskStats ? (taskStats.dueToday || 0) : allTasksCache.filter(t=>!t.done && t.due && String(t.due).slice(0,10) === todayKey()).length;
+  const total = overdue + dueToday;
+  badge.innerText = total;
+  badge.style.display = total ? 'flex' : 'none';
+}
+
+function renderNotificationMenu(){
+  const menu = document.getElementById('notificationMenu');
+  if(!menu) return;
+  const overdue = allTasksCache.filter(taskIsOverdue);
+  const dueToday = allTasksCache.filter(t=>!t.done && t.due && String(t.due).slice(0,10) === todayKey());
+  let html = '<div class="small-muted mb-2">Notifications</div>';
+  if(!overdue.length && !dueToday.length){
+    html += '<div class="text-muted small p-2">No urgent tasks right now.</div>';
+  } else {
+    overdue.slice(0,5).forEach(t=>{
+      html += `<div class="quick-add-item" onclick="showTab('tasks')"><b>Overdue:</b> ${t.title || 'Task'}<br><small>${t.contactName || ''} | Due ${formatShortDate(t.due)}</small></div>`;
+    });
+    dueToday.slice(0,5).forEach(t=>{
+      html += `<div class="quick-add-item" onclick="showTab('tasks')"><b>Due Today:</b> ${t.title || 'Task'}<br><small>${t.contactName || ''}</small></div>`;
+    });
+  }
+  menu.innerHTML = html;
+}
+
+function quickAddContact(){
+  showTab('contacts');
+  setTimeout(()=>{
+    firstName?.focus();
+    window.scrollTo({ top:0, behavior:'smooth' });
+  }, 100);
+}
+
+function handleGlobalSearch(){
+  const input = document.getElementById('globalSearchInput');
+  const results = document.getElementById('globalSearchResults');
+  if(!input || !results) return;
+  const q = input.value.trim().toLowerCase();
+  if(!q){
+    results.classList.remove('open');
+    results.innerHTML = '';
+    return;
+  }
+
+  const contactMatches = contactsCache.filter(c=>{
+    const text = `${contactName(c)} ${c.email || ''} ${formatPhone(c.phone || '')} ${c.type || ''} ${inferStageFromContact(c)} ${(c.tags || []).join(' ')}`.toLowerCase();
+    return text.includes(q);
+  }).slice(0,8);
+
+  const campaignMatches = campaignsCache.filter(c=>{
+    const text = `${c.name || ''} ${c.subject || ''}`.toLowerCase();
+    return text.includes(q);
+  }).slice(0,5);
+
+  let html = '';
+
+  if(contactMatches.length){
+    html += '<div class="small-muted p-2">Contacts</div>';
+    html += contactMatches.map(c=>`
+      <div class="global-result-row" onclick="openGlobalContact(${c.id})">
+        <b>${contactName(c)}</b><br>
+        <small>${c.email || ''} | ${formatPhone(c.phone || '')} | ${c.type || ''} | ${inferStageFromContact(c)}</small>
+      </div>
+    `).join('');
+  }
+
+  if(campaignMatches.length){
+    html += '<div class="small-muted p-2">Email Campaigns</div>';
+    html += campaignMatches.map(c=>`
+      <div class="global-result-row" onclick="openGlobalCampaign(${c.id})">
+        <b>${c.name || 'Untitled Campaign'}</b><br>
+        <small>${c.subject || ''}</small>
+      </div>
+    `).join('');
+  }
+
+  if(!html) html = '<div class="text-muted small p-3">No matches found.</div>';
+  results.innerHTML = html;
+  results.classList.add('open');
+}
+
+function openGlobalContact(id){
+  document.getElementById('globalSearchResults')?.classList.remove('open');
+  document.getElementById('globalSearchInput').value = '';
+  showTab('contacts');
+  setTimeout(()=>openContact(id), 100);
+}
+
+function openGlobalCampaign(id){
+  document.getElementById('globalSearchResults')?.classList.remove('open');
+  document.getElementById('globalSearchInput').value = '';
+  showTab('campaigns');
+  setTimeout(()=>openCampaignPanel(id), 150);
+}
+
+document.addEventListener('click', function(event){
+  const searchWrap = document.querySelector('.global-search-wrap');
+  if(searchWrap && !searchWrap.contains(event.target)){
+    document.getElementById('globalSearchResults')?.classList.remove('open');
+  }
+});
+
 contactSearch.addEventListener('input', loadContacts);
 if(document.getElementById('recipientSearch')) recipientSearch.addEventListener('input', renderRecipientContacts);
 extraRecipients.addEventListener('input', updateRecipientCount);
