@@ -1776,6 +1776,72 @@ body {
 .email-block-v2 { min-height: var(--designer-block-height, auto); }
 .email-block-inner-shell { min-height: inherit; }
 
+
+/* ===== CLEAN SOCIAL ICON WIDGET REWRITE ===== */
+.email-social-widget-card {
+  grid-column:1 / -1;
+}
+.social-picker-icon-grid {
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+.social-picker-icon {
+  width:100%;
+  min-height:42px;
+  border-radius:12px;
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  font-size:13px;
+  font-weight:800;
+  border:2px solid white;
+  box-shadow:0 4px 12px rgba(15,23,42,.14);
+  cursor:grab;
+  user-select:none;
+  padding:8px 10px;
+  text-align:left;
+}
+.social-picker-icon span {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  background:rgba(255,255,255,.16);
+  flex:0 0 26px;
+}
+.social-picker-icon small {
+  color:white;
+  font-weight:800;
+  opacity:.95;
+}
+.social-picker-icon:active {
+  cursor:grabbing;
+}
+.email-social-row-in-block {
+  min-height:44px;
+  padding:4px 0;
+}
+.email-social-row-in-block:empty::before {
+  content:'Drop social icons here';
+  color:#94a3b8;
+  font-size:12px;
+}
+.email-block-v2.drag-drop-target {
+  outline:3px solid rgba(0,161,67,.55)!important;
+  outline-offset:4px!important;
+  background:rgba(0,161,67,.06)!important;
+}
+.email-social-icon-wrap.selected .email-social-placed,
+.email-social-placed.selected {
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+}
+
 </style>
 </head>
 
@@ -2614,6 +2680,8 @@ let selectedDesignerBlockId = null;
 let selectedDesignerImageTarget = null;
 let selectedDesignerSocialTarget = null;
 let activeDraggedEmailWidgetType = null;
+let activeDraggedSocialIconPlatform = null;
+let socialIconTrayOpen = false;
 let designerSortable = null;
 let designerPaletteSortable = null;
 let designerImageLibrary = JSON.parse(localStorage.getItem('excelEmailImageLibrary') || '[]');
@@ -2699,12 +2767,17 @@ function renderEmailWidgetPalette(){
   const el = document.getElementById('emailWidgetPalette');
   if(!el) return;
   el.innerHTML = emailWidgetLibrary.map(w=>{
-    const clickAction = w.type === 'social' ? 'toggleSocialIconTray()' : `addDesignerBlock('${w.type}')`;
-    const dragAttr = w.type === 'social' ? '' : `draggable="true" data-widget-type="${w.type}" ondragstart="startEmailWidgetDrag(event,'${w.type}')"`;
+    if(w.type === 'social'){
+      return `
+      <div class="widget-card-v2 email-social-widget-card" onclick="toggleSocialIconTray()">
+        <div class="widget-icon-preview"><b>${w.icon}</b></div>
+        <b>${w.name}</b><br><small class="text-muted">Click to open individual icons</small>
+      </div>`;
+    }
     return `
-    <div class="widget-card-v2" ${dragAttr} onclick="${clickAction}">
+    <div class="widget-card-v2" draggable="true" data-widget-type="${w.type}" ondragstart="startEmailWidgetDrag(event,'${w.type}')" onclick="addDesignerBlock('${w.type}')">
       <div class="widget-icon-preview"><b>${w.icon}</b></div>
-      <b>${w.name}</b><br><small class="text-muted">${w.type === 'social' ? 'Click to open icon tray' : w.desc}</small>
+      <b>${w.name}</b><br><small class="text-muted">${w.desc}</small>
     </div>`;
   }).join('');
   renderSocialIconTray(false);
@@ -2719,7 +2792,8 @@ function setupEmailDesignerDragDrop(){
     designerPaletteSortable = Sortable.create(palette, {
       group:{ name:'emailDesigner', pull:'clone', put:false },
       sort:false,
-      animation:150
+      animation:150,
+      draggable:'.widget-card-v2[data-widget-type]'
     });
   }
 
@@ -2809,12 +2883,12 @@ function updateDesignerSetting(key,value){
   renderEmailDesigner(false);
 }
 
-function wrapBlock(block, inner){
+function wrapBlock(block, inner, final=false){
   const bgImage = block.bgImage ? `background-image:url('${safeAttr(block.bgImage)}');background-size:cover;background-position:center;` : '';
   const minHeight = Number(block.blockHeight || 0) > 0 ? `min-height:${Number(block.blockHeight)}px;` : '';
   const style = `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${Number(block.padding||0)}px;border:${Number(block.borderWidth||0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius||0)}px;${bgImage}${minHeight}`;
   const withMedia = renderOptionalMedia(block, inner);
-  const socials = renderPlacedSocialIcons(block);
+  const socials = renderPlacedSocialIcons(block, final);
   return `<div class="email-block-inner-shell" style="${style}">${withMedia}${socials}</div>`;
 }
 
@@ -2886,33 +2960,44 @@ function renderDesignerBlockInner(block){
   return safeHtml(block.body || '');
 }
 
-function renderSocialBlock(block){
+function renderSocialBlock(block, final=false){
   if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
   if(!block.socialIcons.length){
-    return `<div style="text-align:center;color:#6b7280;"><b>Social Icons</b><br><small>Click Social Icons in the left panel, then click an icon to add it here.</small></div>`;
+    return `<div style="text-align:center;color:#6b7280;"><b>Social Icons</b><br><small>Open Social Icons on the left, then drag only the icons you use into this block.</small></div>`;
   }
-  return `<div style="text-align:${block.align || 'center'};">${renderPlacedSocialIcons(block)}</div>`;
+  return `<div style="text-align:${block.align || 'center'};">${renderPlacedSocialIcons(block, final)}</div>`;
 }
 
-function renderPlacedSocialIcons(block){
-  if(!Array.isArray(block.socialIcons) || !block.socialIcons.length || block.type === 'social') return block.type === 'social' && Array.isArray(block.socialIcons) && block.socialIcons.length ? `<div class="email-social-row-in-block ${block.align||'center'}">${block.socialIcons.map((icon,idx)=>renderPlacedSocialIcon(block,icon,idx)).join('')}</div>` : '';
-  return `<div class="email-social-row-in-block ${block.align||'left'}">${block.socialIcons.map((icon,idx)=>renderPlacedSocialIcon(block,icon,idx)).join('')}</div>`;
+function renderPlacedSocialIcons(block, final=false){
+  if(!Array.isArray(block.socialIcons) || !block.socialIcons.length) return '';
+  const align = block.align || (block.type === 'social' ? 'center' : 'left');
+  return `<div class="email-social-row-in-block ${align}">${block.socialIcons.map((icon,idx)=>renderPlacedSocialIcon(block,icon,idx,final)).join('')}</div>`;
 }
 
-function renderPlacedSocialIcon(block, icon, idx){
+function renderPlacedSocialIcon(block, icon, idx, final=false){
   const platform = icon.platform || 'website';
-  const bg = icon.useCustomColor === 'yes' ? (icon.customColor || socialBrandColors[platform] || '#042C49') : (socialBrandColors[platform] || '#042C49');
+  const brandColor = socialBrandColors[platform] || '#042C49';
+  const bg = icon.useCustomColor === 'yes' ? (icon.customColor || brandColor) : brandColor;
   const radius = block.iconShape === 'square' ? 6 : block.iconShape === 'rounded' ? 12 : 999;
   const size = Number(block.iconSize || 36);
+  const label = socialIconLabels[platform] || platform[0] || '?';
+  const name = socialIconNames[platform] || platform;
   const selected = selectedDesignerSocialTarget && String(selectedDesignerSocialTarget.blockId) === String(block.id) && Number(selectedDesignerSocialTarget.index) === Number(idx);
+  const labelHtml = block.showLabels==='yes' ? `<span style="margin-right:8px;">${safeHtml(name)}</span>` : '';
+
+  if(final){
+    const href = icon.url && String(icon.url).trim() ? String(icon.url).trim() : '#';
+    return `<a href="${safeAttr(href)}" title="${safeAttr(name)}" style="background:${safeAttr(bg)};width:${size}px;height:${size}px;border-radius:${radius}px;display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:13px;text-decoration:none;margin:4px;">${safeHtml(label)}</a>${labelHtml}`;
+  }
+
   return `<span class="email-social-icon-wrap ${selected?'selected':''}" style="display:inline-flex;align-items:center;gap:3px;">
-    <span class="email-social-placed ${selected?'selected':''}" title="${safeAttr(socialIconNames[platform] || platform)}" style="background:${bg};width:${size}px;height:${size}px;border-radius:${radius}px;" onclick="editPlacedSocialIcon(event,'${block.id}',${idx})">${socialIconLabels[platform] || platform[0]}</span>
+    <span class="email-social-placed ${selected?'selected':''}" title="Click to edit ${safeAttr(name)} URL" style="background:${safeAttr(bg)};width:${size}px;height:${size}px;border-radius:${radius}px;" onclick="editPlacedSocialIcon(event,'${block.id}',${idx})">${safeHtml(label)}</span>
     <span class="email-social-icon-tools">
       <button class="email-social-icon-tool" title="Move left" onclick="event.stopPropagation();movePlacedSocialIcon('${block.id}',${idx},-1)">‹</button>
       <button class="email-social-icon-tool" title="Move right" onclick="event.stopPropagation();movePlacedSocialIcon('${block.id}',${idx},1)">›</button>
       <button class="email-social-icon-tool" title="Delete icon" onclick="event.stopPropagation();deletePlacedSocialIcon('${block.id}',${idx})">×</button>
     </span>
-    ${block.showLabels==='yes'?`<span style="margin-right:8px;">${safeHtml(socialIconNames[platform] || platform)}</span>`:''}
+    ${labelHtml}
   </span>`;
 }
 
@@ -2939,44 +3024,76 @@ function designerBlockOuterStyle(block){
 }
 
 function startEmailWidgetDrag(event, type){
+  activeDraggedSocialIconPlatform = null;
   activeDraggedEmailWidgetType = type;
-  try { event.dataTransfer.setData('text/plain', type); event.dataTransfer.effectAllowed = 'copyMove'; } catch(e) {}
+  try {
+    event.dataTransfer.setData('text/plain', `widget:${type}`);
+    event.dataTransfer.effectAllowed = 'copyMove';
+  } catch(e) {}
+}
+
+function startSocialIconDrag(event, platform){
+  event.stopPropagation();
+  activeDraggedEmailWidgetType = null;
+  activeDraggedSocialIconPlatform = platform;
+  try {
+    event.dataTransfer.setData('application/x-excel-social-icon', platform);
+    event.dataTransfer.setData('text/plain', `socialIcon:${platform}`);
+    event.dataTransfer.effectAllowed = 'copy';
+  } catch(e) {}
+}
+
+function getEmailDesignerDragPayload(event){
+  let plain = '';
+  let social = activeDraggedSocialIconPlatform || '';
+  try {
+    if(event && event.dataTransfer){
+      social = social || event.dataTransfer.getData('application/x-excel-social-icon');
+      plain = event.dataTransfer.getData('text/plain') || '';
+    }
+  } catch(e) {}
+  if(social) return { kind:'social', value:social };
+  if(String(plain).startsWith('socialIcon:')) return { kind:'social', value:String(plain).split(':')[1] };
+  if(String(plain).startsWith('widget:')) return { kind:'widget', value:String(plain).split(':')[1] };
+  if(activeDraggedEmailWidgetType) return { kind:'widget', value:activeDraggedEmailWidgetType };
+  return { kind:'', value:'' };
 }
 
 function toggleSocialIconTray(){
-  const tray = document.getElementById('emailSocialIconTray');
-  if(!tray) return;
-  const shouldShow = tray.style.display === 'none' || !tray.style.display;
-  renderSocialIconTray(shouldShow);
+  socialIconTrayOpen = !socialIconTrayOpen;
+  renderSocialIconTray(socialIconTrayOpen);
 }
 
-function renderSocialIconTray(show=true){
+function renderSocialIconTray(show=socialIconTrayOpen){
+  socialIconTrayOpen = !!show;
   const tray = document.getElementById('emailSocialIconTray');
   if(!tray) return;
-  tray.style.display = show ? 'block' : 'none';
+  tray.style.display = socialIconTrayOpen ? 'block' : 'none';
   const platforms = ['facebook','instagram','linkedin','youtube','x','tiktok','website'];
-  tray.innerHTML = `<div class="social-tray-title">Drag or click an icon</div><div class="small-muted mb-1">Select a block first, then click an icon, or drag an icon onto any block.</div>` +
-    platforms.map(p=>`<span class="social-picker-icon" title="${socialIconNames[p]}" style="background:${socialBrandColors[p]}" draggable="true" ondragstart="startEmailWidgetDrag(event,'socialIcon:${p}')" onclick="addSocialIconToSelectedBlock('${p}')">${socialIconLabels[p]}</span>`).join('');
+  tray.innerHTML = `<div class="social-tray-title">Social Icons</div><div class="small-muted mb-2">Drag only the icons you use into any email block. Click a placed icon in the email to set its URL.</div><div class="social-picker-icon-grid">` +
+    platforms.map(p=>`<button type="button" class="social-picker-icon" title="${safeAttr(socialIconNames[p])}" style="background:${safeAttr(socialBrandColors[p])}" draggable="true" ondragstart="startSocialIconDrag(event,'${p}')" onclick="addSocialIconToSelectedBlock('${p}')"><span>${safeHtml(socialIconLabels[p])}</span><small>${safeHtml(socialIconNames[p])}</small></button>`).join('') +
+    `</div>`;
 }
 
 function addSocialIconToSelectedBlock(platform){
-  let block = designerBlocks.find(b=>String(b.id)===String(selectedDesignerBlockId));
+  const block = designerBlocks.find(b=>String(b.id)===String(selectedDesignerBlockId));
   if(!block){
-    block = emailBlockDefaults('social');
-    designerBlocks.push(block);
-    selectedDesignerBlockId = block.id;
+    alert('Select a block first, or drag the social icon directly onto the block where you want it to appear.');
+    return;
   }
   addSocialIconToBlock(block.id, platform);
 }
 
 function addSocialIconToBlock(blockId, platform){
   const block = designerBlocks.find(b=>String(b.id)===String(blockId));
-  if(!block) return;
+  if(!block || !platform) return;
   if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
-  block.socialIcons.push({ platform, url:'', useCustomColor:'no', customColor:socialBrandColors[platform] || '#042C49' });
+  block.socialIcons.push({ id:edId('social'), platform, url:'', useCustomColor:'no', customColor:socialBrandColors[platform] || '#042C49' });
   selectedDesignerBlockId = block.id;
   selectedDesignerImageTarget = null;
   selectedDesignerSocialTarget = { blockId:block.id, index:block.socialIcons.length-1 };
+  activeDraggedSocialIconPlatform = null;
+  activeDraggedEmailWidgetType = null;
   renderEmailDesigner();
 }
 
@@ -2987,16 +3104,17 @@ function editPlacedSocialIcon(event, blockId, index){
   if(!block || !Array.isArray(block.socialIcons) || !block.socialIcons[index]) return;
   selectedDesignerBlockId = block.id;
   selectedDesignerImageTarget = null;
-  selectedDesignerSocialTarget = { blockId, index };
-  const icon = block.socialIcons[index];
-  const url = prompt(`Enter ${socialIconNames[icon.platform] || icon.platform} URL`, icon.url || '');
-  if(url !== null) icon.url = url.trim();
-  const colorAnswer = prompt('Optional custom color hex. Leave blank to use normal brand color.', icon.useCustomColor === 'yes' ? (icon.customColor || '') : '');
-  if(colorAnswer !== null){
-    if(colorAnswer.trim()){ icon.useCustomColor = 'yes'; icon.customColor = colorAnswer.trim(); }
-    else { icon.useCustomColor = 'no'; }
-  }
-  renderEmailDesigner();
+  selectedDesignerSocialTarget = { blockId:block.id, index };
+  renderEmailDesigner(false);
+}
+
+function updatePlacedSocialIcon(blockId, index, key, value){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block || !Array.isArray(block.socialIcons) || !block.socialIcons[index]) return;
+  block.socialIcons[index][key] = value;
+  selectedDesignerBlockId = block.id;
+  selectedDesignerSocialTarget = { blockId:block.id, index };
+  renderEmailDesigner(false);
 }
 
 function movePlacedSocialIcon(blockId, index, direction){
@@ -3007,7 +3125,7 @@ function movePlacedSocialIcon(blockId, index, direction){
   const temp = block.socialIcons[index];
   block.socialIcons[index] = block.socialIcons[next];
   block.socialIcons[next] = temp;
-  selectedDesignerSocialTarget = { blockId, index:next };
+  selectedDesignerSocialTarget = { blockId:block.id, index:next };
   renderEmailDesigner();
 }
 
@@ -3020,9 +3138,10 @@ function deletePlacedSocialIcon(blockId, index){
 }
 
 function allowDesignerBlockDrop(event){
-  const type = activeDraggedEmailWidgetType || (event.dataTransfer ? event.dataTransfer.getData('text/plain') : '');
-  if(!type) return;
+  const payload = getEmailDesignerDragPayload(event);
+  if(!payload.kind) return;
   event.preventDefault();
+  if(payload.kind === 'social') event.dataTransfer.dropEffect = 'copy';
   event.currentTarget.classList.add('drag-drop-target');
 }
 
@@ -3030,23 +3149,27 @@ function dropWidgetIntoDesignerBlock(event, blockId){
   event.preventDefault();
   event.stopPropagation();
   event.currentTarget.classList.remove('drag-drop-target');
-  const type = activeDraggedEmailWidgetType || (event.dataTransfer ? event.dataTransfer.getData('text/plain') : '');
+  const payload = getEmailDesignerDragPayload(event);
   activeDraggedEmailWidgetType = null;
+  activeDraggedSocialIconPlatform = null;
   const block = designerBlocks.find(b=>String(b.id)===String(blockId));
-  if(!block || !type) return;
+  if(!block || !payload.kind || !payload.value) return;
+
   selectedDesignerBlockId = block.id;
-  if(String(type).startsWith('socialIcon:')){
-    addSocialIconToBlock(block.id, String(type).split(':')[1]);
-    activeDraggedEmailWidgetType = null;
+  selectedDesignerImageTarget = null;
+
+  if(payload.kind === 'social'){
+    addSocialIconToBlock(block.id, payload.value);
     return;
   }
-  selectedDesignerImageTarget = null;
-  if(type === 'image'){
+
+  if(payload.value === 'image'){
     openEmailImagePicker(block.id, block.type === 'image' ? 'image' : 'media');
     return;
   }
+
   const index = designerBlocks.findIndex(b=>String(b.id)===String(blockId));
-  const newBlock = emailBlockDefaults(type);
+  const newBlock = emailBlockDefaults(payload.value);
   designerBlocks.splice(index + 1, 0, newBlock);
   selectedDesignerBlockId = newBlock.id;
   renderEmailDesigner();
@@ -3088,6 +3211,30 @@ function renderEmailDesigner(autosave=true){
   renderEmailDesignerSettings();
   setupEmailDesignerDragDrop();
   if(autosave) saveEmailDesignLocal(false);
+}
+
+
+function renderSelectedSocialIconSettings(block){
+  if(!selectedDesignerSocialTarget || String(selectedDesignerSocialTarget.blockId) !== String(block.id)) return '';
+  const index = Number(selectedDesignerSocialTarget.index);
+  const icon = Array.isArray(block.socialIcons) ? block.socialIcons[index] : null;
+  if(!icon) return '';
+  const platform = icon.platform || 'website';
+  const name = socialIconNames[platform] || platform;
+  const brandColor = socialBrandColors[platform] || '#042C49';
+  return `<div class="designer-simple-section">
+    <div class="designer-simple-section-title">Editing ${safeHtml(name)} Icon</div>
+    <div class="setting-full-v2"><label>${safeHtml(name)} URL</label><input class="form-control form-control-sm" value="${safeAttr(icon.url || '')}" placeholder="https://..." onchange="updatePlacedSocialIcon('${block.id}',${index},'url',this.value)"></div>
+    <div class="setting-grid-v2 mt-2">
+      <div><label>Use Custom Color</label><select class="form-control form-control-sm" onchange="updatePlacedSocialIcon('${block.id}',${index},'useCustomColor',this.value)"><option value="no" ${icon.useCustomColor !== 'yes' ? 'selected' : ''}>No - Brand Color</option><option value="yes" ${icon.useCustomColor === 'yes' ? 'selected' : ''}>Yes</option></select></div>
+      <div><label>Custom Color</label><input type="color" class="form-control form-control-sm" value="${safeAttr(icon.customColor || brandColor)}" onchange="updatePlacedSocialIcon('${block.id}',${index},'customColor',this.value)"></div>
+    </div>
+    <div class="d-flex gap-2 mt-2 flex-wrap">
+      <button class="btn btn-sm btn-outline-primary" onclick="movePlacedSocialIcon('${block.id}',${index},-1)">Move Left</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="movePlacedSocialIcon('${block.id}',${index},1)">Move Right</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="deletePlacedSocialIcon('${block.id}',${index})">Delete Icon</button>
+    </div>
+  </div>`;
 }
 
 function renderEmailDesignerSettings(){
@@ -3136,6 +3283,7 @@ function renderEmailDesignerSettings(){
       ${setInput(block,'blockHeight','Block Height px','number')}
       ${setInput(block,'bgImage','Background Image URL')}
     </div></div>
+    ${renderSelectedSocialIconSettings(block)}
     <div class="designer-simple-section">
     <div class="designer-panel-title">Block Image</div>
     <div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Library</button></div></div>
@@ -3153,7 +3301,7 @@ function renderEmailDesignerSettings(){
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
   if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
-  if(block.type === 'social') html += `<div class="setting-grid-v2">${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div><div class="small-muted mt-2">Add icons from the Social Icons tray on the left. Click a placed icon to set its URL or custom color.</div>`;
+  if(Array.isArray(block.socialIcons) && block.socialIcons.length) html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Display</div><div class="setting-grid-v2">${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div><div class="small-muted mt-2">Click an individual icon in the block to edit its URL, color, position, or delete it.</div></div>`;
   if(block.type === 'video') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Video URL</label><input class="form-control form-control-sm" value="${safeAttr(block.videoUrl)}" onchange="updateDesignerBlock('${block.id}','videoUrl',this.value)"></div><div class="setting-full-v2 mt-2"><label>Preview Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div>`;
   if(block.type === 'table') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('headers','Headers, comma separated')}${setArea('rows','Rows, one per line, comma separated')}`;
   if(block.type === 'article') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'buttonLabel','Button Label')}${setInput(block,'buttonUrl','Button URL')}</div>`;
@@ -3171,7 +3319,7 @@ function renderFinalEmailDesignerHtml(){
   const outerBgImage = designerSettings.outerBgImage ? `background-image:url('${safeAttr(designerSettings.outerBgImage)}');background-size:cover;background-position:center;` : '';
   const canvasBgImage = designerSettings.canvasBgImage ? `background-image:url('${safeAttr(designerSettings.canvasBgImage)}');background-size:cover;background-position:center;` : '';
   const preheaderHtml = designerMeta.preheader ? `<div style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">${safeHtml(designerMeta.preheader)}</div>` : '';
-  return `<!--EXCEL_EMAIL_DESIGN_V2:${encoded}-->${preheaderHtml}<div style="margin:0;padding:0;background:${designerSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(designerSettings.emailWidth||680)}px;margin:0 auto;background:${designerSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${designerSettings.fontFamily || 'Arial, sans-serif'};">${designerBlocks.map(b=>wrapBlock(b, renderDesignerBlockInner(b))).join('')}</div></div>`;
+  return `<!--EXCEL_EMAIL_DESIGN_V2:${encoded}-->${preheaderHtml}<div style="margin:0;padding:0;background:${designerSettings.outerBg || '#f4f6f8'};${outerBgImage}"><div style="max-width:${Number(designerSettings.emailWidth||680)}px;margin:0 auto;background:${designerSettings.canvasBg || '#ffffff'};${canvasBgImage}font-family:${designerSettings.fontFamily || 'Arial, sans-serif'};">${designerBlocks.map(b=>wrapBlock(b, renderDesignerBlockInner(b), true)).join('')}</div></div>`;
 }
 
 function applyEmailDesignToCampaign(){
@@ -3197,8 +3345,7 @@ function loadEmailDesignerStarter(){
     {...emailBlockDefaults('header'), title:'Excel Real Estate Update', subtitle:'Market news, listings, and helpful resources'},
     {...emailBlockDefaults('article'), title:'Featured Update', body:'Use this area for your main story, listing highlight, market update, or client message.', mediaPosition:'top'},
     {...emailBlockDefaults('twoColumn'), leftTitle:'Market Snapshot', leftBody:'Add quick market stats or notes.', rightTitle:'Next Steps', rightBody:'Invite readers to contact you or click a button.'},
-    {...emailBlockDefaults('button'), label:'Schedule a Call', url:'https://excelrealestateconsultants.com'},
-    emailBlockDefaults('social')
+    {...emailBlockDefaults('button'), label:'Schedule a Call', url:'https://excelrealestateconsultants.com'}
   ];
   selectedDesignerBlockId = designerBlocks[0].id;
   renderEmailDesigner();
