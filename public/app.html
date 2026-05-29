@@ -1780,44 +1780,65 @@ body {
 /* ===== CLEAN SOCIAL ICON WIDGET REWRITE ===== */
 .email-social-widget-card {
   grid-column:1 / -1;
+  cursor:pointer;
+}
+.email-social-widget-card::after {
+  content:'Open';
+}
+.email-social-tray-fixed {
+  grid-column:1 / -1;
+  margin:0 0 8px 0;
+  padding:8px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:#f8fafc;
+}
+.email-social-tray-fixed .social-tray-title {
+  font-weight:800;
+  color:var(--primary);
+  font-size:12px;
+  margin-bottom:5px;
 }
 .social-picker-icon-grid {
   display:grid;
-  grid-template-columns:1fr;
-  gap:8px;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
 }
 .social-picker-icon {
   width:100%;
-  min-height:42px;
-  border-radius:12px;
+  min-height:34px;
+  border-radius:10px;
   color:white;
   display:flex;
   align-items:center;
   justify-content:flex-start;
-  gap:10px;
-  font-size:13px;
+  gap:6px;
+  font-size:12px;
   font-weight:800;
-  border:2px solid white;
-  box-shadow:0 4px 12px rgba(15,23,42,.14);
+  border:1px solid white;
+  box-shadow:0 2px 8px rgba(15,23,42,.12);
   cursor:grab;
   user-select:none;
-  padding:8px 10px;
+  padding:5px 7px;
   text-align:left;
 }
 .social-picker-icon span {
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:26px;
-  height:26px;
+  width:21px;
+  height:21px;
   border-radius:999px;
   background:rgba(255,255,255,.16);
-  flex:0 0 26px;
+  flex:0 0 21px;
+  font-size:11px;
 }
 .social-picker-icon small {
   color:white;
   font-weight:800;
   opacity:.95;
+  font-size:10px;
+  line-height:1;
 }
 .social-picker-icon:active {
   cursor:grabbing;
@@ -2052,7 +2073,6 @@ body {
       <div class="designer-panel-title">Widget Library</div>
       <div class="small-muted mb-3">Drag a widget into the email canvas or click to add it.</div>
       <div id="emailWidgetPalette" class="widget-card-grid"></div>
-      <div id="emailSocialIconTray" class="email-social-tray-fixed" style="display:none;"></div>
 
       <div class="designer-panel-title mt-4">Image Library</div>
       <div class="small-muted mb-2">Upload images once and reuse them in any block.</div>
@@ -2771,8 +2791,9 @@ function renderEmailWidgetPalette(){
       return `
       <div class="widget-card-v2 email-social-widget-card" onclick="toggleSocialIconTray()">
         <div class="widget-icon-preview"><b>${w.icon}</b></div>
-        <b>${w.name}</b><br><small class="text-muted">Click to open individual icons</small>
-      </div>`;
+        <b>${w.name}</b><br><small class="text-muted">Click to choose icons</small>
+      </div>
+      <div id="emailSocialIconTray" class="email-social-tray-fixed" style="display:none;"></div>`;
     }
     return `
     <div class="widget-card-v2" draggable="true" data-widget-type="${w.type}" ondragstart="startEmailWidgetDrag(event,'${w.type}')" onclick="addDesignerBlock('${w.type}')">
@@ -3070,7 +3091,7 @@ function renderSocialIconTray(show=socialIconTrayOpen){
   if(!tray) return;
   tray.style.display = socialIconTrayOpen ? 'block' : 'none';
   const platforms = ['facebook','instagram','linkedin','youtube','x','tiktok','website'];
-  tray.innerHTML = `<div class="social-tray-title">Social Icons</div><div class="small-muted mb-2">Drag only the icons you use into any email block. Click a placed icon in the email to set its URL.</div><div class="social-picker-icon-grid">` +
+  tray.innerHTML = `<div class="social-tray-title">Drag icons into a block</div><div class="social-picker-icon-grid">` +
     platforms.map(p=>`<button type="button" class="social-picker-icon" title="${safeAttr(socialIconNames[p])}" style="background:${safeAttr(socialBrandColors[p])}" draggable="true" ondragstart="startSocialIconDrag(event,'${p}')" onclick="addSocialIconToSelectedBlock('${p}')"><span>${safeHtml(socialIconLabels[p])}</span><small>${safeHtml(socialIconNames[p])}</small></button>`).join('') +
     `</div>`;
 }
