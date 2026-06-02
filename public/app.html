@@ -1666,61 +1666,55 @@ body {
   line-height:20px;
 }
 
-.email-block-spacing-handle-v2 {
+.email-block-height-handle-v2 {
   position:absolute;
-  width:132px;
-  height:28px;
+  left:50%;
+  bottom:-18px;
+  width:172px;
+  height:34px;
+  transform:translateX(-50%);
   border-radius:999px;
-  background:transparent;
-  z-index:90;
+  background:rgba(255,255,255,.96);
+  border:1px solid rgba(4,44,73,.18);
+  box-shadow:0 8px 22px rgba(15,23,42,.20);
+  z-index:95;
   opacity:0;
   pointer-events:none;
   cursor:ns-resize;
-  transition:opacity .15s ease, transform .15s ease;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  color:#042C49;
+  font-size:11px;
+  font-weight:800;
+  user-select:none;
+  transition:opacity .15s ease, bottom .15s ease, box-shadow .15s ease;
 }
-.email-block-spacing-handle-v2::before {
-  content:'';
-  position:absolute;
-  left:18px;
-  right:18px;
-  top:50%;
-  height:8px;
-  transform:translateY(-50%);
+.email-block-height-handle-v2::before {
+  content:'↕';
+  width:22px;
+  height:22px;
   border-radius:999px;
-  background:rgba(4,44,73,.82);
-  border:2px solid #fff;
-  box-shadow:0 4px 14px rgba(15,23,42,.20);
-}
-.email-block-spacing-handle-v2.top {
-  top:-22px;
-  left:18%;
-}
-.email-block-spacing-handle-v2.bottom {
-  bottom:-22px;
-  right:18%;
-}
-.email-block-spacing-handle-v2::after {
-  content:'Drag spacing';
-  position:absolute;
-  left:50%;
-  top:-20px;
-  transform:translateX(-50%);
   background:#042C49;
   color:#fff;
-  border-radius:999px;
-  padding:3px 8px;
-  font-size:10px;
-  white-space:nowrap;
-  display:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:13px;
+  line-height:1;
 }
-.email-block-spacing-handle-v2.top::after { content:'Top spacing'; }
-.email-block-spacing-handle-v2.bottom::after { content:'Bottom spacing'; top:28px; }
-.email-block-v2.selected .email-block-spacing-handle-v2 {
+.email-block-height-handle-v2::after {
+  content:'Block height';
+}
+.email-block-v2.selected .email-block-height-handle-v2 {
   opacity:1;
   pointer-events:auto;
 }
-.email-block-spacing-handle-v2:hover { transform:scale(1.04); }
-.email-block-spacing-handle-v2:hover::after { display:block; }
+.email-block-height-handle-v2:hover {
+  bottom:-20px;
+  box-shadow:0 10px 26px rgba(15,23,42,.26);
+}
 .email-image-action-bar { display:none!important; }
 .email-image-resize-wrap.selected-image {
   outline:2px solid var(--accent);
@@ -3338,10 +3332,9 @@ function renderEmailDesigner(autosave=true){
           <button class="email-mini-btn-v2" title="Copy block" onclick="duplicateDesignerBlock('${block.id}')">⧉</button>
           <button class="email-mini-btn-v2 danger" title="Delete block" onclick="removeDesignerBlock('${block.id}')">×</button>
         </div>
-        <span class="email-block-spacing-handle-v2 top" title="Drag up/down to adjust top spacing" onmousedown="startDesignerBlockSpacingDrag(event,'${block.id}','top')"></span>
         ${wrapBlock(block, renderDesignerBlockInner(block))}
-        <span class="email-block-spacing-handle-v2 bottom" title="Drag up/down to adjust bottom spacing" onmousedown="startDesignerBlockSpacingDrag(event,'${block.id}','bottom')"></span>
-        <span class="email-block-resize-handle-v2" title="Drag to resize block" onmousedown="startDesignerBlockResize(event,'${block.id}')"></span>
+        <span class="email-block-height-handle-v2" title="Drag up to shrink this block or down to add height" onmousedown="startDesignerBlockHeightDrag(event,'${block.id}')"></span>
+        <span class="email-block-resize-handle-v2" title="Drag to resize block width" onmousedown="startDesignerBlockResize(event,'${block.id}')"></span>
       </div>
     `).join('');
   }
@@ -3494,7 +3487,7 @@ function renderEmailDesignerSettings(){
       
     </div>
     <div class="designer-simple-section"><div class="designer-simple-section-title">Block Style</div>
-    <div class="small-muted mb-2">Click a block, then drag the top or bottom spacing handle. Handles only show on the selected block so nearby blocks are easier to grab.</div>
+    <div class="small-muted mb-2">Click a block, then drag the Block Height handle at the bottom of that block. Drag up to tighten the block or down to add breathing room.</div>
     <div class="setting-grid-v2">
       ${setInput(block,'bg','Background Color','color')}
       ${setInput(block,'text','Text Color','color')}
@@ -3843,6 +3836,42 @@ function startDesignerBlockSpacingDrag(event, blockId, edge){
     if(inner){
       if(edge === 'top') inner.style.paddingTop = `${nextValue}px`;
       else inner.style.paddingBottom = `${nextValue}px`;
+    }
+  };
+  const up = ()=>{
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    renderEmailDesigner(false);
+    saveEmailDesignLocal(false);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+function startDesignerBlockHeightDrag(event, blockId){
+  event.preventDefault();
+  event.stopPropagation();
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = null;
+  selectedDesignerSocialTarget = null;
+
+  const startY = event.clientY;
+  const startTop = Number(block.blockTopSpacing ?? block.padding ?? 0);
+  const startBottom = Number(block.blockBottomSpacing ?? block.padding ?? 0);
+  const blockEl = document.querySelector(`.email-block-v2[data-block-id="${blockId}"]`);
+  const inner = blockEl ? blockEl.querySelector('.email-block-inner-shell') : null;
+
+  const move = (e)=>{
+    const deltaY = e.clientY - startY;
+    const nextTop = Math.max(0, Math.min(140, Math.round(startTop + (deltaY / 2))));
+    const nextBottom = Math.max(0, Math.min(140, Math.round(startBottom + (deltaY / 2))));
+    block.blockTopSpacing = nextTop;
+    block.blockBottomSpacing = nextBottom;
+    if(inner){
+      inner.style.paddingTop = `${nextTop}px`;
+      inner.style.paddingBottom = `${nextBottom}px`;
     }
   };
   const up = ()=>{
