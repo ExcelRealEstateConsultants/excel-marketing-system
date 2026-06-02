@@ -1668,26 +1668,42 @@ body {
 
 .email-block-spacing-handle-v2 {
   position:absolute;
-  left:50%;
-  transform:translateX(-50%);
-  width:92px;
-  height:12px;
+  width:132px;
+  height:28px;
   border-radius:999px;
-  background:rgba(4,44,73,.78);
-  border:2px solid #fff;
-  box-shadow:0 4px 14px rgba(15,23,42,.18);
-  z-index:76;
+  background:transparent;
+  z-index:90;
   opacity:0;
+  pointer-events:none;
   cursor:ns-resize;
-  transition:.15s ease;
+  transition:opacity .15s ease, transform .15s ease;
 }
-.email-block-spacing-handle-v2.top { top:-7px; }
-.email-block-spacing-handle-v2.bottom { bottom:-7px; }
+.email-block-spacing-handle-v2::before {
+  content:'';
+  position:absolute;
+  left:18px;
+  right:18px;
+  top:50%;
+  height:8px;
+  transform:translateY(-50%);
+  border-radius:999px;
+  background:rgba(4,44,73,.82);
+  border:2px solid #fff;
+  box-shadow:0 4px 14px rgba(15,23,42,.20);
+}
+.email-block-spacing-handle-v2.top {
+  top:-22px;
+  left:18%;
+}
+.email-block-spacing-handle-v2.bottom {
+  bottom:-22px;
+  right:18%;
+}
 .email-block-spacing-handle-v2::after {
   content:'Drag spacing';
   position:absolute;
   left:50%;
-  top:-24px;
+  top:-20px;
   transform:translateX(-50%);
   background:#042C49;
   color:#fff;
@@ -1698,9 +1714,12 @@ body {
   display:none;
 }
 .email-block-spacing-handle-v2.top::after { content:'Top spacing'; }
-.email-block-spacing-handle-v2.bottom::after { content:'Bottom spacing'; top:12px; }
-.email-block-v2:hover .email-block-spacing-handle-v2,
-.email-block-v2.selected .email-block-spacing-handle-v2 { opacity:1; }
+.email-block-spacing-handle-v2.bottom::after { content:'Bottom spacing'; top:28px; }
+.email-block-v2.selected .email-block-spacing-handle-v2 {
+  opacity:1;
+  pointer-events:auto;
+}
+.email-block-spacing-handle-v2:hover { transform:scale(1.04); }
 .email-block-spacing-handle-v2:hover::after { display:block; }
 .email-image-action-bar { display:none!important; }
 .email-image-resize-wrap.selected-image {
@@ -3475,7 +3494,7 @@ function renderEmailDesignerSettings(){
       
     </div>
     <div class="designer-simple-section"><div class="designer-simple-section-title">Block Style</div>
-    <div class="small-muted mb-2">Drag the small top or bottom handle on a selected block to tighten or increase spacing.</div>
+    <div class="small-muted mb-2">Click a block, then drag the top or bottom spacing handle. Handles only show on the selected block so nearby blocks are easier to grab.</div>
     <div class="setting-grid-v2">
       ${setInput(block,'bg','Background Color','color')}
       ${setInput(block,'text','Text Color','color')}
