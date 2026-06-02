@@ -1842,6 +1842,49 @@ body {
   outline-offset:3px;
 }
 
+
+/* ===== CLEAN SOCIAL ICON BLOCK FINAL FIX ===== */
+.clean-social-settings-list {
+  display:grid;
+  gap:8px;
+}
+.clean-social-setting-row {
+  display:grid;
+  grid-template-columns:145px 1fr;
+  gap:8px;
+  align-items:center;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:8px;
+}
+.clean-social-check {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin:0;
+  cursor:pointer;
+}
+.clean-social-check input {
+  accent-color:var(--accent);
+}
+.clean-social-mini {
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  color:white;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  font-weight:800;
+}
+@media (max-width:760px){
+  .clean-social-setting-row {
+    grid-template-columns:1fr;
+  }
+}
+
 </style>
 </head>
 
@@ -2740,7 +2783,7 @@ function emailBlockDefaults(type){
     button:{...base,label:'Click Here',url:'#',buttonBg:'#00A143',buttonText:'#ffffff',buttonRadius:8,buttonSize:'medium',fullWidth:'no',align:'center'},
     divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:18},
     spacer:{...base,height:32,padding:0},
-    social:{...base,socialIcons:[],iconShape:'circle',iconSize:36,showLabels:'no',align:'center',padding:18},
+    social:{...base,socialTitle:'Connect With Me',socialIcons:[{id:edId('social'),platform:'website',url:'',useCustomColor:'no',customColor:'#00A143'},{id:edId('social'),platform:'facebook',url:'',useCustomColor:'no',customColor:'#1877F2'},{id:edId('social'),platform:'instagram',url:'',useCustomColor:'no',customColor:'#E4405F'},{id:edId('social'),platform:'linkedin',url:'',useCustomColor:'no',customColor:'#0A66C2'}],iconShape:'circle',iconSize:36,showLabels:'no',align:'center',padding:18},
     video:{...base,title:'Watch the Video',videoUrl:'#',imageUrl:'',buttonLabel:'Watch Video',buttonBg:'#00A143'},
     table:{...base,title:'Data Table',headers:'Item,Details,Status',rows:'Open House,Saturday 11-2,Scheduled\nFollow Up,Call interested buyer,Pending'},
     article:{...base,title:'Feature Article',body:'Use this for a market update, listing highlight, newsletter story, or client education.',buttonLabel:'Read More',buttonUrl:'',mediaUrl:'',mediaPosition:'top',mediaWidth:40,borderWidth:1,radius:12},
@@ -2766,21 +2809,18 @@ function initEmailDesignerIfNeeded(){
 function renderEmailWidgetPalette(){
   const el = document.getElementById('emailWidgetPalette');
   if(!el) return;
-  el.innerHTML = emailWidgetLibrary.map(w=>{
-    if(w.type === 'social'){
-      return `
-      <div class="widget-card-v2 email-social-widget-card" onclick="toggleSocialIconTray()">
-        <div class="widget-icon-preview"><b>${w.icon}</b></div>
-        <b>${w.name}</b><br><small class="text-muted">Click to open individual icons</small>
-      </div>`;
-    }
-    return `
+  el.innerHTML = emailWidgetLibrary.map(w=>`
     <div class="widget-card-v2" draggable="true" data-widget-type="${w.type}" ondragstart="startEmailWidgetDrag(event,'${w.type}')" onclick="addDesignerBlock('${w.type}')">
       <div class="widget-icon-preview"><b>${w.icon}</b></div>
       <b>${w.name}</b><br><small class="text-muted">${w.desc}</small>
-    </div>`;
-  }).join('');
-  renderSocialIconTray(false);
+    </div>
+  `).join('');
+
+  const tray = document.getElementById('emailSocialIconTray');
+  if(tray){
+    tray.style.display = 'none';
+    tray.innerHTML = '';
+  }
 }
 
 function setupEmailDesignerDragDrop(){
@@ -2888,7 +2928,7 @@ function wrapBlock(block, inner, final=false){
   const minHeight = Number(block.blockHeight || 0) > 0 ? `min-height:${Number(block.blockHeight)}px;` : '';
   const style = `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${Number(block.padding||0)}px;border:${Number(block.borderWidth||0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius||0)}px;${bgImage}${minHeight}`;
   const withMedia = renderOptionalMedia(block, inner);
-  const socials = renderPlacedSocialIcons(block, final);
+  const socials = block.type === 'social' ? '' : renderPlacedSocialIcons(block, final);
   return `<div class="email-block-inner-shell" style="${style}">${withMedia}${socials}</div>`;
 }
 
@@ -2962,12 +3002,23 @@ function renderDesignerBlockInner(block){
 
 function renderSocialBlock(block, final=false){
   if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
-  if(!block.socialIcons.length){
-    return `<div style="text-align:center;color:#6b7280;"><b>Social Icons</b><br><small>Open Social Icons on the left, then drag only the icons you use into this block.</small></div>`;
+  const title = block.socialTitle || '';
+  const row = renderPlacedSocialIcons(block, final);
+  if(final){
+    return `<div style="text-align:${block.align || 'center'};">${title ? `<div style="font-weight:bold;margin-bottom:10px;">${safeHtml(title)}</div>` : ''}${row}</div>`;
   }
-  return `<div style="text-align:${block.align || 'center'};">${renderPlacedSocialIcons(block, final)}</div>`;
+  if(!block.socialIcons.length){
+    return `<div style="text-align:center;color:#6b7280;border:2px dashed #cbd5e1;border-radius:14px;padding:20px;">
+      <b>Social Icons</b><br>
+      <small>Use the Design Settings panel to choose which icons to show and add each link.</small>
+    </div>`;
+  }
+  return `<div style="text-align:${block.align || 'center'};">
+    ${title ? `<div style="font-weight:800;margin-bottom:10px;color:inherit;">${safeHtml(title)}</div>` : ''}
+    ${row}
+    <div class="small-muted mt-2">Click this block to edit icons and links in Design Settings.</div>
+  </div>`;
 }
-
 function renderPlacedSocialIcons(block, final=false){
   if(!Array.isArray(block.socialIcons) || !block.socialIcons.length) return '';
   const align = block.align || (block.type === 'social' ? 'center' : 'left');
@@ -3214,6 +3265,92 @@ function renderEmailDesigner(autosave=true){
 }
 
 
+
+function getSocialPlatforms(){
+  return ['website','facebook','instagram','linkedin','youtube','x','tiktok'];
+}
+
+function findSocialIcon(block, platform){
+  if(!block || !Array.isArray(block.socialIcons)) return null;
+  return block.socialIcons.find(icon=>icon.platform === platform) || null;
+}
+
+function updateSocialBlockPlatform(blockId, platform, enabled){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
+  const exists = findSocialIcon(block, platform);
+  if(enabled && !exists){
+    block.socialIcons.push({
+      id:edId('social'),
+      platform,
+      url:'',
+      useCustomColor:'no',
+      customColor:socialBrandColors[platform] || '#042C49'
+    });
+  }
+  if(!enabled && exists){
+    block.socialIcons = block.socialIcons.filter(icon=>icon.platform !== platform);
+  }
+  selectedDesignerBlockId = block.id;
+  selectedDesignerSocialTarget = null;
+  renderEmailDesigner(false);
+}
+
+function updateSocialIconUrlForPlatform(blockId, platform, value){
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
+  let icon = findSocialIcon(block, platform);
+  if(!icon){
+    icon = { id:edId('social'), platform, url:'', useCustomColor:'no', customColor:socialBrandColors[platform] || '#042C49' };
+    block.socialIcons.push(icon);
+  }
+  icon.url = value;
+  selectedDesignerBlockId = block.id;
+  renderEmailDesigner(false);
+}
+
+function renderSocialBlockSettings(block){
+  if(!block || block.type !== 'social') return '';
+  const platformRows = getSocialPlatforms().map(platform=>{
+    const icon = findSocialIcon(block, platform);
+    const checked = !!icon;
+    const url = icon ? icon.url || '' : '';
+    const color = socialBrandColors[platform] || '#042C49';
+    return `<div class="clean-social-setting-row">
+      <label class="clean-social-check">
+        <input type="checkbox" ${checked ? 'checked' : ''} onchange="updateSocialBlockPlatform('${block.id}','${platform}',this.checked)">
+        <span class="clean-social-mini" style="background:${safeAttr(color)}">${safeHtml(socialIconLabels[platform] || platform[0])}</span>
+        <b>${safeHtml(socialIconNames[platform] || platform)}</b>
+      </label>
+      <input class="form-control form-control-sm" value="${safeAttr(url)}" placeholder="https://..." ${checked ? '' : 'disabled'} onchange="updateSocialIconUrlForPlatform('${block.id}','${platform}',this.value)">
+    </div>`;
+  }).join('');
+
+  return `<div class="designer-simple-section">
+    <div class="designer-simple-section-title">Social Icons</div>
+    <div class="setting-full-v2 mb-2">
+      <label>Optional Title</label>
+      <input class="form-control form-control-sm" value="${safeAttr(block.socialTitle || '')}" placeholder="Connect With Me" onchange="updateDesignerBlock('${block.id}','socialTitle',this.value)">
+    </div>
+    <div class="setting-grid-v2 mb-2">
+      <div><label>Icon Shape</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','iconShape',this.value)">
+        ${['circle','rounded','square'].map(o=>`<option value="${o}" ${String(block.iconShape||'circle')===o?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+      <div><label>Icon Size</label><input class="form-control form-control-sm" type="number" value="${safeAttr(block.iconSize || 36)}" onchange="updateDesignerBlock('${block.id}','iconSize',this.value)"></div>
+      <div><label>Show Labels</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','showLabels',this.value)">
+        ${['no','yes'].map(o=>`<option value="${o}" ${String(block.showLabels||'no')===o?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+      <div><label>Alignment</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','align',this.value)">
+        ${['left','center','right'].map(o=>`<option value="${o}" ${String(block.align||'center')===o?'selected':''}>${o}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="clean-social-settings-list">${platformRows}</div>
+    <div class="small-muted mt-2">Check only the platforms you want. Add the URL beside each selected icon.</div>
+  </div>`;
+}
+
 function renderSelectedSocialIconSettings(block){
   if(!selectedDesignerSocialTarget || String(selectedDesignerSocialTarget.blockId) !== String(block.id)) return '';
   const index = Number(selectedDesignerSocialTarget.index);
@@ -3283,7 +3420,8 @@ function renderEmailDesignerSettings(){
       ${setInput(block,'blockHeight','Block Height px','number')}
       ${setInput(block,'bgImage','Background Image URL')}
     </div></div>
-    ${renderSelectedSocialIconSettings(block)}
+    ${renderSocialBlockSettings(block)}
+    ${block.type !== 'social' ? renderSelectedSocialIconSettings(block) : ''}
     <div class="designer-simple-section">
     <div class="designer-panel-title">Block Image</div>
     <div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.mediaUrl)}" onchange="updateDesignerBlock('${block.id}','mediaUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','media')">Library</button></div></div>
@@ -3301,7 +3439,7 @@ function renderEmailDesignerSettings(){
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
   if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
-  if(Array.isArray(block.socialIcons) && block.socialIcons.length) html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Display</div><div class="setting-grid-v2">${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div><div class="small-muted mt-2">Click an individual icon in the block to edit its URL, color, position, or delete it.</div></div>`;
+  if(block.type !== 'social' && Array.isArray(block.socialIcons) && block.socialIcons.length) html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Display</div><div class="setting-grid-v2">${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div><div class="small-muted mt-2">Click an individual icon in the block to edit its URL, color, position, or delete it.</div></div>`;
   if(block.type === 'video') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Video URL</label><input class="form-control form-control-sm" value="${safeAttr(block.videoUrl)}" onchange="updateDesignerBlock('${block.id}','videoUrl',this.value)"></div><div class="setting-full-v2 mt-2"><label>Preview Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div>`;
   if(block.type === 'table') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('headers','Headers, comma separated')}${setArea('rows','Rows, one per line, comma separated')}`;
   if(block.type === 'article') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div>${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'buttonLabel','Button Label')}${setInput(block,'buttonUrl','Button URL')}</div>`;
