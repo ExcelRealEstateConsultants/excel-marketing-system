@@ -1880,6 +1880,23 @@ body {
   }
 }
 
+
+/* ===== SOCIAL ICON TRUE SIZE FIX ===== */
+.email-social-placed,
+.email-social-placed svg {
+  flex:0 0 auto!important;
+}
+.email-social-placed {
+  background:transparent!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+.email-social-row-in-block {
+  align-items:center!important;
+}
+
 </style>
 </head>
 
@@ -2734,9 +2751,8 @@ const socialIconLabels = { facebook:'f', instagram:'◎', linkedin:'in', youtube
 const socialIconNames = { facebook:'Facebook', instagram:'Instagram', linkedin:'LinkedIn', youtube:'YouTube', x:'X', tiktok:'TikTok', website:'Website' };
 
 function renderSocialBrandIcon(platform, size=36){
-  const iconSize = Number(size || 36);
-  const svgSize = Math.max(18, iconSize);
-  const common = `width="${svgSize}" height="${svgSize}" viewBox="0 0 48 48" aria-hidden="true" style="display:block;"`;
+  const iconSize = Math.max(14, Math.min(96, Number(size || 36)));
+  const common = `width="${iconSize}" height="${iconSize}" viewBox="0 0 48 48" aria-hidden="true" style="display:block;width:${iconSize}px!important;height:${iconSize}px!important;max-width:${iconSize}px!important;max-height:${iconSize}px!important;"`;
   const icons = {
     facebook:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><path fill="#1877F2" d="M29.5 48V29.3h6.3l1-7.3h-7.3v-4.6c0-2.1.6-3.6 3.7-3.6H37V7.3c-.7-.1-3.1-.3-5.9-.3-5.8 0-9.8 3.5-9.8 10v5h-6.6v7.3h6.6V48h8.2z"/></svg>`,
     instagram:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="igGrad" x1="8" y1="42" x2="42" y2="8" gradientUnits="userSpaceOnUse"><stop stop-color="#FEDA75"/><stop offset=".25" stop-color="#FA7E1E"/><stop offset=".5" stop-color="#D62976"/><stop offset=".75" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect x="6" y="6" width="36" height="36" rx="10" fill="url(#igGrad)"/><circle cx="24" cy="24" r="9" fill="none" stroke="#fff" stroke-width="4"/><circle cx="34" cy="14" r="2.7" fill="#fff"/></svg>`,
@@ -3048,8 +3064,8 @@ function renderPlacedSocialIcon(block, icon, idx, final=false){
     return `<a href="${safeAttr(href)}" title="${safeAttr(name)}" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin:4px;vertical-align:middle;">${iconHtml}</a>${labelHtml}`;
   }
 
-  return `<span class="email-social-icon-wrap ${selected?'selected':''}" style="display:inline-flex;align-items:center;gap:3px;">
-    <span class="email-social-placed ${selected?'selected':''}" title="Click to edit ${safeAttr(name)} URL" style="width:${size}px;height:${size}px;" onclick="editPlacedSocialIcon(event,'${block.id}',${idx})">${iconHtml}</span>
+  return `<span class="email-social-icon-wrap ${selected?'selected':''}" style="display:inline-flex;align-items:center;gap:3px;line-height:0;">
+    <span class="email-social-placed ${selected?'selected':''}" title="Click to edit ${safeAttr(name)} URL" style="width:${size}px!important;height:${size}px!important;min-width:${size}px!important;min-height:${size}px!important;line-height:0;background:transparent!important;border-radius:0!important;box-shadow:none!important;" onclick="editPlacedSocialIcon(event,'${block.id}',${idx})">${iconHtml}</span>
     <span class="email-social-icon-tools">
       <button class="email-social-icon-tool" title="Move left" onclick="event.stopPropagation();movePlacedSocialIcon('${block.id}',${idx},-1)">‹</button>
       <button class="email-social-icon-tool" title="Move right" onclick="event.stopPropagation();movePlacedSocialIcon('${block.id}',${idx},1)">›</button>
@@ -3343,7 +3359,7 @@ function renderSocialBlockSettings(block){
         <input class="form-range flex-grow-1" type="range" min="20" max="72" step="2" value="${safeAttr(block.iconSize || 36)}" oninput="document.getElementById('socialIconSizeNumber-${block.id}').value=this.value; updateDesignerBlock('${block.id}','iconSize',this.value)">
         <input id="socialIconSizeNumber-${block.id}" class="form-control form-control-sm" style="width:78px;" type="number" min="20" max="72" step="2" value="${safeAttr(block.iconSize || 36)}" onchange="updateDesignerBlock('${block.id}','iconSize',this.value)">
       </div>
-      <div class="small-muted">This resizes the whole social icon row together.</div>
+      <div class="small-muted">This changes the actual icon/logo size. All selected social icons scale together.</div>
     </div>
     <div class="setting-grid-v2 mb-2">
       <div><label>Show Labels</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','showLabels',this.value)">
