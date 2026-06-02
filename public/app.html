@@ -1665,6 +1665,43 @@ body {
   font-size:12px;
   line-height:20px;
 }
+
+.email-block-spacing-handle-v2 {
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:92px;
+  height:12px;
+  border-radius:999px;
+  background:rgba(4,44,73,.78);
+  border:2px solid #fff;
+  box-shadow:0 4px 14px rgba(15,23,42,.18);
+  z-index:76;
+  opacity:0;
+  cursor:ns-resize;
+  transition:.15s ease;
+}
+.email-block-spacing-handle-v2.top { top:-7px; }
+.email-block-spacing-handle-v2.bottom { bottom:-7px; }
+.email-block-spacing-handle-v2::after {
+  content:'Drag spacing';
+  position:absolute;
+  left:50%;
+  top:-24px;
+  transform:translateX(-50%);
+  background:#042C49;
+  color:#fff;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:10px;
+  white-space:nowrap;
+  display:none;
+}
+.email-block-spacing-handle-v2.top::after { content:'Top spacing'; }
+.email-block-spacing-handle-v2.bottom::after { content:'Bottom spacing'; top:12px; }
+.email-block-v2:hover .email-block-spacing-handle-v2,
+.email-block-v2.selected .email-block-spacing-handle-v2 { opacity:1; }
+.email-block-spacing-handle-v2:hover::after { display:block; }
 .email-image-action-bar { display:none!important; }
 .email-image-resize-wrap.selected-image {
   outline:2px solid var(--accent);
@@ -3010,9 +3047,7 @@ function renderDesignerBlockInner(block){
     return `<div style="text-align:${align};"><a href="${safeAttr(block.url)}" style="display:${block.fullWidth==='yes'?'block':'inline-block'};background:${block.buttonBg};color:${block.buttonText};padding:${size};border-radius:${Number(block.buttonRadius||8)}px;text-decoration:none;font-weight:bold;">${safeHtml(block.label)}</a></div>`;
   }
   if(block.type === 'divider') {
-    const topSpace = Number(block.blockTopSpacing ?? block.dividerTopSpacing ?? 6);
-    const bottomSpace = Number(block.blockBottomSpacing ?? block.dividerBottomSpacing ?? 6);
-    return `<div style="text-align:${align};padding:${topSpace}px 0 ${bottomSpace}px 0;line-height:0;"><div style="display:inline-block;width:${Number(block.lineWidth||100)}%;border-top:${Number(block.thickness||2)}px solid ${block.lineColor || '#00A143'};"></div></div>`;
+    return `<div style="text-align:${align};line-height:0;"><div style="display:inline-block;width:${Number(block.lineWidth||100)}%;border-top:${Number(block.thickness||2)}px solid ${block.lineColor || '#00A143'};"></div></div>`;
   }
   if(block.type === 'spacer') return `<div style="height:${Number(block.height||32)}px;"></div>`;
   if(block.type === 'social') return renderSocialBlock(block);
@@ -3284,7 +3319,9 @@ function renderEmailDesigner(autosave=true){
           <button class="email-mini-btn-v2" title="Copy block" onclick="duplicateDesignerBlock('${block.id}')">⧉</button>
           <button class="email-mini-btn-v2 danger" title="Delete block" onclick="removeDesignerBlock('${block.id}')">×</button>
         </div>
+        <span class="email-block-spacing-handle-v2 top" title="Drag up/down to adjust top spacing" onmousedown="startDesignerBlockSpacingDrag(event,'${block.id}','top')"></span>
         ${wrapBlock(block, renderDesignerBlockInner(block))}
+        <span class="email-block-spacing-handle-v2 bottom" title="Drag up/down to adjust bottom spacing" onmousedown="startDesignerBlockSpacingDrag(event,'${block.id}','bottom')"></span>
         <span class="email-block-resize-handle-v2" title="Drag to resize block" onmousedown="startDesignerBlockResize(event,'${block.id}')"></span>
       </div>
     `).join('');
@@ -3438,12 +3475,11 @@ function renderEmailDesignerSettings(){
       
     </div>
     <div class="designer-simple-section"><div class="designer-simple-section-title">Block Style</div>
+    <div class="small-muted mb-2">Drag the small top or bottom handle on a selected block to tighten or increase spacing.</div>
     <div class="setting-grid-v2">
       ${setInput(block,'bg','Background Color','color')}
       ${setInput(block,'text','Text Color','color')}
       ${setInput(block,'padding','Side Padding','number')}
-      ${setInput(block,'blockTopSpacing','Top Spacing','number')}
-      ${setInput(block,'blockBottomSpacing','Bottom Spacing','number')}
       ${setInput(block,'radius','Radius','number')}
       ${setInput(block,'borderWidth','Border','number')}
       ${setInput(block,'borderColor','Border Color','color')}
@@ -3469,7 +3505,7 @@ function renderEmailDesignerSettings(){
   if(block.type === 'text') html += `${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'fontSize','Font Size','number')}${setInput(block,'lineHeight','Line Height','number')}</div>`;
   if(block.type === 'image') html += `<div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','image')">Library</button></div></div><div class="setting-grid-v2 mt-2">${setInput(block,'alt','Alt Text')}${setInput(block,'imageWidth','Width %','number')}${setInput(block,'imageHeight','Height px','number')}${setSelect('imageFit','Fit',['cover','contain','fill'])}${setSelect('imageShape','Shape',['rounded','square','circle','pill','custom'])}${setInput(block,'imageRadius','Custom Radius','number')}${setInput(block,'imageBorderWidth','Border px','number')}${setInput(block,'imageBorderColor','Border Color','color')}${setSelect('imageShadow','Shadow',['no','yes'])}${setInput(block,'imageRotate','Rotate Degrees','number')}</div>`;
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
-  if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div><div class="small-muted mt-2">Use the Top Spacing and Bottom Spacing controls above to move the divider closer to the block above or below.</div>`;
+  if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div><div class="small-muted mt-2">Drag the top or bottom edge of the divider block to move the line closer to the block above or below.</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
   if(block.type !== 'social' && Array.isArray(block.socialIcons) && block.socialIcons.length) html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Display</div><div class="setting-grid-v2">${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div><div class="small-muted mt-2">Click an individual icon in the block to edit its URL, color, position, or delete it.</div></div>`;
   if(block.type === 'video') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Video URL</label><input class="form-control form-control-sm" value="${safeAttr(block.videoUrl)}" onchange="updateDesignerBlock('${block.id}','videoUrl',this.value)"></div><div class="setting-full-v2 mt-2"><label>Preview Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div>`;
@@ -3756,6 +3792,39 @@ function startDesignerImageResize(event, blockId, target='image'){
       block.imageHeight = 0;
     }
     if(img && target !== 'media') img.style.width = nextWidth + '%';
+  };
+  const up = ()=>{
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    renderEmailDesigner(false);
+    saveEmailDesignLocal(false);
+  };
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
+
+function startDesignerBlockSpacingDrag(event, blockId, edge){
+  event.preventDefault();
+  event.stopPropagation();
+  const block = designerBlocks.find(b=>String(b.id)===String(blockId));
+  if(!block) return;
+  selectedDesignerBlockId = blockId;
+  selectedDesignerImageTarget = null;
+  selectedDesignerSocialTarget = null;
+  const startY = event.clientY;
+  const key = edge === 'top' ? 'blockTopSpacing' : 'blockBottomSpacing';
+  const startValue = Number(block[key] ?? block.padding ?? 0);
+  const blockEl = document.querySelector(`.email-block-v2[data-block-id="${blockId}"]`);
+  const inner = blockEl ? blockEl.querySelector('.email-block-inner-shell') : null;
+  const move = (e)=>{
+    const deltaY = e.clientY - startY;
+    const nextValue = Math.max(0, Math.min(120, Math.round(startValue + deltaY)));
+    block[key] = nextValue;
+    if(inner){
+      if(edge === 'top') inner.style.paddingTop = `${nextValue}px`;
+      else inner.style.paddingBottom = `${nextValue}px`;
+    }
   };
   const up = ()=>{
     document.removeEventListener('mousemove', move);
