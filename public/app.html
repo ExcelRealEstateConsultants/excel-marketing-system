@@ -1740,19 +1740,14 @@ body {
 .email-social-row-in-block.center { justify-content:center; }
 .email-social-row-in-block.right { justify-content:flex-end; }
 .email-social-placed {
-  width:36px;
-  height:36px;
-  border-radius:999px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  color:white;
-  font-weight:800;
-  font-size:13px;
   text-decoration:none;
   position:relative;
   cursor:pointer;
-  box-shadow:0 4px 12px rgba(15,23,42,.16);
+  background:transparent!important;
+  border-radius:8px;
 }
 .email-social-placed.selected { outline:2px solid var(--accent); outline-offset:3px; }
 .email-social-icon-tools {
@@ -2738,6 +2733,22 @@ const socialBrandColors = {
 const socialIconLabels = { facebook:'f', instagram:'◎', linkedin:'in', youtube:'▶', x:'X', tiktok:'♪', website:'🌐' };
 const socialIconNames = { facebook:'Facebook', instagram:'Instagram', linkedin:'LinkedIn', youtube:'YouTube', x:'X', tiktok:'TikTok', website:'Website' };
 
+function renderSocialBrandIcon(platform, size=36){
+  const iconSize = Number(size || 36);
+  const svgSize = Math.max(18, iconSize);
+  const common = `width="${svgSize}" height="${svgSize}" viewBox="0 0 48 48" aria-hidden="true" style="display:block;"`;
+  const icons = {
+    facebook:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><path fill="#1877F2" d="M29.5 48V29.3h6.3l1-7.3h-7.3v-4.6c0-2.1.6-3.6 3.7-3.6H37V7.3c-.7-.1-3.1-.3-5.9-.3-5.8 0-9.8 3.5-9.8 10v5h-6.6v7.3h6.6V48h8.2z"/></svg>`,
+    instagram:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="igGrad" x1="8" y1="42" x2="42" y2="8" gradientUnits="userSpaceOnUse"><stop stop-color="#FEDA75"/><stop offset=".25" stop-color="#FA7E1E"/><stop offset=".5" stop-color="#D62976"/><stop offset=".75" stop-color="#962FBF"/><stop offset="1" stop-color="#4F5BD5"/></linearGradient></defs><rect x="6" y="6" width="36" height="36" rx="10" fill="url(#igGrad)"/><circle cx="24" cy="24" r="9" fill="none" stroke="#fff" stroke-width="4"/><circle cx="34" cy="14" r="2.7" fill="#fff"/></svg>`,
+    linkedin:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="36" height="36" rx="4" fill="#0A66C2"/><rect x="13" y="20" width="6" height="17" fill="#fff"/><circle cx="16" cy="15" r="3" fill="#fff"/><path fill="#fff" d="M23 20h5.7v2.3h.1c.8-1.5 2.7-3.1 5.6-3.1 6 0 7.1 3.9 7.1 9V37h-6V29.2c0-1.9 0-4.3-2.6-4.3s-3 2-3 4.1V37h-6V20z"/></svg>`,
+    youtube:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><rect x="5" y="13" width="38" height="22" rx="6" fill="#FF0000"/><path d="M21 18.5v11l10-5.5-10-5.5z" fill="#fff"/></svg>`,
+    x:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="36" height="36" rx="6" fill="#000"/><path fill="#fff" d="M28.5 22.3 40 9h-2.7L27.3 20.6 19.3 9H10l12.1 17.6L10 40.7h2.7l10.6-12.3 8.4 12.3H41L28.5 22.3zm-3.8 4.4-1.2-1.8-9.8-14h4.3l7.9 11.3 1.2 1.8 10.3 14.8h-4.3l-8.4-12.1z"/></svg>`,
+    tiktok:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><rect x="6" y="6" width="36" height="36" rx="9" fill="#111827"/><path d="M29 13c.8 4.3 3.4 6.9 7 7v6c-2.7 0-5.1-.8-7-2.1v8.4c0 5.6-4.5 9.7-10.2 9.7-5.1 0-9.3-3.8-9.3-8.9 0-5.9 5.1-9.6 10.9-8.4v6.1c-2.1-.7-4.7.5-4.7 2.8 0 1.7 1.4 2.9 3.1 2.9 2 0 3.3-1.4 3.3-3.7V13h6.9z" fill="#25F4EE"/><path d="M31 15c.9 2.9 2.7 4.6 5 5v3.1c-2.2-.2-4.6-1.1-7-2.9V32c0 5.6-4.5 9.7-10.2 9.7-2.5 0-4.8-.9-6.4-2.4 1.7 1 3.8 1.4 6.1 1.1 4.9-.7 8.1-4.4 8.1-9.3V15h4.4z" fill="#FE2C55" opacity=".9"/></svg>`,
+    website:`<svg ${common} xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="18" fill="none" stroke="#00A143" stroke-width="4"/><path d="M6 24h36M24 6c5 5.2 7.5 11.2 7.5 18S29 36.8 24 42M24 6c-5 5.2-7.5 11.2-7.5 18S19 36.8 24 42" fill="none" stroke="#00A143" stroke-width="3" stroke-linecap="round"/></svg>`
+  };
+  return icons[platform] || icons.website;
+}
+
 const emailWidgetLibrary = [
   { type:'header', name:'Header', icon:'▰', desc:'Logo/title hero' },
   { type:'heading', name:'Heading', icon:'H', desc:'Section heading' },
@@ -2783,7 +2794,7 @@ function emailBlockDefaults(type){
     button:{...base,label:'Click Here',url:'#',buttonBg:'#00A143',buttonText:'#ffffff',buttonRadius:8,buttonSize:'medium',fullWidth:'no',align:'center'},
     divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:18},
     spacer:{...base,height:32,padding:0},
-    social:{...base,socialTitle:'Connect With Me',socialIcons:[{id:edId('social'),platform:'website',url:'',useCustomColor:'no',customColor:'#00A143'},{id:edId('social'),platform:'facebook',url:'',useCustomColor:'no',customColor:'#1877F2'},{id:edId('social'),platform:'instagram',url:'',useCustomColor:'no',customColor:'#E4405F'},{id:edId('social'),platform:'linkedin',url:'',useCustomColor:'no',customColor:'#0A66C2'}],iconShape:'circle',iconSize:36,showLabels:'no',align:'center',padding:18},
+    social:{...base,socialTitle:'',socialIcons:[{id:edId('social'),platform:'website',url:'',useCustomColor:'no',customColor:'#00A143'},{id:edId('social'),platform:'facebook',url:'',useCustomColor:'no',customColor:'#1877F2'},{id:edId('social'),platform:'instagram',url:'',useCustomColor:'no',customColor:'#E4405F'},{id:edId('social'),platform:'linkedin',url:'',useCustomColor:'no',customColor:'#0A66C2'}],iconShape:'brand',iconSize:36,showLabels:'no',align:'center',padding:18},
     video:{...base,title:'Watch the Video',videoUrl:'#',imageUrl:'',buttonLabel:'Watch Video',buttonBg:'#00A143'},
     table:{...base,title:'Data Table',headers:'Item,Details,Status',rows:'Open House,Saturday 11-2,Scheduled\nFollow Up,Call interested buyer,Pending'},
     article:{...base,title:'Feature Article',body:'Use this for a market update, listing highlight, newsletter story, or client education.',buttonLabel:'Read More',buttonUrl:'',mediaUrl:'',mediaPosition:'top',mediaWidth:40,borderWidth:1,radius:12},
@@ -3002,10 +3013,10 @@ function renderDesignerBlockInner(block){
 
 function renderSocialBlock(block, final=false){
   if(!Array.isArray(block.socialIcons)) block.socialIcons = [];
-  const title = block.socialTitle || '';
+  block.socialTitle = '';
   const row = renderPlacedSocialIcons(block, final);
   if(final){
-    return `<div style="text-align:${block.align || 'center'};">${title ? `<div style="font-weight:bold;margin-bottom:10px;">${safeHtml(title)}</div>` : ''}${row}</div>`;
+    return `<div style="text-align:${block.align || 'center'};">${row}</div>`;
   }
   if(!block.socialIcons.length){
     return `<div style="text-align:center;color:#6b7280;border:2px dashed #cbd5e1;border-radius:14px;padding:20px;">
@@ -3014,7 +3025,6 @@ function renderSocialBlock(block, final=false){
     </div>`;
   }
   return `<div style="text-align:${block.align || 'center'};">
-    ${title ? `<div style="font-weight:800;margin-bottom:10px;color:inherit;">${safeHtml(title)}</div>` : ''}
     ${row}
     <div class="small-muted mt-2">Click this block to edit icons and links in Design Settings.</div>
   </div>`;
@@ -3027,22 +3037,19 @@ function renderPlacedSocialIcons(block, final=false){
 
 function renderPlacedSocialIcon(block, icon, idx, final=false){
   const platform = icon.platform || 'website';
-  const brandColor = socialBrandColors[platform] || '#042C49';
-  const bg = icon.useCustomColor === 'yes' ? (icon.customColor || brandColor) : brandColor;
-  const radius = block.iconShape === 'square' ? 6 : block.iconShape === 'rounded' ? 12 : 999;
   const size = Number(block.iconSize || 36);
-  const label = socialIconLabels[platform] || platform[0] || '?';
   const name = socialIconNames[platform] || platform;
   const selected = selectedDesignerSocialTarget && String(selectedDesignerSocialTarget.blockId) === String(block.id) && Number(selectedDesignerSocialTarget.index) === Number(idx);
   const labelHtml = block.showLabels==='yes' ? `<span style="margin-right:8px;">${safeHtml(name)}</span>` : '';
+  const iconHtml = renderSocialBrandIcon(platform, size);
 
   if(final){
     const href = icon.url && String(icon.url).trim() ? String(icon.url).trim() : '#';
-    return `<a href="${safeAttr(href)}" title="${safeAttr(name)}" style="background:${safeAttr(bg)};width:${size}px;height:${size}px;border-radius:${radius}px;display:inline-flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:13px;text-decoration:none;margin:4px;">${safeHtml(label)}</a>${labelHtml}`;
+    return `<a href="${safeAttr(href)}" title="${safeAttr(name)}" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin:4px;vertical-align:middle;">${iconHtml}</a>${labelHtml}`;
   }
 
   return `<span class="email-social-icon-wrap ${selected?'selected':''}" style="display:inline-flex;align-items:center;gap:3px;">
-    <span class="email-social-placed ${selected?'selected':''}" title="Click to edit ${safeAttr(name)} URL" style="background:${safeAttr(bg)};width:${size}px;height:${size}px;border-radius:${radius}px;" onclick="editPlacedSocialIcon(event,'${block.id}',${idx})">${safeHtml(label)}</span>
+    <span class="email-social-placed ${selected?'selected':''}" title="Click to edit ${safeAttr(name)} URL" style="width:${size}px;height:${size}px;" onclick="editPlacedSocialIcon(event,'${block.id}',${idx})">${iconHtml}</span>
     <span class="email-social-icon-tools">
       <button class="email-social-icon-tool" title="Move left" onclick="event.stopPropagation();movePlacedSocialIcon('${block.id}',${idx},-1)">‹</button>
       <button class="email-social-icon-tool" title="Move right" onclick="event.stopPropagation();movePlacedSocialIcon('${block.id}',${idx},1)">›</button>
@@ -3321,7 +3328,7 @@ function renderSocialBlockSettings(block){
     return `<div class="clean-social-setting-row">
       <label class="clean-social-check">
         <input type="checkbox" ${checked ? 'checked' : ''} onchange="updateSocialBlockPlatform('${block.id}','${platform}',this.checked)">
-        <span class="clean-social-mini" style="background:${safeAttr(color)}">${safeHtml(socialIconLabels[platform] || platform[0])}</span>
+        <span class="clean-social-mini">${renderSocialBrandIcon(platform, 22)}</span>
         <b>${safeHtml(socialIconNames[platform] || platform)}</b>
       </label>
       <input class="form-control form-control-sm" value="${safeAttr(url)}" placeholder="https://..." ${checked ? '' : 'disabled'} onchange="updateSocialIconUrlForPlatform('${block.id}','${platform}',this.value)">
@@ -3330,14 +3337,7 @@ function renderSocialBlockSettings(block){
 
   return `<div class="designer-simple-section">
     <div class="designer-simple-section-title">Social Icons</div>
-    <div class="setting-full-v2 mb-2">
-      <label>Optional Title</label>
-      <input class="form-control form-control-sm" value="${safeAttr(block.socialTitle || '')}" placeholder="Connect With Me" onchange="updateDesignerBlock('${block.id}','socialTitle',this.value)">
-    </div>
     <div class="setting-grid-v2 mb-2">
-      <div><label>Icon Shape</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','iconShape',this.value)">
-        ${['circle','rounded','square'].map(o=>`<option value="${o}" ${String(block.iconShape||'circle')===o?'selected':''}>${o}</option>`).join('')}
-      </select></div>
       <div><label>Icon Size</label><input class="form-control form-control-sm" type="number" value="${safeAttr(block.iconSize || 36)}" onchange="updateDesignerBlock('${block.id}','iconSize',this.value)"></div>
       <div><label>Show Labels</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','showLabels',this.value)">
         ${['no','yes'].map(o=>`<option value="${o}" ${String(block.showLabels||'no')===o?'selected':''}>${o}</option>`).join('')}
@@ -3507,7 +3507,13 @@ function loadSavedEmailDesignerDraft(){
   const saved = JSON.parse(localStorage.getItem('excelEmailDesignerDraft') || 'null');
   if(saved && Array.isArray(saved.blocks)){
     designerSettings = {...designerSettings, ...(saved.settings || {})};
-    designerBlocks = saved.blocks;
+    designerBlocks = saved.blocks.map(block => {
+      if(block && block.type === 'social'){
+        block.socialTitle = '';
+        block.iconShape = 'brand';
+      }
+      return block;
+    });
     designerMeta = {...designerMeta, ...(saved.meta || {})};
     hydrateDesignerMetaInputs();
     selectedDesignerBlockId = designerBlocks[0]?.id || null;
