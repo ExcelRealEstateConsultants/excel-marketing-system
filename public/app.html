@@ -3037,7 +3037,7 @@ function renderPlacedSocialIcons(block, final=false){
 
 function renderPlacedSocialIcon(block, icon, idx, final=false){
   const platform = icon.platform || 'website';
-  const size = Number(block.iconSize || 36);
+  const size = Math.max(20, Math.min(72, Number(block.iconSize || 36)));
   const name = socialIconNames[platform] || platform;
   const selected = selectedDesignerSocialTarget && String(selectedDesignerSocialTarget.blockId) === String(block.id) && Number(selectedDesignerSocialTarget.index) === Number(idx);
   const labelHtml = block.showLabels==='yes' ? `<span style="margin-right:8px;">${safeHtml(name)}</span>` : '';
@@ -3337,8 +3337,15 @@ function renderSocialBlockSettings(block){
 
   return `<div class="designer-simple-section">
     <div class="designer-simple-section-title">Social Icons</div>
+    <div class="designer-simple-section mb-2" style="background:#fff;">
+      <label style="font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.03em;">Icon Size — all icons scale together</label>
+      <div class="d-flex align-items-center gap-2">
+        <input class="form-range flex-grow-1" type="range" min="20" max="72" step="2" value="${safeAttr(block.iconSize || 36)}" oninput="document.getElementById('socialIconSizeNumber-${block.id}').value=this.value; updateDesignerBlock('${block.id}','iconSize',this.value)">
+        <input id="socialIconSizeNumber-${block.id}" class="form-control form-control-sm" style="width:78px;" type="number" min="20" max="72" step="2" value="${safeAttr(block.iconSize || 36)}" onchange="updateDesignerBlock('${block.id}','iconSize',this.value)">
+      </div>
+      <div class="small-muted">This resizes the whole social icon row together.</div>
+    </div>
     <div class="setting-grid-v2 mb-2">
-      <div><label>Icon Size</label><input class="form-control form-control-sm" type="number" value="${safeAttr(block.iconSize || 36)}" onchange="updateDesignerBlock('${block.id}','iconSize',this.value)"></div>
       <div><label>Show Labels</label><select class="form-control form-control-sm" onchange="updateDesignerBlock('${block.id}','showLabels',this.value)">
         ${['no','yes'].map(o=>`<option value="${o}" ${String(block.showLabels||'no')===o?'selected':''}>${o}</option>`).join('')}
       </select></div>
