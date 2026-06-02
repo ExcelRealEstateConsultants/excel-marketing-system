@@ -2808,7 +2808,7 @@ function emailBlockDefaults(type){
     text:{...base,body:'Write your email copy here. Everything in this block can be customized.',fontSize:16,lineHeight:1.6},
     image:{...base,imageUrl:'',alt:'Email image',imageWidth:100,imageHeight:0,imageFit:'cover',imageRadius:8,imageShape:'rounded',imageBorderWidth:0,imageBorderColor:'#e5e7eb',imageShadow:'no',imageRotate:0,align:'center'},
     button:{...base,label:'Click Here',url:'#',buttonBg:'#00A143',buttonText:'#ffffff',buttonRadius:8,buttonSize:'medium',fullWidth:'no',align:'center'},
-    divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:18},
+    divider:{...base,lineColor:'#00A143',thickness:2,lineWidth:100,padding:0,dividerTopSpacing:6,dividerBottomSpacing:6,align:'center'},
     spacer:{...base,height:32,padding:0},
     social:{...base,socialTitle:'',socialIcons:[{id:edId('social'),platform:'website',url:'',useCustomColor:'no',customColor:'#00A143'},{id:edId('social'),platform:'facebook',url:'',useCustomColor:'no',customColor:'#1877F2'},{id:edId('social'),platform:'instagram',url:'',useCustomColor:'no',customColor:'#E4405F'},{id:edId('social'),platform:'linkedin',url:'',useCustomColor:'no',customColor:'#0A66C2'}],iconShape:'brand',iconSize:36,showLabels:'no',align:'center',padding:18},
     video:{...base,title:'Watch the Video',videoUrl:'#',imageUrl:'',buttonLabel:'Watch Video',buttonBg:'#00A143'},
@@ -2938,7 +2938,7 @@ function removeDesignerBlock(id){
 function updateDesignerBlock(id,key,value){
   const block = designerBlocks.find(b=>b.id===id);
   if(!block) return;
-  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap','blockWidth','blockHeight'].includes(key)) value = Number(value || 0);
+  if(['padding','radius','borderWidth','mediaWidth','mediaRadius','fontSize','lineHeight','imageWidth','imageRadius','imageHeight','imageBorderWidth','imageRotate','thickness','lineWidth','height','iconSize','gap','blockWidth','blockHeight','dividerTopSpacing','dividerBottomSpacing'].includes(key)) value = Number(value || 0);
   block[key] = value;
   renderEmailDesigner(false);
 }
@@ -2953,7 +2953,8 @@ function updateDesignerSetting(key,value){
 function wrapBlock(block, inner, final=false){
   const bgImage = block.bgImage ? `background-image:url('${safeAttr(block.bgImage)}');background-size:cover;background-position:center;` : '';
   const minHeight = Number(block.blockHeight || 0) > 0 ? `min-height:${Number(block.blockHeight)}px;` : '';
-  const style = `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${Number(block.padding||0)}px;border:${Number(block.borderWidth||0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius||0)}px;${bgImage}${minHeight}`;
+  const blockPadding = block.type === 'divider' ? 0 : Number(block.padding || 0);
+  const style = `background:${block.bg || '#ffffff'};color:${block.text || '#1f2937'};padding:${blockPadding}px;border:${Number(block.borderWidth||0)}px solid ${block.borderColor || '#e5e7eb'};border-radius:${Number(block.radius||0)}px;${bgImage}${minHeight}`;
   const withMedia = renderOptionalMedia(block, inner);
   const socials = block.type === 'social' ? '' : renderPlacedSocialIcons(block, final);
   return `<div class="email-block-inner-shell" style="${style}">${withMedia}${socials}</div>`;
@@ -3006,7 +3007,11 @@ function renderDesignerBlockInner(block){
     const size = block.buttonSize === 'large' ? '15px 28px' : block.buttonSize === 'small' ? '9px 16px' : '12px 22px';
     return `<div style="text-align:${align};"><a href="${safeAttr(block.url)}" style="display:${block.fullWidth==='yes'?'block':'inline-block'};background:${block.buttonBg};color:${block.buttonText};padding:${size};border-radius:${Number(block.buttonRadius||8)}px;text-decoration:none;font-weight:bold;">${safeHtml(block.label)}</a></div>`;
   }
-  if(block.type === 'divider') return `<div style="text-align:center;"><div style="display:inline-block;width:${Number(block.lineWidth||100)}%;border-top:${Number(block.thickness||2)}px solid ${block.lineColor || '#00A143'};"></div></div>`;
+  if(block.type === 'divider') {
+    const topSpace = Number(block.dividerTopSpacing ?? 6);
+    const bottomSpace = Number(block.dividerBottomSpacing ?? 6);
+    return `<div style="text-align:${align};padding:${topSpace}px 0 ${bottomSpace}px 0;line-height:0;"><div style="display:inline-block;width:${Number(block.lineWidth||100)}%;border-top:${Number(block.thickness||2)}px solid ${block.lineColor || '#00A143'};"></div></div>`;
+  }
   if(block.type === 'spacer') return `<div style="height:${Number(block.height||32)}px;"></div>`;
   if(block.type === 'social') return renderSocialBlock(block);
   if(block.type === 'video'){
@@ -3460,7 +3465,7 @@ function renderEmailDesignerSettings(){
   if(block.type === 'text') html += `${setArea('body','Body')}<div class="setting-grid-v2 mt-2">${setInput(block,'fontSize','Font Size','number')}${setInput(block,'lineHeight','Line Height','number')}</div>`;
   if(block.type === 'image') html += `<div class="setting-full-v2"><label>Image URL</label><div class="input-group input-group-sm"><input class="form-control" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"><button class="btn btn-outline-primary" onclick="openEmailImagePicker('${block.id}','image')">Library</button></div></div><div class="setting-grid-v2 mt-2">${setInput(block,'alt','Alt Text')}${setInput(block,'imageWidth','Width %','number')}${setInput(block,'imageHeight','Height px','number')}${setSelect('imageFit','Fit',['cover','contain','fill'])}${setSelect('imageShape','Shape',['rounded','square','circle','pill','custom'])}${setInput(block,'imageRadius','Custom Radius','number')}${setInput(block,'imageBorderWidth','Border px','number')}${setInput(block,'imageBorderColor','Border Color','color')}${setSelect('imageShadow','Shadow',['no','yes'])}${setInput(block,'imageRotate','Rotate Degrees','number')}</div>`;
   if(block.type === 'button') html += `<div class="setting-full-v2"><label>Label</label><input class="form-control form-control-sm" value="${safeAttr(block.label)}" onchange="updateDesignerBlock('${block.id}','label',this.value)"></div><div class="setting-full-v2 mt-2"><label>Link URL</label><input class="form-control form-control-sm" value="${safeAttr(block.url)}" onchange="updateDesignerBlock('${block.id}','url',this.value)"></div><div class="setting-grid-v2 mt-2">${setInput(block,'buttonBg','Button Color','color')}${setInput(block,'buttonText','Text Color','color')}${setSelect('buttonSize','Button Size',['small','medium','large'])}${setSelect('fullWidth','Full Width',['no','yes'])}</div>`;
-  if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}</div>`;
+  if(block.type === 'divider') html += `<div class="setting-grid-v2">${setInput(block,'lineColor','Line Color','color')}${setInput(block,'thickness','Thickness','number')}${setInput(block,'lineWidth','Width %','number')}${setInput(block,'dividerTopSpacing','Top Spacing','number')}${setInput(block,'dividerBottomSpacing','Bottom Spacing','number')}</div><div class="small-muted mt-2">Use Top Spacing and Bottom Spacing to move the divider closer to the block above or below.</div>`;
   if(block.type === 'spacer') html += `<div class="setting-grid-v2">${setInput(block,'height','Height','number')}</div>`;
   if(block.type !== 'social' && Array.isArray(block.socialIcons) && block.socialIcons.length) html += `<div class="designer-simple-section"><div class="designer-simple-section-title">Social Icon Display</div><div class="setting-grid-v2">${setSelect('iconShape','Icon Shape',['circle','rounded','square'])}${setInput(block,'iconSize','Icon Size','number')}${setSelect('showLabels','Show Labels',['no','yes'])}</div><div class="small-muted mt-2">Click an individual icon in the block to edit its URL, color, position, or delete it.</div></div>`;
   if(block.type === 'video') html += `<div class="setting-full-v2"><label>Title</label><input class="form-control form-control-sm" value="${safeAttr(block.title)}" onchange="updateDesignerBlock('${block.id}','title',this.value)"></div><div class="setting-full-v2 mt-2"><label>Video URL</label><input class="form-control form-control-sm" value="${safeAttr(block.videoUrl)}" onchange="updateDesignerBlock('${block.id}','videoUrl',this.value)"></div><div class="setting-full-v2 mt-2"><label>Preview Image URL</label><input class="form-control form-control-sm" value="${safeAttr(block.imageUrl)}" onchange="updateDesignerBlock('${block.id}','imageUrl',this.value)"></div>`;
