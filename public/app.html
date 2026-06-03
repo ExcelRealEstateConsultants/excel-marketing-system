@@ -2326,6 +2326,8 @@ body {
 .ai-contact-badge.hot { background:#fee2e2; color:#991b1b; }
 .ai-contact-badge.warm { background:#fef3c7; color:#92400e; }
 .ai-contact-badge.cold { background:#eef2f7; color:#334155; }
+.ai-contact-badge.inactive { background:#e5e7eb; color:#374151; }
+.ai-contact-badge.network { background:#ede9fe; color:#5b21b6; }
 .ai-contact-badge.action { background:#e0f2fe; color:#075985; }
 @media (max-width:760px){ .ai-score-strip { grid-template-columns:1fr; } }
 
@@ -4868,10 +4870,38 @@ function aiAddScoreDriver(drivers, label, value, type){
 
 function aiScoreHeatLabel(score){
   const num = Number(score || 0);
-  if(num >= 80) return 'Hot';
-  if(num >= 50) return 'Warm';
-  if(num >= 20) return 'Cold';
+  if(num >= 75) return 'Hot';
+  if(num >= 45) return 'Warm';
+  if(num >= 15) return 'Cold';
   return 'Inactive';
+}
+
+function aiIsNetworkContact(contact = {}){
+  const type = String(contact.type || '').toLowerCase();
+  const tags = Array.isArray(contact.tags) ? contact.tags.join(' ').toLowerCase() : String(contact.tags || '').toLowerCase();
+  const text = `${type} ${tags}`;
+  return ['agent','broker','vendor','lender','title','escrow','inspector','appraiser','photographer','contractor','staff','team'].some(word => text.includes(word));
+}
+
+function aiHeatIcon(heat){
+  const label = String(heat || '').toLowerCase();
+  if(label === 'hot') return '🔥';
+  if(label === 'warm') return '🟡';
+  if(label === 'cold') return '⚪';
+  if(label === 'network') return '🤝';
+  return '❄️';
+}
+
+function aiHeatClass(heat){
+  const label = String(heat || '').toLowerCase();
+  return ['hot','warm','cold','inactive','network'].includes(label) ? label : 'cold';
+}
+
+function aiHeatBadgeText(insight = {}){
+  const heat = insight.heat || 'Cold';
+  const score = Number(insight.leadScore ?? 0);
+  if(heat === 'Network') return `${aiHeatIcon(heat)} Network ${score}`;
+  return `${aiHeatIcon(heat)} ${heat} Lead ${score}`;
 }
 
 function aiContactSearchText(contact = {}){
@@ -4914,6 +4944,7 @@ function aiAnalyzeContactIntent(contact = {}, emailActivity = {}, phoneActivity 
   ];
 
   positivePatterns.forEach(([phrase, heat, opp]) => {
+    if(phrase === 'interested' && (text.includes('not interested') || text.includes('uninterested'))) return;
     if(text.includes(phrase)) {
       heatDelta += heat;
       opportunityDelta += opp;
@@ -4969,6 +5000,7 @@ function aiScoreRecommendedAction({stage = '', staleDays = 999, overdueTasks = 0
   const sentiment = intent.sentiment || 'Neutral';
   const label = intent.intentLabel || '';
 
+  if(heat === 'Network' || sentiment === 'Network') return { nextAction:'Network relationship', nextActionReason:'This appears to be a business/network contact, not an active buyer or seller lead.' };
   if(sentiment === 'Negative' || label === 'Cool Down') return { nextAction:'Cool down / do not pursue', nextActionReason:'The contact appears uninterested or should not be actively contacted.' };
   if(label === 'Do Not Email') return { nextAction:'Do not email', nextActionReason:'The contact is unsubscribed or should not receive email campaigns.' };
   if(overdueTasks > 0) return { nextAction:'Complete overdue follow-up', nextActionReason:`${overdueTasks} overdue task${overdueTasks === 1 ? '' : 's'} need attention.` };
@@ -5022,33 +5054,69 @@ function buildAIContactInsights(contactList = [], activityList = [], smsActivity
     const overdueTasks = tasks.filter(task => !task.done && task.due && String(task.due).slice(0,10) < today).length;
     const dueTodayTasks = tasks.filter(task => !task.done && task.due && String(task.due).slice(0,10) === today).length;
     const stage = aiContactStage(contact);
+    const typeText = String(contact.type || '').toLowerCase();
+    const isNetwork = aiIsNetworkContact(contact);
+
+    const baseLeadScore = isNetwork ? 0
+      : typeText.includes('referral') ? 60
+      : typeText.includes('seller') ? 54
+      : typeText.includes('buyer') ? 48
+      : typeText.includes('investor') ? 52
+      : typeText.includes('past') ? 42
+      : typeText.includes('sphere') ? 40
+      : 38;
+
+    const baseOpportunityScore = isNetwork ? 0
+      : typeText.includes('referral') ? 55
+      : typeText.includes('seller') ? 45
+      : typeText.includes('buyer') ? 42
+      : typeText.includes('investor') ? 48
+      : typeText.includes('past') ? 35
+      : typeText.includes('sphere') ? 32
+      : 30;
+
     const stageBoostMap = {
-      'New Lead': 8,
-      'Contacted': 16,
-      'Appointment Set': 30,
-      'Active Prospect': 38,
-      'Under Contract': 55,
-      'Pending': 60,
-      'Closed': 22,
-      'Past Client': 18
+      'New Lead': 0,
+      'Contacted': 8,
+      'Appointment Set': 22,
+      'Active Prospect': 28,
+      'Under Contract': 38,
+      'Pending': 42,
+      'Closed': -5,
+      'Past Client': -3
     };
-    const stageBoost = stageBoostMap[stage] || 8;
+    const opportunityStageMap = {
+      'New Lead': 0,
+      'Contacted': 8,
+      'Appointment Set': 25,
+      'Active Prospect': 30,
+      'Under Contract': 45,
+      'Pending': 50,
+      'Closed': -8,
+      'Past Client': -5
+    };
+    const stageBoost = stageBoostMap[stage] ?? 0;
+    const opportunityStageBoost = opportunityStageMap[stage] ?? 0;
     const lastTouch = emailActivity.last || phoneActivity.last || contact.lastContactedAt || contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || '';
     const staleDays = aiDaysSince(lastTouch);
-    const recencyBoost = staleDays <= 2 ? 18 : staleDays <= 7 ? 12 : staleDays <= 14 ? 6 : staleDays <= 30 ? 0 : staleDays <= 60 ? -10 : staleDays <= 90 ? -20 : -35;
-    const engagementScore = (emailActivity.clicks * 18) + (emailActivity.opens * 8) + (phoneActivity.texts * 8);
-    const taskScore = (overdueTasks * 8) + (dueTodayTasks * 10) + (openTasks * 3);
-    const intent = aiAnalyzeContactIntent(contact, emailActivity, phoneActivity, stage);
+    const recencyBoost = isNetwork || staleDays === 9999 ? 0 : staleDays <= 2 ? 16 : staleDays <= 7 ? 10 : staleDays <= 14 ? 5 : staleDays <= 30 ? 0 : staleDays <= 60 ? -7 : staleDays <= 90 ? -14 : -25;
+    const engagementScore = isNetwork ? 0 : Math.min(35, (emailActivity.clicks * 8) + (emailActivity.opens * 3) + (phoneActivity.texts * 6));
+    const taskScore = isNetwork ? 0 : Math.min(18, (overdueTasks * 6) + (dueTodayTasks * 8) + (openTasks * 2));
+    const intent = isNetwork ? { heatDelta:0, opportunityDelta:0, sentiment:'Network', intentLabel:'Business Contact', drivers:[] } : aiAnalyzeContactIntent(contact, emailActivity, phoneActivity, stage);
     const scoreDrivers = [...intent.drivers];
+    if(!isNetwork) aiAddScoreDriver(scoreDrivers, 'Starting score by contact type', baseLeadScore, 'positive');
+    if(isNetwork) aiAddScoreDriver(scoreDrivers, 'Business/network contact', 0, 'neutral');
+    if(stageBoost > 0) aiAddScoreDriver(scoreDrivers, `${stage} stage`, stageBoost, 'positive');
+    if(stageBoost < 0) aiAddScoreDriver(scoreDrivers, `${stage} stage`, stageBoost, 'neutral');
     if(recencyBoost > 0) aiAddScoreDriver(scoreDrivers, staleDays <= 2 ? 'Very recent activity' : 'Recent activity', recencyBoost, 'positive');
     if(recencyBoost < 0) aiAddScoreDriver(scoreDrivers, `No activity for ${staleDays} days`, recencyBoost, 'negative');
-    if(overdueTasks > 0) aiAddScoreDriver(scoreDrivers, `${overdueTasks} overdue task${overdueTasks === 1 ? '' : 's'}`, overdueTasks * 8, 'positive');
-    if(dueTodayTasks > 0) aiAddScoreDriver(scoreDrivers, `${dueTodayTasks} task${dueTodayTasks === 1 ? '' : 's'} due today`, dueTodayTasks * 10, 'positive');
+    if(overdueTasks > 0) aiAddScoreDriver(scoreDrivers, `${overdueTasks} overdue task${overdueTasks === 1 ? '' : 's'}`, overdueTasks * 6, 'positive');
+    if(dueTodayTasks > 0) aiAddScoreDriver(scoreDrivers, `${dueTodayTasks} task${dueTodayTasks === 1 ? '' : 's'} due today`, dueTodayTasks * 8, 'positive');
 
-    const rawLeadScore = engagementScore + taskScore + stageBoost + recencyBoost + intent.heatDelta;
+    const rawLeadScore = isNetwork ? 0 : baseLeadScore + engagementScore + taskScore + stageBoost + recencyBoost + intent.heatDelta;
     const leadScore = Math.max(0, Math.min(100, Math.round(rawLeadScore)));
-    const opportunityScore = Math.max(0, Math.min(100, Math.round((leadScore * .48) + (stageBoost * .70) + (emailActivity.clicks * 6) + (dueTodayTasks * 4) + intent.opportunityDelta - (staleDays > 45 ? 8 : 0))));
-    const heat = aiScoreHeatLabel(leadScore);
+    const opportunityScore = isNetwork ? 0 : Math.max(0, Math.min(100, Math.round(baseOpportunityScore + opportunityStageBoost + (leadScore * .25) + (emailActivity.clicks * 4) + (dueTodayTasks * 3) + intent.opportunityDelta - (staleDays > 45 && staleDays !== 9999 ? 6 : 0))));
+    const heat = isNetwork ? 'Network' : aiScoreHeatLabel(leadScore);
     const estimatedGCI = aiExtractDealValue(contact) * (opportunityScore / 100);
     const actionResult = aiScoreRecommendedAction({stage, staleDays, overdueTasks, dueTodayTasks, emailActivity, phoneActivity, intent, heat, leadScore, opportunityScore});
     const nextAction = actionResult.nextAction;
@@ -6818,7 +6886,7 @@ function renderContactQuickSummary(){
   const taskCount = (currentContact.tasks || []).filter(t=>!t.done).length;
   const tagText = Array.isArray(currentContact.tags) && currentContact.tags.length ? currentContact.tags.join(', ') : 'No tags yet';
   const insight = buildAIContactInsights([currentContact], activityCache, smsActivityCache)[0] || {};
-  const heatClass = String(insight.heat || 'Cold').toLowerCase();
+  const heatClass = aiHeatClass(insight.heat || 'Cold');
   const topDrivers = Array.isArray(insight.scoreDrivers) ? insight.scoreDrivers.slice(0,4) : [];
 
   contactQuickSummary.innerHTML = `
@@ -6841,7 +6909,7 @@ function renderContactQuickSummary(){
           <small>${aiSafe(insight.intentLabel || 'No clear intent yet')} • ${aiSafe(insight.sentiment || 'Neutral')} signal</small>
         </div>
         <div class="text-end">
-          <span class="ai-contact-badge ${heatClass}">${aiSafe(insight.heat || 'Cold')} ${insight.leadScore ?? 0}</span>
+          <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
           <span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span>
         </div>
       </div>
@@ -7263,9 +7331,9 @@ async function loadContacts(){
           </div>
           ${(() => {
             const insight = buildAIContactInsights([c], activityCache, smsActivityCache)[0] || {};
-            const heatClass = String(insight.heat || 'Cold').toLowerCase();
+            const heatClass = aiHeatClass(insight.heat || 'Cold');
             return `<div class="ai-contact-score-row">
-              <span class="ai-contact-badge ${heatClass}">${insight.heat || 'Cold'} Lead ${insight.leadScore ?? 0}</span>
+              <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
               <span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span>
               <span class="ai-contact-badge action">${aiSafe(insight.nextAction || 'Stay in touch')}</span>
             </div>`;
@@ -8112,7 +8180,7 @@ function renderPipelineKanban(filteredContacts){
       const overdueTasks = getOverdueTasksForContact(c);
       const lastActivity = getLastContactActivityDate(c);
       const insight = buildAIContactInsights([c], activityCache, smsActivityCache)[0] || {};
-      const heatClass = String(insight.heat || 'Cold').toLowerCase();
+      const heatClass = aiHeatClass(insight.heat || 'Cold');
 
       const card = document.createElement('div');
       card.className = 'pipeline-card';
@@ -8128,7 +8196,7 @@ function renderPipelineKanban(filteredContacts){
         </div>
         <div class="pipeline-meta-row">
           <span class="stage-pill">${c.type || 'Unassigned'}</span>
-          <span class="ai-contact-badge ${heatClass}">${aiSafe(insight.heat || 'Cold')} ${insight.leadScore ?? 0}</span>
+          <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
           <span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span>
           ${openTasks.length ? `<span class="priority-pill priority-normal">${openTasks.length} task(s)</span>` : ''}
         </div>
@@ -8231,7 +8299,7 @@ function renderPipelineCompact(filteredContacts){
             const overdueTasks = getOverdueTasksForContact(c);
             const lastActivity = getLastContactActivityDate(c);
             const insight = buildAIContactInsights([c], activityCache, smsActivityCache)[0] || {};
-            const heatClass = String(insight.heat || 'Cold').toLowerCase();
+            const heatClass = aiHeatClass(insight.heat || 'Cold');
             return `
               <tr>
                 <td><b>${contactName(c)}</b><br><small>${c.email || ''}<br>${formatPhone(c.phone || '')}</small></td>
@@ -8241,7 +8309,7 @@ function renderPipelineCompact(filteredContacts){
                   </select>
                 </td>
                 <td>${c.type || 'Unassigned'}</td>
-                <td><span class="ai-contact-badge ${heatClass}">${aiSafe(insight.heat || 'Cold')} ${insight.leadScore ?? 0}</span><br><span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span></td>
+                <td><span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span><br><span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span></td>
                 <td><small>${aiSafe(insight.nextAction || 'Stay in touch')}</small></td>
                 <td>
                   ${openTasks.length ? `<span class="priority-pill priority-normal">${openTasks.length} open</span>` : '<span class="text-muted small">None</span>'}
