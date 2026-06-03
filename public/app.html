@@ -2775,6 +2775,51 @@ body {
 .automation-pill.high { background:#fee2e2; color:#991b1b; }
 .automation-pill.normal { background:#e0f2fe; color:#075985; }
 .automation-pill.low { background:#dcfce7; color:#166534; }
+
+.transaction-party-link-card {
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  margin-bottom:10px;
+}
+.transaction-party-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.transaction-contact-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  border:1px solid var(--border);
+  background:white;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:800;
+  color:var(--primary);
+  cursor:pointer;
+  margin:3px 4px 3px 0;
+}
+.transaction-contact-pill:hover {
+  border-color:var(--accent);
+  background:#f0fdf4;
+}
+.contact-transaction-row {
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:white;
+  margin-bottom:9px;
+  cursor:pointer;
+}
+.contact-transaction-row:hover {
+  background:#f9fafb;
+  border-color:rgba(0,161,67,.35);
+}
+@media (max-width: 992px){ .transaction-party-grid { grid-template-columns:1fr; } }
+
 @media (max-width: 992px){ .transaction-automation-grid { grid-template-columns:1fr; } }
 
 </style>
@@ -3590,6 +3635,32 @@ body {
     </div>
 
     <input type="hidden" id="txnId">
+    <input type="hidden" id="txnBuyerContactId">
+    <input type="hidden" id="txnSellerContactId">
+
+    <div class="transaction-party-link-card">
+      <div class="feature-title mb-2">Connect Transaction to Contacts</div>
+      <div class="small-muted mb-2">Link buyer and seller contacts here. A single contact can have multiple transactions over time.</div>
+      <div class="transaction-party-grid">
+        <div>
+          <label class="form-label small fw-bold">Buyer Contact</label>
+          <select id="txnBuyerContactSelect" class="form-control mb-2" onchange="txnAttachPartyFromSelect('buyer')"></select>
+          <div class="d-flex gap-1 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="txnCreateContactFromParty('buyer')">Create/Link Buyer Contact</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="txnClearPartyLink('buyer')">Clear Buyer Link</button>
+          </div>
+        </div>
+        <div>
+          <label class="form-label small fw-bold">Seller Contact</label>
+          <select id="txnSellerContactSelect" class="form-control mb-2" onchange="txnAttachPartyFromSelect('seller')"></select>
+          <div class="d-flex gap-1 flex-wrap">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="txnCreateContactFromParty('seller')">Create/Link Seller Contact</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="txnClearPartyLink('seller')">Clear Seller Link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="transaction-form-grid">
       <div class="wide-2"><label class="form-label small fw-bold">Property Address</label><input id="txnAddress" class="form-control" placeholder="123 Main Street"></div>
       <div><label class="form-label small fw-bold">Side</label><select id="txnSide" class="form-control"><option>Buyer</option><option>Seller</option><option>Both</option></select></div>
@@ -3600,7 +3671,11 @@ body {
       <div><label class="form-label small fw-bold">Assigned Agent</label><input id="txnAgent" class="form-control" placeholder="Jeff Peterson"></div>
       <div><label class="form-label small fw-bold">MLS #</label><input id="txnMls" class="form-control" placeholder="Optional"></div>
       <div><label class="form-label small fw-bold">Buyer</label><input id="txnBuyer" class="form-control" placeholder="Buyer name"></div>
+      <div><label class="form-label small fw-bold">Buyer Email</label><input id="txnBuyerEmail" class="form-control" placeholder="buyer@email.com"></div>
+      <div><label class="form-label small fw-bold">Buyer Phone</label><input id="txnBuyerPhone" class="form-control" placeholder="(775) 555-1234"></div>
       <div><label class="form-label small fw-bold">Seller</label><input id="txnSeller" class="form-control" placeholder="Seller name"></div>
+      <div><label class="form-label small fw-bold">Seller Email</label><input id="txnSellerEmail" class="form-control" placeholder="seller@email.com"></div>
+      <div><label class="form-label small fw-bold">Seller Phone</label><input id="txnSellerPhone" class="form-control" placeholder="(775) 555-1234"></div>
       <div><label class="form-label small fw-bold">Lender</label><input id="txnLender" class="form-control" placeholder="Lender"></div>
       <div><label class="form-label small fw-bold">Title / Escrow</label><input id="txnTitleCompany" class="form-control" placeholder="Title company"></div>
       <div><label class="form-label small fw-bold">Contract Date</label><input id="txnContractDate" type="date" class="form-control"></div>
@@ -3718,6 +3793,17 @@ body {
       <button class="btn btn-outline-primary" onclick="quickAddTagToCurrentContact()">Add Tag</button>
     </div>
     <div id="quickTagButtons"></div>
+  </div>
+
+  <div class="feature-card">
+    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+      <div>
+        <div class="feature-title mb-1">Transactions</div>
+        <div class="small-muted">A contact can be connected to multiple buyer, seller, or dual-side transaction files.</div>
+      </div>
+      <button class="btn btn-sm btn-success" onclick="txnStartFromCurrentContact()">+ Start Transaction</button>
+    </div>
+    <div id="contactTransactionList" class="mt-2"></div>
   </div>
 
   <div class="feature-card">
@@ -7452,6 +7538,7 @@ function openContact(id){
   editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
 
   renderContactQuickSummary();
+  renderContactTransactions();
   renderQuickStageButtons();
   renderQuickTagButtons();
   updateCampaignContactButton();
@@ -9624,8 +9711,14 @@ function txnReadTransactionForm(requireAddress = true){
     gci: manualGci || Math.round(price * (pct/100)),
     agent: document.getElementById('txnAgent')?.value.trim() || '',
     mls: document.getElementById('txnMls')?.value.trim() || '',
+    buyerContactId: document.getElementById('txnBuyerContactId')?.value || '',
+    sellerContactId: document.getElementById('txnSellerContactId')?.value || '',
     buyer: document.getElementById('txnBuyer')?.value.trim() || '',
+    buyerEmail: document.getElementById('txnBuyerEmail')?.value.trim() || '',
+    buyerPhone: document.getElementById('txnBuyerPhone')?.value.trim() || '',
     seller: document.getElementById('txnSeller')?.value.trim() || '',
+    sellerEmail: document.getElementById('txnSellerEmail')?.value.trim() || '',
+    sellerPhone: document.getElementById('txnSellerPhone')?.value.trim() || '',
     lender: document.getElementById('txnLender')?.value.trim() || '',
     titleCompany: document.getElementById('txnTitleCompany')?.value.trim() || '',
     contractDate: document.getElementById('txnContractDate')?.value || '',
@@ -9710,8 +9803,167 @@ function txnAllAlerts(){
     .sort((a,b)=>({high:0,medium:1,good:2}[a.severity] ?? 3)-({high:0,medium:1,good:2}[b.severity] ?? 3));
 }
 
+
+function txnContactDisplay(contact){
+  if(!contact) return '';
+  const name = typeof contactName === 'function' ? contactName(contact) : `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+  const email = contact.email ? ` • ${contact.email}` : '';
+  const phone = contact.phone ? ` • ${formatPhone(contact.phone)}` : '';
+  return `${name}${email}${phone}`;
+}
+
+function txnRenderPartySelectors(){
+  const buyerSelect = document.getElementById('txnBuyerContactSelect');
+  const sellerSelect = document.getElementById('txnSellerContactSelect');
+  if(!buyerSelect || !sellerSelect) return;
+  const options = ['<option value="">No linked contact selected</option>'].concat(
+    (contactsCache || []).slice().sort((a,b)=>contactName(a).localeCompare(contactName(b))).map(c=>`<option value="${String(c.id)}">${txnSafe(txnContactDisplay(c))}</option>`)
+  ).join('');
+  buyerSelect.innerHTML = options;
+  sellerSelect.innerHTML = options;
+  buyerSelect.value = document.getElementById('txnBuyerContactId')?.value || '';
+  sellerSelect.value = document.getElementById('txnSellerContactId')?.value || '';
+}
+
+function txnAttachPartyFromSelect(party){
+  const prefix = party === 'seller' ? 'Seller' : 'Buyer';
+  const select = document.getElementById(`txn${prefix}ContactSelect`);
+  const hidden = document.getElementById(`txn${prefix}ContactId`);
+  const id = select?.value || '';
+  if(hidden) hidden.value = id;
+  const contact = (contactsCache || []).find(c=>String(c.id) === String(id));
+  if(contact){
+    document.getElementById(`txn${prefix}`).value = contactName(contact);
+    document.getElementById(`txn${prefix}Email`).value = contact.email || '';
+    document.getElementById(`txn${prefix}Phone`).value = formatPhone(contact.phone || '');
+  }
+  txnRenderAutomationPreview();
+}
+
+function txnClearPartyLink(party){
+  const prefix = party === 'seller' ? 'Seller' : 'Buyer';
+  const hidden = document.getElementById(`txn${prefix}ContactId`);
+  const select = document.getElementById(`txn${prefix}ContactSelect`);
+  if(hidden) hidden.value = '';
+  if(select) select.value = '';
+}
+
+async function txnCreateContactFromParty(party){
+  const prefix = party === 'seller' ? 'Seller' : 'Buyer';
+  const name = (document.getElementById(`txn${prefix}`)?.value || '').trim();
+  const email = (document.getElementById(`txn${prefix}Email`)?.value || '').trim();
+  const phone = (document.getElementById(`txn${prefix}Phone`)?.value || '').trim();
+  if(!name && !email && !phone){ alert(`Enter a ${party} name, email, or phone first.`); return; }
+
+  const existing = (contactsCache || []).find(c =>
+    (email && String(c.email || '').toLowerCase() === email.toLowerCase()) ||
+    (phone && String(c.phone || '').replace(/\D/g,'') === phone.replace(/\D/g,''))
+  );
+
+  if(existing){
+    document.getElementById(`txn${prefix}ContactId`).value = existing.id;
+    document.getElementById(`txn${prefix}`).value = contactName(existing);
+    document.getElementById(`txn${prefix}Email`).value = existing.email || email;
+    document.getElementById(`txn${prefix}Phone`).value = formatPhone(existing.phone || phone);
+    txnRenderPartySelectors();
+    alert(`${contactName(existing)} is now linked as the ${party}.`);
+    return;
+  }
+
+  const parts = name.split(/\s+/).filter(Boolean);
+  const firstName = parts.shift() || '';
+  const lastName = parts.join(' ');
+  const payload = { firstName, lastName, email, phone, type: party === 'seller' ? 'Seller' : 'Buyer', stage:'Under Contract', tags:['Transaction'] };
+
+  const res = await fetch('/api/contacts', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+  const data = await res.json().catch(()=>({}));
+  if(!data.success || !data.contact){ alert('Contact could not be created.'); return; }
+  await loadContacts();
+  document.getElementById(`txn${prefix}ContactId`).value = data.contact.id;
+  document.getElementById(`txn${prefix}`).value = contactName(data.contact);
+  document.getElementById(`txn${prefix}Email`).value = data.contact.email || email;
+  document.getElementById(`txn${prefix}Phone`).value = formatPhone(data.contact.phone || phone);
+  txnRenderPartySelectors();
+  renderContactTransactions();
+  alert(`${contactName(data.contact)} was created and linked as the ${party}.`);
+}
+
+function txnTransactionsForContact(contact){
+  if(!contact) return [];
+  txnLoad();
+  const id = String(contact.id || '');
+  const email = String(contact.email || '').toLowerCase();
+  const name = contactName(contact).toLowerCase();
+  return txnCache.filter(txn => {
+    if(String(txn.buyerContactId || '') === id || String(txn.sellerContactId || '') === id) return true;
+    if(email && (String(txn.buyerEmail || '').toLowerCase() === email || String(txn.sellerEmail || '').toLowerCase() === email)) return true;
+    if(name && (String(txn.buyer || '').toLowerCase() === name || String(txn.seller || '').toLowerCase() === name)) return true;
+    return false;
+  }).sort((a,b)=>new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+}
+
+function renderContactTransactions(){
+  const el = document.getElementById('contactTransactionList');
+  if(!el || !currentContact) return;
+  const txns = txnTransactionsForContact(currentContact);
+  if(!txns.length){
+    el.innerHTML = '<div class="small-muted">No transactions linked to this contact yet.</div>';
+    return;
+  }
+  el.innerHTML = txns.map(txn => {
+    const role = String(txn.buyerContactId || '') === String(currentContact.id) || String(txn.buyer || '').toLowerCase() === contactName(currentContact).toLowerCase() ? 'Buyer' : 'Seller';
+    const alerts = txnCriticalAlerts(txn).filter(a=>a.severity !== 'good');
+    return `
+      <div class="contact-transaction-row" onclick="showTab('transactions'); setTimeout(()=>txnOpenPanel('${txn.id}'), 100);">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <div><b>${txnSafe(txn.address || 'Untitled Transaction')}</b><br><small>${role} • ${txnSafe(txn.status || 'Active')} • Close: ${txnDate(txn.closeDate) || 'Not set'}</small></div>
+          <div class="text-end"><span class="transaction-status-pill ${txnStatusClass(txn.status)}">${txnSafe(txn.status || 'Active')}</span><br><small>${alerts.length ? alerts.length + ' alert(s)' : 'On track'}</small></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function txnStartFromCurrentContact(){
+  if(!currentContact){ showTab('transactions'); txnStartNew(); return; }
+  showTab('transactions');
+  setTimeout(()=>{
+    txnStartNew();
+    const typeText = `${currentContact.type || ''} ${(currentContact.tags || []).join(' ')}`.toLowerCase();
+    const isSeller = typeText.includes('seller') || typeText.includes('listing');
+    const prefix = isSeller ? 'Seller' : 'Buyer';
+    document.getElementById('txnSide').value = isSeller ? 'Seller' : 'Buyer';
+    document.getElementById(`txn${prefix}ContactId`).value = currentContact.id;
+    document.getElementById(`txn${prefix}`).value = contactName(currentContact);
+    document.getElementById(`txn${prefix}Email`).value = currentContact.email || '';
+    document.getElementById(`txn${prefix}Phone`).value = formatPhone(currentContact.phone || '');
+    document.getElementById('txnStatus').value = 'Under Contract';
+    txnRenderPartySelectors();
+    document.getElementById('txnAddress')?.focus();
+  }, 120);
+}
+
+function txnOpenLinkedContact(id){
+  if(!id) return;
+  showTab('contacts');
+  setTimeout(()=>openContact(id), 100);
+}
+
+function txnPartyPanelHtml(txn, party){
+  const prefix = party === 'seller' ? 'seller' : 'buyer';
+  const label = party === 'seller' ? 'Seller' : 'Buyer';
+  const id = txn[`${prefix}ContactId`] || '';
+  const name = txn[prefix] || '—';
+  const email = txn[`${prefix}Email`] || '';
+  const phone = txn[`${prefix}Phone`] || '';
+  const contact = id ? (contactsCache || []).find(c=>String(c.id) === String(id)) : null;
+  const click = id ? ` onclick="txnOpenLinkedContact('${id}')"` : '';
+  const pill = id ? `<span class="transaction-contact-pill"${click}>Open Contact</span>` : `<span class="small-muted">Not linked</span>`;
+  return `<div class="transaction-meta-box"><div class="small-muted">${label}</div><b>${txnSafe(name)}</b><br><small>${txnSafe(email)}${email && phone ? ' • ' : ''}${txnSafe(formatPhone(phone))}</small><br>${pill}</div>`;
+}
+
 function txnInit(){
   txnLoad();
+  txnRenderPartySelectors();
   txnRenderChecklistEditor({});
   txnRenderAll();
 }
@@ -9845,12 +10097,13 @@ function txnStartNew(){
   txnWorkingDocs = [];
   document.getElementById('transactionFormCard').style.display = 'block';
   document.getElementById('transactionFormTitle').innerText = 'New Transaction';
-  ['txnId','txnAddress','txnPrice','txnGci','txnAgent','txnMls','txnBuyer','txnSeller','txnLender','txnTitleCompany','txnContractDate','txnEmdDue','txnInspectionDate','txnAppraisalDate','txnLoanDate','txnWalkthroughDate','txnCloseDate','txnNotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  ['txnId','txnAddress','txnPrice','txnGci','txnAgent','txnMls','txnBuyerContactId','txnSellerContactId','txnBuyer','txnBuyerEmail','txnBuyerPhone','txnSeller','txnSellerEmail','txnSellerPhone','txnLender','txnTitleCompany','txnContractDate','txnEmdDue','txnInspectionDate','txnAppraisalDate','txnLoanDate','txnWalkthroughDate','txnCloseDate','txnNotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
   if(document.getElementById('txnCommissionPercent')) document.getElementById('txnCommissionPercent').value='2.5';
   if(document.getElementById('txnSide')) document.getElementById('txnSide').value='Buyer';
   if(document.getElementById('txnStatus')) document.getElementById('txnStatus').value='Active';
   if(document.getElementById('txnRisk')) document.getElementById('txnRisk').value='Normal';
   ['txnAutomationEnabled','txnAutoCreateDates','txnAutoCreateDocs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=true; });
+  txnRenderPartySelectors();
   txnRenderChecklistEditor({});
   txnRenderDocumentList();
   txnRenderAutomationPreview();
@@ -9926,6 +10179,7 @@ function txnSaveTransaction(){
   txnSaveAll();
   document.getElementById('transactionFormCard').style.display = 'none';
   txnRenderAll();
+  renderContactTransactions();
   loadCalendar();
 }
 
@@ -9967,8 +10221,14 @@ function txnEdit(id){
   document.getElementById('txnGci').value = txn.gci || '';
   document.getElementById('txnAgent').value = txn.agent || '';
   document.getElementById('txnMls').value = txn.mls || '';
+  document.getElementById('txnBuyerContactId').value = txn.buyerContactId || '';
+  document.getElementById('txnSellerContactId').value = txn.sellerContactId || '';
   document.getElementById('txnBuyer').value = txn.buyer || '';
+  document.getElementById('txnBuyerEmail').value = txn.buyerEmail || '';
+  document.getElementById('txnBuyerPhone').value = txn.buyerPhone || '';
   document.getElementById('txnSeller').value = txn.seller || '';
+  document.getElementById('txnSellerEmail').value = txn.sellerEmail || '';
+  document.getElementById('txnSellerPhone').value = txn.sellerPhone || '';
   document.getElementById('txnLender').value = txn.lender || '';
   document.getElementById('txnTitleCompany').value = txn.titleCompany || '';
   document.getElementById('txnContractDate').value = txn.contractDate || '';
@@ -9984,6 +10244,7 @@ function txnEdit(id){
   if(document.getElementById('txnAutoCreateDates')) document.getElementById('txnAutoCreateDates').checked = txn.autoCreateDates !== false;
   if(document.getElementById('txnAutoCreateDocs')) document.getElementById('txnAutoCreateDocs').checked = txn.autoCreateDocs !== false;
   txnWorkingDocs = Array.isArray(txn.documents) ? [...txn.documents] : [];
+  txnRenderPartySelectors();
   txnRenderChecklistEditor(txn.checklist || {});
   txnRenderDocumentList();
   txnRenderAutomationPreview();
@@ -9999,6 +10260,7 @@ function txnDeleteCurrent(){
   txnSaveAll();
   txnCancelEdit();
   txnRenderAll();
+  renderContactTransactions();
 }
 
 function txnOpenPanel(id){
@@ -10033,8 +10295,8 @@ function txnOpenPanel(id){
 
     <div class="section"><h6>People & Vendors</h6>
       <div class="transaction-meta-grid">
-        <div class="transaction-meta-box"><div class="small-muted">Buyer</div><b>${txnSafe(txn.buyer || '—')}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">Seller</div><b>${txnSafe(txn.seller || '—')}</b></div>
+        ${txnPartyPanelHtml(txn, 'buyer')}
+        ${txnPartyPanelHtml(txn, 'seller')}
         <div class="transaction-meta-box"><div class="small-muted">Lender</div><b>${txnSafe(txn.lender || '—')}</b></div>
         <div class="transaction-meta-box"><div class="small-muted">Title / Escrow</div><b>${txnSafe(txn.titleCompany || '—')}</b></div>
       </div>
