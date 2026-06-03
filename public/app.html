@@ -1978,162 +1978,192 @@ body {
 }
 
 
-/* ===== DASHBOARD 2.0 PREMIUM COMMAND CENTER ===== */
-.dashboard-hero-strip {
-  background:linear-gradient(135deg, #042C49 0%, #0b486f 55%, #00A143 160%);
+/* ===== DASHBOARD / SNAPSHOT SPLIT ===== */
+.ai-dashboard-hero {
+  background:linear-gradient(135deg, #042C49 0%, #06496f 58%, #00A143 140%);
   color:white;
   border-radius:24px;
-  padding:22px;
-  box-shadow:0 18px 42px rgba(4,44,73,.22);
-  margin:16px 0 4px 0;
+  padding:26px;
   display:grid;
-  grid-template-columns:1.2fr .8fr;
+  grid-template-columns:1fr auto;
   gap:18px;
   align-items:center;
+  box-shadow:0 18px 45px rgba(4,44,73,.22);
+  overflow:hidden;
+  position:relative;
 }
-.dashboard-hero-title {
-  font-size:24px;
+.ai-dashboard-hero::after {
+  content:'';
+  position:absolute;
+  width:260px;
+  height:260px;
+  border-radius:999px;
+  right:-110px;
+  top:-120px;
+  background:rgba(255,255,255,.11);
+}
+.ai-eyebrow {
+  text-transform:uppercase;
+  letter-spacing:.10em;
+  font-size:12px;
   font-weight:900;
-  letter-spacing:-.02em;
-  margin-bottom:4px;
+  opacity:.82;
+  margin-bottom:8px;
 }
-.dashboard-hero-subtitle {
-  color:rgba(255,255,255,.82);
-  font-size:14px;
+.ai-summary-text {
+  max-width:900px;
+  font-size:15px;
+  line-height:1.55;
+  opacity:.95;
 }
-.dashboard-hero-actions {
+.ai-hero-actions {
   display:flex;
   gap:10px;
-  justify-content:flex-end;
   flex-wrap:wrap;
+  justify-content:flex-end;
+  position:relative;
+  z-index:2;
 }
-.dashboard-hero-pill {
-  background:rgba(255,255,255,.12);
-  border:1px solid rgba(255,255,255,.22);
-  color:white;
+.ai-command-grid {
+  display:grid;
+  grid-template-columns:repeat(12, 1fr);
+  gap:16px;
+}
+.ai-command-card {
+  grid-column:span 4;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:22px;
+  padding:18px;
+  box-shadow:0 10px 28px rgba(15,23,42,.07);
+  min-height:220px;
+}
+.ai-command-card-large { grid-column:span 8; }
+.ai-card-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:14px;
+}
+.ai-card-header h5 {
+  color:var(--primary);
+  font-weight:900;
+  margin:0;
+}
+.ai-card-kicker {
+  color:var(--muted);
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  margin-bottom:4px;
+}
+.ai-soft-badge,
+.ai-number-badge {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   border-radius:999px;
-  padding:8px 12px;
+  background:#ecfdf5;
+  color:#047857;
+  font-size:12px;
+  font-weight:900;
+  padding:6px 10px;
+  white-space:nowrap;
+}
+.ai-number-badge {
+  min-width:34px;
+  height:34px;
+  background:var(--primary);
+  color:white;
+}
+.ai-priority-item,
+.ai-action-item,
+.ai-lead-item {
+  border:1px solid var(--border);
+  background:#f9fafb;
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:10px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+}
+.ai-priority-item b,
+.ai-action-item b,
+.ai-lead-item b { color:var(--primary); }
+.ai-priority-icon {
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  background:#eef6ff;
+  color:var(--primary);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 34px;
+  font-weight:900;
+}
+.ai-action-list .btn { white-space:nowrap; }
+.ai-forecast-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.ai-forecast-grid div {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:13px;
+}
+.ai-forecast-grid b {
+  color:var(--accent);
+  font-size:26px;
+  font-weight:900;
+  display:block;
+}
+.ai-forecast-grid span {
+  color:var(--muted);
   font-size:12px;
   font-weight:800;
 }
-.dashboard-widget-premium {
-  position:relative;
-  overflow:hidden;
-}
-.dashboard-widget-premium::before {
-  content:'';
-  position:absolute;
-  inset:0 0 auto 0;
-  height:4px;
-  background:linear-gradient(90deg, var(--accent), #38bdf8, var(--primary));
-  opacity:.9;
-}
-.dashboard-widget-resize-controls {
-  display:inline-flex;
-  gap:4px;
-  align-items:center;
-  margin-left:auto;
-}
-.dashboard-size-btn {
-  width:24px;
-  height:24px;
-  border:1px solid var(--border);
-  background:#fff;
-  color:var(--primary);
-  border-radius:999px;
-  font-size:10px;
-  font-weight:900;
-  line-height:1;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-}
-.dashboard-size-btn:hover { background:#f0fdf4; border-color:rgba(0,161,67,.35); }
-.dashboard-summary-list { display:grid; gap:10px; }
-.dashboard-summary-item {
+.ai-pulse-row {
   display:flex;
-  gap:10px;
-  align-items:flex-start;
-  background:#f8fafc;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:10px;
-}
-.dashboard-summary-icon {
-  width:32px;
-  height:32px;
-  border-radius:12px;
-  display:inline-flex;
+  justify-content:space-between;
   align-items:center;
-  justify-content:center;
-  background:#e0f2fe;
-  color:#075985;
-  flex:0 0 32px;
-  font-weight:900;
+  font-weight:800;
+  color:var(--primary);
 }
-.dashboard-priority-row {
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:11px;
-  background:#fff;
-  margin-bottom:9px;
-  cursor:pointer;
-}
-.dashboard-priority-row:hover { background:#f9fafb; border-color:rgba(0,161,67,.28); }
-.heat-row {
-  display:grid;
-  grid-template-columns:80px 1fr 46px;
-  align-items:center;
-  gap:10px;
-  margin-bottom:10px;
-}
-.heat-label { font-weight:900; color:var(--primary); }
-.heat-track { height:12px; background:#e5e7eb; border-radius:999px; overflow:hidden; }
-.heat-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, #00A143, #38bdf8); }
-.heat-count { font-weight:900; color:var(--primary); text-align:right; }
-.forecast-grid {
-  display:grid;
-  grid-template-columns:repeat(2, 1fr);
-  gap:10px;
-}
-.forecast-tile {
-  background:#f8fafc;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:12px;
-}
-.forecast-number { font-size:24px; font-weight:900; color:var(--accent); }
-.forecast-label { font-size:12px; color:var(--muted); font-weight:700; }
-.opportunity-row {
-  display:grid;
-  grid-template-columns:1.2fr .8fr .8fr auto;
-  gap:10px;
-  align-items:center;
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:12px;
-  background:#fff;
-  margin-bottom:10px;
-  cursor:pointer;
-}
-.opportunity-row:hover { background:#f9fafb; border-color:rgba(0,161,67,.3); transform:translateY(-1px); }
-.heat-badge {
-  display:inline-flex;
-  align-items:center;
-  gap:5px;
-  padding:5px 9px;
+.ai-meter {
+  height:12px;
+  background:#e5e7eb;
   border-radius:999px;
+  overflow:hidden;
+  margin-top:7px;
+}
+.ai-meter div {
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, #00A143, #38bdf8);
+  border-radius:999px;
+  transition:width .35s ease;
+}
+.snapshot-label {
+  display:inline-flex;
+  background:#eef2f7;
+  color:#334155;
+  border-radius:999px;
+  padding:6px 10px;
   font-size:12px;
   font-weight:900;
 }
-.heat-hot { background:#fee2e2; color:#991b1b; }
-.heat-warm { background:#fef3c7; color:#92400e; }
-.heat-cold { background:#e5e7eb; color:#334155; }
-@media (max-width: 992px){
-  .dashboard-hero-strip { grid-template-columns:1fr; }
-  .dashboard-hero-actions { justify-content:flex-start; }
-  .opportunity-row { grid-template-columns:1fr; }
-  .forecast-grid { grid-template-columns:1fr; }
+@media (max-width: 1100px){
+  .ai-command-card,
+  .ai-command-card-large { grid-column:span 12; }
+  .ai-dashboard-hero { grid-template-columns:1fr; }
+  .ai-hero-actions { justify-content:flex-start; }
 }
 
 </style>
@@ -2153,6 +2183,7 @@ body {
 
 <ul class="nav nav-tabs">
   <li class="nav-item"><button class="nav-link active" id="tabDashboard" onclick="showTab('dashboard')">Dashboard</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabSnapshot" onclick="showTab('snapshot')">Snapshot</button></li>
   <li class="nav-item"><button class="nav-link" id="tabCampaigns" onclick="showTab('campaigns')">Email Campaigns</button></li>
   <li class="nav-item"><button class="nav-link" id="tabEmailDesigner" onclick="showTab('emailDesigner')">Email Designer</button></li>
   <li class="nav-item"><button class="nav-link" id="tabTextCampaigns" onclick="showTab('textCampaigns')">Text Campaigns</button></li>
@@ -2198,55 +2229,101 @@ body {
 <!-- DASHBOARD -->
 <div id="dashboardTab" class="mt-4">
 
+  <div class="ai-dashboard-hero">
+    <div>
+      <div class="ai-eyebrow">Excel AI Command Center</div>
+      <h3 class="mb-2">Today's Game Plan</h3>
+      <div id="aiExecutiveSummary" class="ai-summary-text">Loading your daily briefing...</div>
+    </div>
+    <div class="ai-hero-actions">
+      <button class="btn btn-light" onclick="showTab('contacts')">View Contacts</button>
+      <button class="btn btn-outline-light" onclick="showTab('snapshot')">Open Snapshot</button>
+    </div>
+  </div>
+
+  <div class="ai-command-grid mt-3">
+
+    <div class="ai-command-card ai-command-card-large">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Priority Engine</div>
+          <h5>Today's Priorities</h5>
+        </div>
+        <span class="ai-soft-badge">AI Suggested</span>
+      </div>
+      <div id="aiTodayPriorities" class="ai-priority-list"></div>
+    </div>
+
+    <div class="ai-command-card">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Lead Intelligence</div>
+          <h5>Hot Leads</h5>
+        </div>
+        <span id="aiHotLeadCount" class="ai-number-badge">0</span>
+      </div>
+      <div id="aiHotLeads" class="ai-lead-list"></div>
+    </div>
+
+    <div class="ai-command-card">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Opportunity Forecast</div>
+          <h5>Pipeline Outlook</h5>
+        </div>
+        <span class="ai-soft-badge">30 Days</span>
+      </div>
+      <div class="ai-forecast-grid">
+        <div><b id="aiForecastContacts">0</b><span>Contacts</span></div>
+        <div><b id="aiForecastCampaigns">0</b><span>Campaigns</span></div>
+        <div><b id="aiForecastEngaged">0</b><span>Engaged</span></div>
+        <div><b id="aiForecastFollowups">0</b><span>Follow-ups</span></div>
+      </div>
+      <div id="aiForecastNote" class="small-muted mt-3"></div>
+    </div>
+
+    <div class="ai-command-card ai-command-card-large">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Recommended Actions</div>
+          <h5>What To Do Next</h5>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="showTab('tasks')">Tasks</button>
+      </div>
+      <div id="aiRecommendedActions" class="ai-action-list"></div>
+    </div>
+
+    <div class="ai-command-card">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Marketing Pulse</div>
+          <h5>Performance Signal</h5>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="showTab('snapshot')">Details</button>
+      </div>
+      <div class="ai-pulse-meter">
+        <div class="ai-pulse-row"><span>Open Rate</span><b id="aiPulseOpenRate">0%</b></div>
+        <div class="ai-meter"><div id="aiPulseOpenBar"></div></div>
+        <div class="ai-pulse-row mt-2"><span>Click Rate</span><b id="aiPulseClickRate">0%</b></div>
+        <div class="ai-meter"><div id="aiPulseClickBar"></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SNAPSHOT -->
+<div id="snapshotTab" class="mt-4" style="display:none;">
+
   <div class="dashboard-header-row">
     <div>
-      <h4 class="mb-1">Dashboard</h4>
-      <div class="dashboard-help">Drag cards to rearrange your dashboard. Your layout saves automatically.</div>
+      <h4 class="mb-1">Snapshot</h4>
+      <div class="dashboard-help">Analytics, campaign performance, list health, recent activity, and business metrics. Drag cards to rearrange your Snapshot layout.</div>
     </div>
     <button class="btn btn-sm btn-outline-primary" onclick="resetDashboardLayout()">Reset Layout</button>
   </div>
 
-
-
-  <div class="dashboard-hero-strip">
-    <div>
-      <div class="dashboard-hero-title">Excel Command Center</div>
-      <div class="dashboard-hero-subtitle">A smarter real estate marketing dashboard for follow-ups, lead engagement, pipeline focus, and campaign performance.</div>
-    </div>
-    <div class="dashboard-hero-actions">
-      <span class="dashboard-hero-pill">AI-ready insights</span>
-      <span class="dashboard-hero-pill">Lead heat scoring</span>
-      <span class="dashboard-hero-pill">Pipeline focus</span>
-    </div>
-  </div>
-
   <div id="dashboardWidgetGrid" class="dashboard-grid">
-
-    <div class="dashboard-widget dashboard-widget-medium dashboard-widget-premium" data-widget-id="executiveSummary">
-      <div class="widget-title-row"><h6 class="widget-title">AI Executive Summary</h6><span class="drag-handle">⋮⋮</span></div>
-      <div id="dashExecutiveSummary" class="dashboard-summary-list"></div>
-    </div>
-
-    <div class="dashboard-widget dashboard-widget-medium dashboard-widget-premium" data-widget-id="todaysPriorities">
-      <div class="widget-title-row"><h6 class="widget-title">Today's Priorities</h6><span class="drag-handle">⋮⋮</span></div>
-      <div id="dashTodaysPriorities"></div>
-    </div>
-
-    <div class="dashboard-widget dashboard-widget-medium dashboard-widget-premium" data-widget-id="leadHeatMap">
-      <div class="widget-title-row"><h6 class="widget-title">Lead Heat Map</h6><span class="drag-handle">⋮⋮</span></div>
-      <div id="dashLeadHeatMap"></div>
-    </div>
-
-    <div class="dashboard-widget dashboard-widget-medium dashboard-widget-premium" data-widget-id="commissionForecast">
-      <div class="widget-title-row"><h6 class="widget-title">Commission Forecast</h6><span class="drag-handle">⋮⋮</span></div>
-      <div id="dashCommissionForecast"></div>
-    </div>
-
-    <div class="dashboard-widget dashboard-widget-large dashboard-widget-premium" data-widget-id="topOpportunities">
-      <div class="widget-title-row"><h6 class="widget-title">Top Opportunities</h6><span class="drag-handle">⋮⋮</span></div>
-      <div id="dashTopOpportunities"></div>
-    </div>
-
 
     <div class="dashboard-widget dashboard-widget-small" data-widget-id="totalContacts">
       <div class="widget-title-row"><h6 class="widget-title">Total Contacts</h6><span class="drag-handle">⋮⋮</span></div>
@@ -4436,6 +4513,7 @@ function addContactType(){
 
 function showTab(t){
   dashboardTab.style.display = t==='dashboard'?'block':'none';
+  snapshotTab.style.display = t==='snapshot'?'block':'none';
   campaignsTab.style.display = t==='campaigns'?'block':'none';
   emailDesignerTab.style.display = t==='emailDesigner'?'block':'none';
   textCampaignsTab.style.display = t==='textCampaigns'?'block':'none';
@@ -4444,10 +4522,15 @@ function showTab(t){
   tasksTab.style.display = t==='tasks'?'block':'none';
   calendarTab.style.display = t==='calendar'?'block':'none';
 
-  [tabDashboard, tabCampaigns, tabEmailDesigner, tabTextCampaigns, tabContacts, tabPipeline, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
+  [tabDashboard, tabSnapshot, tabCampaigns, tabEmailDesigner, tabTextCampaigns, tabContacts, tabPipeline, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
 
   if(t === 'dashboard'){
     tabDashboard.classList.add('active');
+    loadDashboard();
+  }
+
+  if(t === 'snapshot'){
+    tabSnapshot.classList.add('active');
     loadDashboard();
     setTimeout(()=>Object.values(dashboardCharts).forEach(chart=>chart.resize()), 150);
   }
@@ -4500,6 +4583,86 @@ function showTab(t){
 }
 
 /* DASHBOARD */
+
+function renderAIDashboard(data = {}, campaigns = [], activity = [], smsActivity = [], taskStats = {}){
+  const opened = Number(data.totalOpened || 0);
+  const clicks = Number(data.totalClicks || 0);
+  const sent = Number(data.totalSent || 0);
+  const openRate = Number(data.openRate || 0);
+  const clickRate = Number(data.clickRate || 0);
+  const dueToday = Number(taskStats.dueToday || 0);
+  const overdue = Number(taskStats.overdue || 0);
+  const engaged = opened + clicks;
+  const campaignCount = Array.isArray(campaigns) ? campaigns.length : 0;
+
+  const summaryParts = [];
+  summaryParts.push(`You have <b>${data.totalContacts || 0}</b> contacts and <b>${campaignCount}</b> saved email campaigns.`);
+  if(overdue > 0) summaryParts.push(`<b>${overdue}</b> follow-up${overdue === 1 ? '' : 's'} overdue.`);
+  if(dueToday > 0) summaryParts.push(`<b>${dueToday}</b> follow-up${dueToday === 1 ? '' : 's'} due today.`);
+  if(engaged > 0) summaryParts.push(`<b>${engaged}</b> tracked engagement event${engaged === 1 ? '' : 's'} from opens/clicks.`);
+  summaryParts.push(`Current marketing signal: <b>${openRate}% open rate</b> and <b>${clickRate}% click rate</b>.`);
+  aiExecutiveSummary.innerHTML = summaryParts.join(' ');
+
+  const priorities = [];
+  if(overdue > 0) priorities.push({icon:'!', title:'Overdue follow-ups need attention', text:`${overdue} task${overdue === 1 ? '' : 's'} should be handled first today.`, action:'View Tasks', tab:'tasks'});
+  if(dueToday > 0) priorities.push({icon:'✓', title:'Follow-ups due today', text:`${dueToday} contact${dueToday === 1 ? '' : 's'} need a timely touch.`, action:'Open Tasks', tab:'tasks'});
+  if(clicks > 0) priorities.push({icon:'🔥', title:'Follow up with engaged contacts', text:`You have ${clicks} tracked link click${clicks === 1 ? '' : 's'} to review.`, action:'Snapshot', tab:'snapshot'});
+  if(campaignCount === 0) priorities.push({icon:'+', title:'Create your first campaign', text:'Start with a simple seller or buyer nurture campaign.', action:'Campaigns', tab:'campaigns'});
+  if(priorities.length === 0) priorities.push({icon:'AI', title:'System is calm today', text:'No overdue follow-ups detected. Review Snapshot for performance trends.', action:'Snapshot', tab:'snapshot'});
+
+  aiTodayPriorities.innerHTML = priorities.slice(0,4).map(item=>`
+    <div class="ai-priority-item">
+      <span class="ai-priority-icon">${item.icon}</span>
+      <div class="flex-grow-1"><b>${item.title}</b><br><small>${item.text}</small></div>
+      <button class="btn btn-sm btn-outline-primary" onclick="showTab('${item.tab}')">${item.action}</button>
+    </div>
+  `).join('');
+
+  const leadMap = new Map();
+  (Array.isArray(activity) ? activity : []).forEach(item=>{
+    const key = (item.email || item.contactEmail || '').toLowerCase();
+    if(!key) return;
+    const current = leadMap.get(key) || { email:key, opens:0, clicks:0, last:item.date || item.createdAt || item.openedAt || item.clickedAt || '' };
+    const type = String(item.type || item.event || '').toLowerCase();
+    if(type.includes('click') || item.url) current.clicks += 1;
+    if(type.includes('open') || item.opened) current.opens += 1;
+    const date = item.date || item.createdAt || item.openedAt || item.clickedAt || '';
+    if(date && (!current.last || new Date(date) > new Date(current.last))) current.last = date;
+    leadMap.set(key, current);
+  });
+  const hotLeads = Array.from(leadMap.values()).map(lead=>({ ...lead, score:(lead.clicks * 20) + (lead.opens * 7) })).sort((a,b)=>b.score-a.score).slice(0,5);
+  aiHotLeadCount.innerText = hotLeads.length;
+  aiHotLeads.innerHTML = hotLeads.length ? hotLeads.map(lead=>`
+    <div class="ai-lead-item">
+      <div><b>${lead.email}</b><br><small>${lead.opens} open${lead.opens === 1 ? '' : 's'} · ${lead.clicks} click${lead.clicks === 1 ? '' : 's'}${lead.last ? ` · ${formatDate(lead.last)}` : ''}</small></div>
+      <span class="ai-soft-badge">${lead.score}</span>
+    </div>
+  `).join('') : '<div class="text-muted">No hot leads yet. Engagement will appear here after contacts open or click campaigns.</div>';
+
+  aiForecastContacts.innerText = data.totalContacts || 0;
+  aiForecastCampaigns.innerText = campaignCount || 0;
+  aiForecastEngaged.innerText = engaged || 0;
+  aiForecastFollowups.innerText = dueToday + overdue;
+  aiForecastNote.innerHTML = overdue > 0 ? 'AI note: clearing overdue follow-ups is the fastest way to improve today\'s opportunity score.' : 'AI note: your follow-up queue is clean. Focus on engaged contacts and new campaign creation.';
+
+  const actions = [];
+  actions.push({title:'Review hot leads', text:'Start with contacts who clicked or opened recently.', tab:'snapshot'});
+  if(overdue > 0) actions.push({title:'Clear overdue tasks', text:'Protect deals and relationships by closing the loop today.', tab:'tasks'});
+  actions.push({title:'Create a market update', text:'Use Email Campaigns or Email Designer to send a valuable update.', tab:'campaigns'});
+  actions.push({title:'Check pipeline momentum', text:'Review stage movement and next opportunities.', tab:'pipeline'});
+  aiRecommendedActions.innerHTML = actions.slice(0,4).map(action=>`
+    <div class="ai-action-item">
+      <div><b>${action.title}</b><br><small>${action.text}</small></div>
+      <button class="btn btn-sm btn-outline-primary" onclick="showTab('${action.tab}')">Open</button>
+    </div>
+  `).join('');
+
+  aiPulseOpenRate.innerText = `${openRate}%`;
+  aiPulseClickRate.innerText = `${clickRate}%`;
+  aiPulseOpenBar.style.width = `${Math.min(openRate,100)}%`;
+  aiPulseClickBar.style.width = `${Math.min(clickRate,100)}%`;
+}
+
 function initDashboardDrag(){
   if(dashboardSortable) return;
   applyDashboardLayout();
@@ -4514,7 +4677,7 @@ function initDashboardDrag(){
 }
 
 function initDashboardDrilldowns(){
-  const drilldownWidgets = ['executiveSummary','todaysPriorities','leadHeatMap','commissionForecast','topOpportunities','totalContacts','totalEmailCampaigns','totalTextCampaigns','openRate','clickRate','totalSent','totalTextsSent','totalOpened','totalClicks','listHealth','dueToday','overdue','recentActivity','topLinks','campaignPerformance','activityTrend','engagementBreakdown'];
+  const drilldownWidgets = ['totalContacts','totalEmailCampaigns','totalTextCampaigns','openRate','clickRate','totalSent','totalTextsSent','totalOpened','totalClicks','listHealth','dueToday','overdue','recentActivity','topLinks','campaignPerformance','activityTrend','engagementBreakdown'];
 
   drilldownWidgets.forEach(widgetId=>{
     const widget = dashboardWidgetGrid.querySelector(`[data-widget-id="${widgetId}"]`);
@@ -4530,52 +4693,6 @@ function initDashboardDrilldowns(){
   });
 }
 
-
-
-
-function getDashboardSizeKey(widgetId){
-  return `excelMarketingDashboardWidgetSize_${widgetId}`;
-}
-
-function setDashboardWidgetSize(widget, size){
-  if(!widget) return;
-  widget.classList.remove('dashboard-widget-small','dashboard-widget-medium','dashboard-widget-large');
-  if(size === 'small') widget.classList.add('dashboard-widget-small');
-  else if(size === 'large') widget.classList.add('dashboard-widget-large');
-  else widget.classList.add('dashboard-widget-medium');
-  if(widget.dataset.widgetId) localStorage.setItem(getDashboardSizeKey(widget.dataset.widgetId), size);
-  setTimeout(()=>Object.values(dashboardCharts || {}).forEach(chart=>chart.resize()), 120);
-}
-
-function initDashboardResizeControls(){
-  document.querySelectorAll('#dashboardWidgetGrid .dashboard-widget').forEach(widget=>{
-    const widgetId = widget.dataset.widgetId;
-    if(!widgetId) return;
-
-    const savedSize = localStorage.getItem(getDashboardSizeKey(widgetId));
-    if(savedSize) setDashboardWidgetSize(widget, savedSize);
-
-    const titleRow = widget.querySelector('.widget-title-row');
-    if(!titleRow || titleRow.querySelector('.dashboard-widget-resize-controls')) return;
-
-    const controls = document.createElement('span');
-    controls.className = 'dashboard-widget-resize-controls';
-    controls.innerHTML = `
-      <button type="button" class="dashboard-size-btn" title="Small" data-size="small">S</button>
-      <button type="button" class="dashboard-size-btn" title="Medium" data-size="medium">M</button>
-      <button type="button" class="dashboard-size-btn" title="Large" data-size="large">L</button>
-    `;
-
-    controls.addEventListener('click', event=>{
-      const button = event.target.closest('[data-size]');
-      if(!button) return;
-      event.stopPropagation();
-      setDashboardWidgetSize(widget, button.dataset.size);
-    });
-
-    titleRow.appendChild(controls);
-  });
-}
 
 function saveDashboardLayout(){
   const order = Array.from(dashboardWidgetGrid.children).map(widget => widget.dataset.widgetId).filter(Boolean);
@@ -4594,7 +4711,6 @@ function applyDashboardLayout(){
 
 function resetDashboardLayout(){
   localStorage.removeItem('excelMarketingDashboardLayout');
-  Object.keys(localStorage).forEach(key=>{ if(key.startsWith('excelMarketingDashboardWidgetSize_')) localStorage.removeItem(key); });
   location.reload();
 }
 
@@ -4739,214 +4855,6 @@ function renderEngagementBreakdownChart(data){
   });
 }
 
-
-
-function getContactLastActivityDate(contact){
-  const email = String(contact.email || '').toLowerCase();
-  let latest = null;
-
-  activityCache.forEach(item=>{
-    if(String(item.email || '').toLowerCase() !== email) return;
-    [item.sentAt, item.sentDate, item.openedAt].forEach(value=>{
-      const date = value ? new Date(value) : null;
-      if(date && !isNaN(date.getTime()) && (!latest || date > latest)) latest = date;
-    });
-    (item.clicks || []).forEach(click=>{
-      const date = click.clickedAt ? new Date(click.clickedAt) : null;
-      if(date && !isNaN(date.getTime()) && (!latest || date > latest)) latest = date;
-    });
-  });
-
-  smsActivityCache.forEach(item=>{
-    const phoneDigits = String(contact.phone || '').replace(/\D/g,'').slice(-10);
-    const toDigits = String(item.to || '').replace(/\D/g,'').slice(-10);
-    if(phoneDigits && toDigits && phoneDigits === toDigits){
-      const date = new Date(item.sentAt || item.createdAt || 0);
-      if(!isNaN(date.getTime()) && (!latest || date > latest)) latest = date;
-    }
-  });
-
-  return latest;
-}
-
-function getContactEngagementScore(contact){
-  const email = String(contact.email || '').toLowerCase();
-  let score = 0;
-  const stage = inferStageFromContact(contact);
-
-  activityCache.forEach(item=>{
-    if(String(item.email || '').toLowerCase() !== email) return;
-    if(item.status === 'sent' || !item.status) score += 3;
-    if(item.opened) score += 12;
-    score += (item.clicks || []).length * 22;
-  });
-
-  if(['Under Contract','Pending','Appointment Set','Active Prospect'].includes(stage)) score += 25;
-  if(['New Lead','Contacted'].includes(stage)) score += 10;
-
-  const openTasks = (contact.tasks || []).filter(task=>!task.done).length;
-  score += Math.min(openTasks * 4, 16);
-
-  const lastActivity = getContactLastActivityDate(contact);
-  if(lastActivity){
-    const daysAgo = Math.max(0, Math.floor((new Date() - lastActivity) / 86400000));
-    if(daysAgo <= 2) score += 18;
-    else if(daysAgo <= 7) score += 10;
-    else if(daysAgo <= 30) score += 4;
-  }
-
-  return Math.min(100, score);
-}
-
-function getHeatLabel(score){
-  if(score >= 55) return {label:'Hot', icon:'🔥', className:'heat-hot'};
-  if(score >= 25) return {label:'Warm', icon:'🟡', className:'heat-warm'};
-  return {label:'Cold', icon:'⚪', className:'heat-cold'};
-}
-
-function getDashboardOpportunityRows(){
-  return contactsCache
-    .map(contact=>{
-      const score = getContactEngagementScore(contact);
-      const heat = getHeatLabel(score);
-      return { contact, score, heat, stage:inferStageFromContact(contact), lastActivity:getContactLastActivityDate(contact) };
-    })
-    .sort((a,b)=>b.score - a.score || String(a.stage).localeCompare(String(b.stage)))
-    .slice(0,8);
-}
-
-function getEstimatedContactValue(contact){
-  const candidates = [contact.estimatedCommission, contact.commission, contact.gci, contact.pipelineValue, contact.value, contact.dealValue, contact.price, contact.purchasePrice, contact.listPrice];
-  for(const value of candidates){
-    const number = Number(String(value || '').replace(/[^0-9.]/g,''));
-    if(number > 0){
-      if(number > 100000) return Math.round(number * 0.03);
-      return Math.round(number);
-    }
-  }
-  return 0;
-}
-
-function money(value){
-  return '$' + Number(value || 0).toLocaleString();
-}
-
-function renderDashboardExecutiveSummary(data, taskStats){
-  const target = document.getElementById('dashExecutiveSummary');
-  if(!target) return;
-
-  const opportunities = getDashboardOpportunityRows();
-  const hotCount = opportunities.filter(row=>row.heat.label === 'Hot').length;
-  const topOpportunity = opportunities[0];
-  const clicks = data.totalClicks || 0;
-  const opens = data.totalOpened || 0;
-
-  target.innerHTML = `
-    <div class="dashboard-summary-item"><span class="dashboard-summary-icon">AI</span><div><b>Business snapshot</b><br><small>${contactsCache.length} contacts, ${campaignsCache.length} email campaigns, ${opens} opens, and ${clicks} link clicks tracked.</small></div></div>
-    <div class="dashboard-summary-item"><span class="dashboard-summary-icon">!</span><div><b>Priority focus</b><br><small>${taskStats.overdue || 0} overdue follow-ups and ${taskStats.dueToday || 0} due today.</small></div></div>
-    <div class="dashboard-summary-item"><span class="dashboard-summary-icon">🔥</span><div><b>Lead heat</b><br><small>${hotCount} hot opportunities detected from campaign engagement, pipeline stage, and follow-up activity.</small></div></div>
-    <div class="dashboard-summary-item"><span class="dashboard-summary-icon">→</span><div><b>Recommended next move</b><br><small>${topOpportunity ? `Open ${contactName(topOpportunity.contact)} and follow up while engagement is fresh.` : 'Add contacts and send campaigns to start generating recommendations.'}</small></div></div>
-  `;
-}
-
-function renderDashboardTodaysPriorities(taskStats){
-  const target = document.getElementById('dashTodaysPriorities');
-  if(!target) return;
-  const rows = [];
-
-  contactsCache.forEach(contact=>{
-    (contact.tasks || []).forEach(task=>{
-      if(task.done) return;
-      if(task.due && String(task.due).slice(0,10) <= todayKey()) rows.push({contact, task});
-    });
-  });
-
-  const hotRows = getDashboardOpportunityRows().filter(row=>row.heat.label === 'Hot').slice(0,3);
-
-  let html = '';
-  rows.slice(0,5).forEach(row=>{
-    html += `<div class="dashboard-priority-row" onclick="openContact(${row.contact.id})"><b>${row.task.title || 'Follow up'}</b><br><small>${contactName(row.contact)} | Due ${formatDate(row.task.due)}</small></div>`;
-  });
-
-  hotRows.forEach(row=>{
-    html += `<div class="dashboard-priority-row" onclick="openContact(${row.contact.id})"><span class="heat-badge ${row.heat.className}">${row.heat.icon} ${row.heat.label}</span> <b>${contactName(row.contact)}</b><br><small>${row.stage} | Score ${row.score}/100</small></div>`;
-  });
-
-  if(!html) html = '<div class="text-muted">No urgent priorities. Add follow-up tasks or send campaigns to generate smart recommendations.</div>';
-  target.innerHTML = html;
-}
-
-function renderDashboardLeadHeatMap(){
-  const target = document.getElementById('dashLeadHeatMap');
-  if(!target) return;
-  const rows = contactsCache.map(contact=>getContactEngagementScore(contact));
-  const hot = rows.filter(score=>score >= 55).length;
-  const warm = rows.filter(score=>score >= 25 && score < 55).length;
-  const cold = rows.filter(score=>score < 25).length;
-  const total = Math.max(1, rows.length);
-
-  target.innerHTML = [
-    ['🔥 Hot', hot],
-    ['🟡 Warm', warm],
-    ['⚪ Cold', cold]
-  ].map(([label, count])=>`
-    <div class="heat-row">
-      <div class="heat-label">${label}</div>
-      <div class="heat-track"><div class="heat-fill" style="width:${Math.round((count/total)*100)}%"></div></div>
-      <div class="heat-count">${count}</div>
-    </div>
-  `).join('') + '<div class="small-muted mt-2">Scored from opens, clicks, pipeline stage, tasks, and recent activity.</div>';
-}
-
-function renderDashboardCommissionForecast(){
-  const target = document.getElementById('dashCommissionForecast');
-  if(!target) return;
-  const activeStages = ['Appointment Set','Active Prospect','Under Contract','Pending'];
-  const activePipeline = contactsCache.filter(contact=>activeStages.includes(inferStageFromContact(contact)));
-  const pending = contactsCache.filter(contact=>inferStageFromContact(contact) === 'Pending').length;
-  const underContract = contactsCache.filter(contact=>inferStageFromContact(contact) === 'Under Contract').length;
-  const activeProspects = contactsCache.filter(contact=>['Appointment Set','Active Prospect'].includes(inferStageFromContact(contact))).length;
-  const estimatedGci = activePipeline.reduce((sum, contact)=>sum + getEstimatedContactValue(contact), 0);
-
-  target.innerHTML = `
-    <div class="forecast-grid">
-      <div class="forecast-tile"><div class="forecast-number">${activePipeline.length}</div><div class="forecast-label">Active Opportunities</div></div>
-      <div class="forecast-tile"><div class="forecast-number">${underContract}</div><div class="forecast-label">Under Contract</div></div>
-      <div class="forecast-tile"><div class="forecast-number">${pending}</div><div class="forecast-label">Pending</div></div>
-      <div class="forecast-tile"><div class="forecast-number">${estimatedGci ? money(estimatedGci) : activeProspects}</div><div class="forecast-label">${estimatedGci ? 'Estimated GCI' : 'Active Prospects'}</div></div>
-    </div>
-    <div class="small-muted mt-2">Add list price, purchase price, deal value, or estimated commission to contacts later for a stronger forecast.</div>
-  `;
-}
-
-function renderDashboardTopOpportunities(){
-  const target = document.getElementById('dashTopOpportunities');
-  if(!target) return;
-  const rows = getDashboardOpportunityRows();
-
-  if(!rows.length){
-    target.innerHTML = '<div class="text-muted">No opportunities yet. Add contacts, stages, tasks, and campaign activity to power this widget.</div>';
-    return;
-  }
-
-  target.innerHTML = rows.map(row=>`
-    <div class="opportunity-row" onclick="openContact(${row.contact.id})">
-      <div><b>${contactName(row.contact)}</b><br><small>${row.contact.email || ''}</small></div>
-      <div><span class="heat-badge ${row.heat.className}">${row.heat.icon} ${row.heat.label}</span></div>
-      <div><small>${row.stage || 'New Lead'}<br>${row.lastActivity ? 'Last activity ' + formatDate(row.lastActivity) : 'No recent activity'}</small></div>
-      <div><b>${row.score}/100</b></div>
-    </div>
-  `).join('');
-}
-
-function renderDashboardPremiumWidgets(data, taskStats){
-  renderDashboardExecutiveSummary(data, taskStats || {});
-  renderDashboardTodaysPriorities(taskStats || {});
-  renderDashboardLeadHeatMap();
-  renderDashboardCommissionForecast();
-  renderDashboardTopOpportunities();
-}
-
 async function loadDashboard(){
   const [statsRes, campaignsRes, activityRes, smsRes, taskStatsRes] = await Promise.all([
     fetch('/api/dashboard-stats'),
@@ -4989,6 +4897,7 @@ async function loadDashboard(){
   dashOverdue.innerText = taskStats.overdue || 0;
 
   updateNotificationBadge(taskStats);
+  renderAIDashboard(data, campaignsCache, activityCache, smsActivityCache, taskStats);
 
   recentActivityList.innerHTML = '';
 
@@ -5039,21 +4948,14 @@ async function loadDashboard(){
   renderActivityTrendChart(activityCache);
   renderCampaignPerformanceChart(campaignsCache, activityCache);
   renderEngagementBreakdownChart(data);
-  renderDashboardPremiumWidgets(data, taskStats);
   initDashboardDrag();
   initDashboardDrilldowns();
-  initDashboardResizeControls();
 }
 
 
 
 function openDashboardDrilldown(type){
   const titleMap = {
-    executiveSummary:'AI Executive Summary',
-    todaysPriorities:"Today's Priorities",
-    leadHeatMap:'Lead Heat Map',
-    commissionForecast:'Commission Forecast',
-    topOpportunities:'Top Opportunities',
     totalContacts:'All Contacts',
     totalEmailCampaigns:'Email Campaigns',
     totalTextCampaigns:'Text Campaigns',
@@ -5093,55 +4995,6 @@ function contactOpenAction(email){
 }
 
 function buildDashboardDrilldownHtml(type){
-
-  if(type === 'executiveSummary'){
-    return `
-      <div class="dashboard-summary-list">
-        <div class="dashboard-summary-item"><span class="dashboard-summary-icon">AI</span><div><b>How this works</b><br><small>This is a local smart summary using your contacts, tasks, pipeline stages, email opens, clicks, and text activity.</small></div></div>
-        <div class="dashboard-summary-item"><span class="dashboard-summary-icon">✓</span><div><b>Next evolution</b><br><small>This widget is ready to connect to a real AI assistant later for written recommendations, campaign ideas, and daily action plans.</small></div></div>
-      </div>
-    `;
-  }
-
-  if(type === 'todaysPriorities'){
-    const rows = [];
-    contactsCache.forEach(contact=>{
-      (contact.tasks || []).forEach(task=>{
-        if(!task.done && task.due && String(task.due).slice(0,10) <= todayKey()) rows.push({contact, task});
-      });
-    });
-    if(!rows.length) return '<div class="text-muted">No due or overdue priorities right now.</div>';
-    return rows.map(row=>`
-      <div class="drilldown-row" onclick="openContact(${row.contact.id})">
-        <b>${row.task.title || 'Follow up'}</b><br>
-        <small>${contactName(row.contact)} | Due ${formatDate(row.task.due)} | ${row.task.priority || 'Normal'}</small>
-      </div>
-    `).join('');
-  }
-
-  if(type === 'leadHeatMap' || type === 'topOpportunities'){
-    const rows = getDashboardOpportunityRows();
-    if(!rows.length) return '<div class="text-muted">No scored opportunities yet.</div>';
-    return rows.map(row=>`
-      <div class="drilldown-row" onclick="openContact(${row.contact.id})">
-        <b>${contactName(row.contact)}</b> <span class="heat-badge ${row.heat.className}">${row.heat.icon} ${row.heat.label}</span><br>
-        <small>${row.contact.email || ''} | ${row.stage} | Score ${row.score}/100</small>
-      </div>
-    `).join('');
-  }
-
-  if(type === 'commissionForecast'){
-    const activeStages = ['Appointment Set','Active Prospect','Under Contract','Pending'];
-    const rows = contactsCache.filter(contact=>activeStages.includes(inferStageFromContact(contact)));
-    if(!rows.length) return '<div class="text-muted">No active pipeline opportunities yet.</div>';
-    return rows.map(contact=>`
-      <div class="drilldown-row" onclick="openContact(${contact.id})">
-        <b>${contactName(contact)}</b><br>
-        <small>${contact.email || ''} | ${inferStageFromContact(contact)} | Forecast ${money(getEstimatedContactValue(contact))}</small>
-      </div>
-    `).join('');
-  }
-
   if(type === 'totalContacts'){
     if(!contactsCache.length) return '<div class="text-muted">No contacts yet.</div>';
     return contactsCache
