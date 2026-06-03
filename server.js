@@ -101,6 +101,30 @@ function defaultStage(stage) {
   return PIPELINE_STAGES.includes(stage) ? stage : 'New Lead';
 }
 
+function normalizeStageForPipeline(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  const matched = PIPELINE_STAGES.find(stage => String(stage).toLowerCase() === raw);
+  return matched || 'New Lead';
+}
+
+function normalizeContactPipelineFields(contact = {}) {
+  const stage = normalizeStageForPipeline(contact.stage || contact.pipelineStage || contact.status || 'New Lead');
+  const now = new Date().toISOString();
+
+  return {
+    ...contact,
+    stage,
+    stageUpdatedAt: contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || now,
+    stageHistory: Array.isArray(contact.stageHistory) && contact.stageHistory.length
+      ? contact.stageHistory
+      : [{ stage, date: contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || now }]
+  };
+}
+
+function normalizeContactsForPipeline(contacts) {
+  return (Array.isArray(contacts) ? contacts : []).map(normalizeContactPipelineFields);
+}
+
 function todayDateString() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -140,7 +164,7 @@ function csvEscape(value) {
 }
 
 function buildContactFromPayload(payload = {}) {
-  const stage = defaultStage(payload.stage || 'New Lead');
+  const stage = normalizeStageForPipeline(payload.stage || payload.pipelineStage || payload.status || 'New Lead');
   const notes = [];
 
   if (payload.note || payload.notes) {
@@ -188,7 +212,7 @@ function isBounceError(message = '') {
 
 /* ================= DATA LOAD/SAVE ================= */
 function loadContacts() {
-  return readJsonFile(DATA_FILE, []);
+  return normalizeContactsForPipeline(readJsonFile(DATA_FILE, []));
 }
 
 function saveContacts(data) {
@@ -474,8 +498,8 @@ app.put('/api/contacts/:id', (req, res) => {
 
   if (i === -1) return res.status(404).json({ error: 'Not found' });
 
-  const oldStage = defaultStage(contacts[i].stage || 'New Lead');
-  const newStage = defaultStage(req.body.stage || oldStage);
+  const oldStage = normalizeStageForPipeline(contacts[i].stage || 'New Lead');
+  const newStage = normalizeStageForPipeline(req.body.stage || oldStage);
   const stageChanged = oldStage !== newStage;
 
   contacts[i] = {
@@ -520,8 +544,8 @@ app.put('/api/contacts/:id/stage', (req, res) => {
 
   if (!contact) return res.status(404).json({ success: false, error: 'Contact not found' });
 
-  const oldStage = defaultStage(contact.stage || 'New Lead');
-  const newStage = defaultStage(req.body.stage || 'New Lead');
+  const oldStage = normalizeStageForPipeline(contact.stage || 'New Lead');
+  const newStage = normalizeStageForPipeline(req.body.stage || 'New Lead');
 
   contact.stage = newStage;
 
@@ -543,7 +567,7 @@ app.put('/api/contacts/bulk-update', (req, res) => {
   const addTags = Array.isArray(req.body.addTags) ? req.body.addTags.map(t => String(t).trim()).filter(Boolean) : [];
   const newType = String(req.body.type || '').trim();
   const newStageRaw = String(req.body.stage || '').trim();
-  const newStage = newStageRaw ? defaultStage(newStageRaw) : '';
+  const newStage = newStageRaw ? normalizeStageForPipeline(newStageRaw) : '';
 
   if (!ids.length) {
     return res.status(400).json({ success: false, error: 'No contacts selected.' });
@@ -557,7 +581,7 @@ app.put('/api/contacts/bulk-update', (req, res) => {
     if (newType) contact.type = newType;
 
     if (newStage) {
-      const oldStage = defaultStage(contact.stage || 'New Lead');
+      const oldStage = normalizeStageForPipeline(contact.stage || 'New Lead');
       if (oldStage !== newStage) {
         contact.stage = newStage;
         contact.stageUpdatedAt = new Date().toISOString();
