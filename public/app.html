@@ -2243,6 +2243,79 @@ body {
   font-weight:700;
 }
 
+.ai-score-strip {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+}
+.ai-score-cell {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:13px;
+}
+.ai-score-cell b {
+  display:block;
+  color:var(--primary);
+  font-size:26px;
+  font-weight:900;
+}
+.ai-score-cell span {
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+}
+.ai-best-opportunity {
+  background:linear-gradient(135deg,#f8fafc,#ecfdf5);
+  border:1px solid rgba(0,161,67,.20);
+  border-radius:18px;
+  padding:16px;
+}
+.ai-best-score-row {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+.ai-big-score {
+  background:#042C49;
+  color:#fff;
+  border-radius:16px;
+  padding:12px 14px;
+  min-width:104px;
+}
+.ai-big-score b {
+  display:block;
+  font-size:28px;
+  line-height:1;
+}
+.ai-big-score span {
+  font-size:11px;
+  opacity:.82;
+  text-transform:uppercase;
+  font-weight:900;
+}
+.ai-contact-score-row {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:7px;
+}
+.ai-contact-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  border-radius:999px;
+  padding:4px 8px;
+  font-size:11px;
+  font-weight:900;
+}
+.ai-contact-badge.hot { background:#fee2e2; color:#991b1b; }
+.ai-contact-badge.warm { background:#fef3c7; color:#92400e; }
+.ai-contact-badge.cold { background:#eef2f7; color:#334155; }
+.ai-contact-badge.action { background:#e0f2fe; color:#075985; }
+@media (max-width:760px){ .ai-score-strip { grid-template-columns:1fr; } }
+
 .snapshot-label {
   display:inline-flex;
   background:#eef2f7;
@@ -2277,13 +2350,13 @@ body {
 <ul class="nav nav-tabs">
   <li class="nav-item"><button class="nav-link active" id="tabDashboard" onclick="showTab('dashboard')">Dashboard</button></li>
   <li class="nav-item"><button class="nav-link" id="tabSnapshot" onclick="showTab('snapshot')">Snapshot</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabCalendar" onclick="showTab('calendar')">Calendar</button></li>
   <li class="nav-item"><button class="nav-link" id="tabCampaigns" onclick="showTab('campaigns')">Email Campaigns</button></li>
   <li class="nav-item"><button class="nav-link" id="tabEmailDesigner" onclick="showTab('emailDesigner')">Email Designer</button></li>
   <li class="nav-item"><button class="nav-link" id="tabTextCampaigns" onclick="showTab('textCampaigns')">Text Campaigns</button></li>
   <li class="nav-item"><button class="nav-link" id="tabContacts" onclick="showTab('contacts')">Contacts</button></li>
   <li class="nav-item"><button class="nav-link" id="tabPipeline" onclick="showTab('pipeline')">Pipeline</button></li>
   <li class="nav-item"><button class="nav-link" id="tabTasks" onclick="showTab('tasks')">Tasks</button></li>
-  <li class="nav-item"><button class="nav-link" id="tabCalendar" onclick="showTab('calendar')">Calendar</button></li>
 </ul>
 
 <div class="app-toolbar">
@@ -2359,19 +2432,46 @@ body {
       <div id="aiHotLeads" class="ai-lead-list"></div>
     </div>
 
+    <div class="ai-command-card ai-command-card-large">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Best Opportunity</div>
+          <h5>Highest Probability Contact</h5>
+        </div>
+        <span class="ai-soft-badge">Opportunity Score</span>
+      </div>
+      <div id="aiBestOpportunity"></div>
+    </div>
+
     <div class="ai-command-card">
       <div class="ai-card-header">
         <div>
-          <div class="ai-card-kicker">Opportunity Forecast</div>
+          <div class="ai-card-kicker">Lead Scoring</div>
+          <h5>Heat Map</h5>
+        </div>
+        <span class="ai-soft-badge">Auto Scored</span>
+      </div>
+      <div class="ai-score-strip">
+        <div class="ai-score-cell"><b id="aiHeatHotCount">0</b><span>Hot</span></div>
+        <div class="ai-score-cell"><b id="aiHeatWarmCount">0</b><span>Warm</span></div>
+        <div class="ai-score-cell"><b id="aiHeatColdCount">0</b><span>Cold</span></div>
+      </div>
+      <div class="small-muted mt-3">Scores update from opens, clicks, task urgency, recency, text activity, and pipeline stage.</div>
+    </div>
+
+    <div class="ai-command-card">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Commission Forecast</div>
           <h5>Pipeline Outlook</h5>
         </div>
-        <span class="ai-soft-badge">30 Days</span>
+        <span class="ai-soft-badge">AI Estimate</span>
       </div>
       <div class="ai-forecast-grid">
-        <div><b id="aiForecastContacts">0</b><span>Contacts</span></div>
-        <div><b id="aiForecastCampaigns">0</b><span>Campaigns</span></div>
-        <div><b id="aiForecastEngaged">0</b><span>Engaged</span></div>
-        <div><b id="aiForecastFollowups">0</b><span>Follow-ups</span></div>
+        <div><b id="aiForecastActive">0</b><span>Active Pipeline</span></div>
+        <div><b id="aiForecastPending">0</b><span>Pending / Contract</span></div>
+        <div><b id="aiForecastGCI">$0</b><span>Forecasted GCI</span></div>
+        <div><b id="aiForecastHot">0</b><span>Hot Leads</span></div>
       </div>
       <div id="aiForecastNote" class="small-muted mt-3"></div>
     </div>
@@ -4698,21 +4798,161 @@ function showTab(t){
   }
 }
 
+
 /* DASHBOARD */
 
+function aiSafe(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+}
+
+function aiContactName(contact = {}){
+  const name = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+  return name || contact.email || contact.phone || 'Unnamed Contact';
+}
+
+function aiContactStage(contact = {}){
+  return contact.stage || contact.pipelineStage || 'New Lead';
+}
+
+function aiDaysSince(value){
+  if(!value) return 999;
+  const d = new Date(value);
+  if(isNaN(d.getTime())) return 999;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+
+function aiMoney(value){
+  const num = Number(value || 0);
+  return num.toLocaleString('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 });
+}
+
+function aiExtractDealValue(contact = {}){
+  const keys = ['expectedCommission','commission','gci','potentialCommission','estimatedCommission','dealValue','pipelineValue','propertyValue','price','purchasePrice','listPrice'];
+  for(const key of keys){
+    const raw = contact[key];
+    const parsed = Number(String(raw ?? '').replace(/[^0-9.]/g,''));
+    if(parsed > 0){
+      if(['price','purchasePrice','listPrice','propertyValue','dealValue','pipelineValue'].includes(key)) return parsed * 0.025;
+      return parsed;
+    }
+  }
+
+  const stage = aiContactStage(contact);
+  if(['Under Contract','Pending'].includes(stage)) return 9000;
+  if(stage === 'Active Prospect') return 6000;
+  if(stage === 'Appointment Set') return 3500;
+  if(stage === 'Contacted') return 2000;
+  return 1000;
+}
+
+function buildAIContactInsights(contactList = [], activityList = [], smsActivityList = []){
+  const contacts = Array.isArray(contactList) ? contactList : [];
+  const activityByEmail = new Map();
+  const activityByPhone = new Map();
+
+  (Array.isArray(activityList) ? activityList : []).forEach(item => {
+    const key = String(item.email || item.contactEmail || '').trim().toLowerCase();
+    if(!key) return;
+    const current = activityByEmail.get(key) || { opens:0, clicks:0, last:'', sent:0 };
+    const type = String(item.type || item.event || item.status || '').toLowerCase();
+    if(type.includes('click') || item.url) current.clicks += 1;
+    if(type.includes('open') || item.opened) current.opens += 1;
+    if(type.includes('sent') || item.sent) current.sent += 1;
+    const date = item.date || item.createdAt || item.openedAt || item.clickedAt || item.sentAt || '';
+    if(date && (!current.last || new Date(date) > new Date(current.last))) current.last = date;
+    activityByEmail.set(key, current);
+  });
+
+  (Array.isArray(smsActivityList) ? smsActivityList : []).forEach(item => {
+    const phone = String(item.phone || item.to || item.from || item.contactPhone || '').replace(/\D/g,'').slice(-10);
+    if(!phone) return;
+    const current = activityByPhone.get(phone) || { texts:0, last:'' };
+    current.texts += 1;
+    const date = item.date || item.createdAt || item.sentAt || item.receivedAt || '';
+    if(date && (!current.last || new Date(date) > new Date(current.last))) current.last = date;
+    activityByPhone.set(phone, current);
+  });
+
+  return contacts.map(contact => {
+    const emailKey = String(contact.email || '').trim().toLowerCase();
+    const phoneKey = String(contact.phone || '').replace(/\D/g,'').slice(-10);
+    const emailActivity = activityByEmail.get(emailKey) || { opens:0, clicks:0, last:'', sent:0 };
+    const phoneActivity = activityByPhone.get(phoneKey) || { texts:0, last:'' };
+    const tasks = Array.isArray(contact.tasks) ? contact.tasks : [];
+    const today = new Date().toISOString().slice(0,10);
+    const openTasks = tasks.filter(task => !task.done).length;
+    const overdueTasks = tasks.filter(task => !task.done && task.due && String(task.due).slice(0,10) < today).length;
+    const dueTodayTasks = tasks.filter(task => !task.done && task.due && String(task.due).slice(0,10) === today).length;
+    const stage = aiContactStage(contact);
+    const stageBoostMap = {
+      'New Lead': 8,
+      'Contacted': 16,
+      'Appointment Set': 30,
+      'Active Prospect': 38,
+      'Under Contract': 55,
+      'Pending': 60,
+      'Closed': 22,
+      'Past Client': 18
+    };
+    const stageBoost = stageBoostMap[stage] || 8;
+    const lastTouch = emailActivity.last || phoneActivity.last || contact.lastContactedAt || contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || '';
+    const staleDays = aiDaysSince(lastTouch);
+    const recencyBoost = staleDays <= 2 ? 18 : staleDays <= 7 ? 12 : staleDays <= 14 ? 6 : staleDays <= 30 ? 0 : -12;
+    const engagementScore = (emailActivity.clicks * 18) + (emailActivity.opens * 8) + (phoneActivity.texts * 8);
+    const taskScore = (overdueTasks * 8) + (dueTodayTasks * 10) + (openTasks * 3);
+    const rawLeadScore = engagementScore + taskScore + stageBoost + recencyBoost;
+    const leadScore = Math.max(0, Math.min(100, Math.round(rawLeadScore)));
+    const opportunityScore = Math.max(0, Math.min(100, Math.round((leadScore * .58) + (stageBoost * .72) + (emailActivity.clicks * 6) + (dueTodayTasks * 4) - (staleDays > 45 ? 8 : 0))));
+    const heat = leadScore >= 75 ? 'Hot' : leadScore >= 45 ? 'Warm' : 'Cold';
+    const estimatedGCI = aiExtractDealValue(contact) * (opportunityScore / 100);
+
+    let nextAction = 'Stay in touch';
+    let nextActionReason = 'Keep this contact warm with useful market information.';
+    if(overdueTasks > 0){
+      nextAction = 'Handle overdue task';
+      nextActionReason = `${overdueTasks} overdue follow-up${overdueTasks === 1 ? '' : 's'} need attention.`;
+    } else if(emailActivity.clicks > 0 && staleDays <= 14){
+      nextAction = 'Call or text today';
+      nextActionReason = `${emailActivity.clicks} link click${emailActivity.clicks === 1 ? '' : 's'} show strong intent.`;
+    } else if(emailActivity.opens >= 2 && staleDays <= 14){
+      nextAction = 'Send personal follow-up';
+      nextActionReason = `${emailActivity.opens} recent open${emailActivity.opens === 1 ? '' : 's'} show interest.`;
+    } else if(stage === 'New Lead'){
+      nextAction = 'Make first contact';
+      nextActionReason = 'New leads should not sit without a personal touch.';
+    } else if(staleDays >= 30){
+      nextAction = 'Re-engage';
+      nextActionReason = `No clear movement for ${staleDays} days.`;
+    } else if(['Appointment Set','Active Prospect'].includes(stage)){
+      nextAction = 'Move opportunity forward';
+      nextActionReason = `Stage is ${stage}; schedule the next step.`;
+    }
+
+    return {
+      contact,
+      opens: emailActivity.opens,
+      clicks: emailActivity.clicks,
+      texts: phoneActivity.texts,
+      lastTouch,
+      staleDays,
+      openTasks,
+      overdueTasks,
+      dueTodayTasks,
+      stage,
+      leadScore,
+      opportunityScore,
+      heat,
+      estimatedGCI,
+      nextAction,
+      nextActionReason
+    };
+  }).sort((a,b)=>b.opportunityScore-a.opportunityScore || b.leadScore-a.leadScore);
+}
+
 function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = [], smsActivity = [], taskStats = {}){
-  const safe = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
-  const contactName = contact => {
-    const name = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
-    return name || contact.email || contact.phone || 'Unnamed Contact';
-  };
-  const daysSince = value => {
-    if(!value) return 999;
-    const d = new Date(value);
-    if(isNaN(d.getTime())) return 999;
-    return Math.floor((Date.now() - d.getTime()) / 86400000);
-  };
-  const contactStage = contact => contact.stage || contact.pipelineStage || 'New Lead';
+  const safe = aiSafe;
+  const contactName = aiContactName;
+  const contactStage = aiContactStage;
   const opened = Number(data.totalOpened || 0);
   const clicks = Number(data.totalClicks || 0);
   const openRate = Number(data.openRate || 0);
@@ -4723,70 +4963,47 @@ function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = 
   const campaignCount = Array.isArray(campaigns) ? campaigns.length : 0;
   const contactsList = Array.isArray(contacts) && contacts.length ? contacts : contactsCache;
   const activityList = Array.isArray(activity) ? activity : [];
+  const smsList = Array.isArray(smsActivity) ? smsActivity : [];
+  const enrichedContacts = buildAIContactInsights(contactsList, activityList, smsList);
 
-  const activityByEmail = new Map();
-  activityList.forEach(item => {
-    const key = String(item.email || item.contactEmail || '').trim().toLowerCase();
-    if(!key) return;
-    const current = activityByEmail.get(key) || { email:key, opens:0, clicks:0, last:'' };
-    const type = String(item.type || item.event || item.status || '').toLowerCase();
-    if(type.includes('click') || item.url) current.clicks += 1;
-    if(type.includes('open') || item.opened) current.opens += 1;
-    const date = item.date || item.createdAt || item.openedAt || item.clickedAt || item.sentAt || '';
-    if(date && (!current.last || new Date(date) > new Date(current.last))) current.last = date;
-    activityByEmail.set(key, current);
-  });
-
-  const enrichedContacts = contactsList.map(contact => {
-    const emailKey = String(contact.email || '').trim().toLowerCase();
-    const act = activityByEmail.get(emailKey) || { opens:0, clicks:0, last:'' };
-    const tasks = Array.isArray(contact.tasks) ? contact.tasks : [];
-    const openTasks = tasks.filter(task => !task.done).length;
-    const overdueTasks = tasks.filter(task => !task.done && task.due && String(task.due).slice(0,10) < new Date().toISOString().slice(0,10)).length;
-    const lastTouch = act.last || contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || '';
-    const staleDays = daysSince(lastTouch);
-    const score =
-      (act.clicks * 28) +
-      (act.opens * 10) +
-      (overdueTasks * 12) +
-      (openTasks * 4) +
-      (['Appointment Set','Active Prospect','Under Contract','Pending'].includes(contactStage(contact)) ? 18 : 0) -
-      (staleDays > 30 ? 12 : staleDays > 14 ? 6 : 0);
-    const heat = score >= 45 ? 'Hot' : score >= 18 ? 'Warm' : 'Cold';
-    return { contact, ...act, openTasks, overdueTasks, lastTouch, staleDays, score:Math.max(0, Math.round(score)), heat };
-  }).sort((a,b)=>b.score-a.score);
-
-  const hotLeads = enrichedContacts.filter(item => item.heat === 'Hot').slice(0,5);
-  const warmLeads = enrichedContacts.filter(item => item.heat === 'Warm').slice(0,5);
+  const hotLeads = enrichedContacts.filter(item => item.heat === 'Hot').slice(0,6);
+  const warmLeads = enrichedContacts.filter(item => item.heat === 'Warm').slice(0,6);
+  const coldLeads = enrichedContacts.filter(item => item.heat === 'Cold');
   const quietContacts = enrichedContacts
     .filter(item => item.staleDays >= 14 && !item.contact.unsubscribed && !item.contact.bounced)
     .sort((a,b)=>b.staleDays-a.staleDays)
     .slice(0,5);
 
   const topLead = hotLeads[0] || warmLeads[0] || enrichedContacts[0];
-  const activePipeline = contactsList.filter(c => ['Appointment Set','Active Prospect','Under Contract','Pending'].includes(contactStage(c))).length;
+  const bestOpportunity = enrichedContacts[0];
+  const activePipelineItems = enrichedContacts.filter(row => ['Appointment Set','Active Prospect','Under Contract','Pending'].includes(row.stage));
+  const activePipeline = activePipelineItems.length;
+  const pendingPipeline = enrichedContacts.filter(row => ['Under Contract','Pending'].includes(row.stage)).length;
   const newLeads = contactsList.filter(c => contactStage(c) === 'New Lead').length;
+  const forecastGCI = activePipelineItems.reduce((sum,row)=>sum + Number(row.estimatedGCI || 0),0);
 
   const summaryParts = [];
-  summaryParts.push(`I reviewed <b>${contactsList.length}</b> contacts, <b>${campaignCount}</b> email campaigns, follow-up tasks, and engagement activity.`);
-  if(hotLeads.length) summaryParts.push(`<b>${hotLeads.length}</b> hot lead${hotLeads.length === 1 ? '' : 's'} need attention.`);
+  summaryParts.push(`I scored <b>${contactsList.length}</b> contacts using engagement, tasks, pipeline stage, and recency.`);
+  if(hotLeads.length) summaryParts.push(`<b>${hotLeads.length}</b> hot lead${hotLeads.length === 1 ? '' : 's'} should be handled first.`);
+  if(bestOpportunity) summaryParts.push(`Best opportunity: <b>${safe(contactName(bestOpportunity.contact))}</b> with opportunity score <b>${bestOpportunity.opportunityScore}</b>.`);
   if(overdue > 0) summaryParts.push(`<b>${overdue}</b> follow-up${overdue === 1 ? '' : 's'} are overdue.`);
   if(dueToday > 0) summaryParts.push(`<b>${dueToday}</b> follow-up${dueToday === 1 ? '' : 's'} are due today.`);
-  if(activePipeline > 0) summaryParts.push(`<b>${activePipeline}</b> active pipeline contact${activePipeline === 1 ? '' : 's'} should keep moving.`);
+  if(activePipeline > 0) summaryParts.push(`Estimated weighted pipeline GCI is <b>${aiMoney(forecastGCI)}</b>.`);
   if(!hotLeads.length && !overdue && !dueToday) summaryParts.push(`Your immediate queue is clean, so today is a good day to create new opportunities.`);
   aiExecutiveSummary.innerHTML = summaryParts.join(' ');
 
   const briefing = [];
-  if(topLead) briefing.push({icon:'1', text:`Start with <b>${safe(contactName(topLead.contact))}</b>. Score ${topLead.score}; ${topLead.clicks} click${topLead.clicks === 1 ? '' : 's'}, ${topLead.opens} open${topLead.opens === 1 ? '' : 's'}, stage: ${safe(contactStage(topLead.contact))}.`});
+  if(bestOpportunity) briefing.push({icon:'1', text:`Start with <b>${safe(contactName(bestOpportunity.contact))}</b>. Lead score ${bestOpportunity.leadScore}, opportunity score ${bestOpportunity.opportunityScore}. ${safe(bestOpportunity.nextAction)}: ${safe(bestOpportunity.nextActionReason)}`});
   if(overdue > 0) briefing.push({icon:'2', text:`Clear overdue tasks before sending new campaigns. This protects active opportunities and past-client relationships.`});
-  if(quietContacts.length) briefing.push({icon:'3', text:`Re-engage <b>${quietContacts.length}</b> cooling contact${quietContacts.length === 1 ? '' : 's'} that have not had recent movement.`});
-  if(clickRate > 0) briefing.push({icon:'4', text:`Clicks are buying signals. Prioritize anyone who clicked links before reviewing general opens.`});
+  if(hotLeads.length) briefing.push({icon:'3', text:`Your hot list has <b>${hotLeads.length}</b> contact${hotLeads.length === 1 ? '' : 's'}. Personal outreach beats another blast email here.`});
+  if(quietContacts.length) briefing.push({icon:'4', text:`Re-engage <b>${quietContacts.length}</b> cooling contact${quietContacts.length === 1 ? '' : 's'} before they go cold.`});
   if(!briefing.length) briefing.push({icon:'AI', text:`No urgent risks detected. Best next move: create a short market update campaign and send it to a warm segment.`});
   aiGeneratedBriefing.innerHTML = briefing.slice(0,4).map(row=>`
     <div class="ai-briefing-line"><span>${row.icon}</span><div>${row.text}</div></div>
   `).join('');
 
   const priorities = [];
+  if(bestOpportunity) priorities.push({icon:'★', title:`Best Opportunity: ${contactName(bestOpportunity.contact)}`, text:`${bestOpportunity.nextAction}. ${bestOpportunity.nextActionReason}`, action:'Open Contact', contactId:bestOpportunity.contact.id});
   if(overdue > 0) priorities.push({icon:'!', title:'Overdue follow-ups need attention', text:`Handle ${overdue} overdue task${overdue === 1 ? '' : 's'} before new outreach.`, action:'View Tasks', tab:'tasks'});
   if(hotLeads.length) priorities.push({icon:'🔥', title:'Call or text hot leads', text:`${hotLeads.length} contact${hotLeads.length === 1 ? '' : 's'} show strong buying/selling signals.`, action:'Open Contacts', tab:'contacts'});
   if(dueToday > 0) priorities.push({icon:'✓', title:'Finish today’s follow-ups', text:`${dueToday} follow-up${dueToday === 1 ? '' : 's'} are due today.`, action:'Tasks', tab:'tasks'});
@@ -4794,11 +5011,11 @@ function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = 
   if(campaignCount === 0) priorities.push({icon:'+', title:'Create first campaign', text:'Start with a seller, buyer, or past-client nurture campaign.', action:'Campaigns', tab:'campaigns'});
   if(priorities.length === 0) priorities.push({icon:'AI', title:'Build new demand today', text:'Create a market update or listing-focused campaign to generate engagement.', action:'Campaigns', tab:'campaigns'});
 
-  aiTodayPriorities.innerHTML = priorities.slice(0,4).map(item=>`
+  aiTodayPriorities.innerHTML = priorities.slice(0,5).map(item=>`
     <div class="ai-priority-item">
       <span class="ai-priority-icon">${item.icon}</span>
       <div class="flex-grow-1"><b>${safe(item.title)}</b><br><small>${safe(item.text)}</small></div>
-      <button class="btn btn-sm btn-outline-primary" onclick="showTab('${item.tab}')">${safe(item.action)}</button>
+      ${item.contactId ? `<button class="btn btn-sm btn-outline-primary" onclick="openContact(${item.contactId})">${safe(item.action)}</button>` : `<button class="btn btn-sm btn-outline-primary" onclick="showTab('${item.tab}')">${safe(item.action)}</button>`}
     </div>
   `).join('');
 
@@ -4808,38 +5025,57 @@ function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = 
       <div>
         <b>${safe(contactName(lead.contact))}</b><br>
         <small>${safe(lead.contact.email || lead.contact.phone || '')}</small><br>
-        <span class="ai-muted-line">${lead.opens} open${lead.opens === 1 ? '' : 's'} · ${lead.clicks} click${lead.clicks === 1 ? '' : 's'} · ${safe(contactStage(lead.contact))}${lead.lastTouch ? ` · ${formatShortDate(lead.lastTouch)}` : ''}</span>
+        <span class="ai-muted-line">${lead.opens} open${lead.opens === 1 ? '' : 's'} · ${lead.clicks} click${lead.clicks === 1 ? '' : 's'} · ${safe(lead.stage)}${lead.lastTouch ? ` · ${formatShortDate(lead.lastTouch)}` : ''}</span><br>
+        <span class="ai-muted-line"><b>Next:</b> ${safe(lead.nextAction)}</span>
       </div>
-      <span class="ai-soft-badge ai-lead-score ai-heat-hot">${lead.score}</span>
+      <span class="ai-soft-badge ai-lead-score ai-heat-hot">${lead.leadScore}</span>
     </div>
-  `).join('') : '<div class="text-muted">No hot leads yet. Hot leads will appear when contacts open, click, or have active follow-up signals.</div>';
+  `).join('') : '<div class="text-muted">No hot leads yet. Hot leads will appear when contacts open, click, text, or have active follow-up signals.</div>';
 
-  aiForecastContacts.innerText = contactsList.length || 0;
-  aiForecastCampaigns.innerText = campaignCount || 0;
-  aiForecastEngaged.innerText = engaged || 0;
-  aiForecastFollowups.innerText = dueToday + overdue;
+  aiBestOpportunity.innerHTML = bestOpportunity ? `
+    <div class="ai-best-opportunity">
+      <h5 class="mb-1">${safe(contactName(bestOpportunity.contact))}</h5>
+      <div class="small-muted">${safe(bestOpportunity.contact.email || bestOpportunity.contact.phone || '')} · ${safe(bestOpportunity.stage)} · ${safe(bestOpportunity.contact.type || 'Unassigned')}</div>
+      <div class="ai-best-score-row">
+        <div class="ai-big-score"><b>${bestOpportunity.opportunityScore}</b><span>Opportunity</span></div>
+        <div class="ai-big-score"><b>${bestOpportunity.leadScore}</b><span>Lead Score</span></div>
+        <div class="ai-big-score"><b>${aiMoney(bestOpportunity.estimatedGCI)}</b><span>Weighted GCI</span></div>
+      </div>
+      <div class="ai-confidence-note mt-3"><b>Recommended action:</b> ${safe(bestOpportunity.nextAction)} — ${safe(bestOpportunity.nextActionReason)}</div>
+      <button class="btn btn-sm btn-success mt-3" onclick="openContact(${bestOpportunity.contact.id})">Open Contact</button>
+    </div>
+  ` : '<div class="text-muted">Add contacts and activity to generate a best opportunity.</div>';
+
+  aiHeatHotCount.innerText = hotLeads.length;
+  aiHeatWarmCount.innerText = warmLeads.length;
+  aiHeatColdCount.innerText = coldLeads.length;
+
+  aiForecastActive.innerText = activePipeline;
+  aiForecastPending.innerText = pendingPipeline;
+  aiForecastGCI.innerText = aiMoney(forecastGCI);
+  aiForecastHot.innerText = hotLeads.length;
   aiForecastNote.innerHTML = `
     <div class="ai-confidence-note">
-      AI read: ${activePipeline} active pipeline contact${activePipeline === 1 ? '' : 's'}, ${newLeads} new lead${newLeads === 1 ? '' : 's'}, and ${hotLeads.length} hot lead${hotLeads.length === 1 ? '' : 's'}.
+      AI read: ${activePipeline} active pipeline contact${activePipeline === 1 ? '' : 's'}, ${pendingPipeline} pending/contract contact${pendingPipeline === 1 ? '' : 's'}, ${newLeads} new lead${newLeads === 1 ? '' : 's'}, and ${hotLeads.length} hot lead${hotLeads.length === 1 ? '' : 's'}. Forecasted GCI is a weighted estimate until transaction values are added.
     </div>
   `;
 
   const actions = [];
-  if(topLead) actions.push({title:`Contact ${contactName(topLead.contact)}`, text:`Best next action: personal call or short text. Lead score ${topLead.score}.`, tab:'contacts'});
+  if(bestOpportunity) actions.push({title:`${bestOpportunity.nextAction}: ${contactName(bestOpportunity.contact)}`, text:`${bestOpportunity.nextActionReason} Opportunity score ${bestOpportunity.opportunityScore}.`, contactId:bestOpportunity.contact.id});
   if(overdue > 0) actions.push({title:'Clear overdue tasks', text:'Protect deals and relationships by closing the loop today.', tab:'tasks'});
   if(hotLeads.length || warmLeads.length) actions.push({title:'Send engaged-lead follow-up', text:'Use the message below for contacts who opened or clicked recently.', tab:'campaigns'});
   actions.push({title:'Create a market update', text:'Generate fresh activity by sending a useful local market note.', tab:'campaigns'});
   actions.push({title:'Review pipeline momentum', text:'Move stale opportunities forward or clean up the board.', tab:'pipeline'});
-  aiRecommendedActions.innerHTML = actions.slice(0,4).map(action=>`
+  aiRecommendedActions.innerHTML = actions.slice(0,5).map(action=>`
     <div class="ai-action-item">
       <div><b>${safe(action.title)}</b><br><small>${safe(action.text)}</small></div>
-      <button class="btn btn-sm btn-outline-primary" onclick="showTab('${action.tab}')">Open</button>
+      ${action.contactId ? `<button class="btn btn-sm btn-outline-primary" onclick="openContact(${action.contactId})">Open</button>` : `<button class="btn btn-sm btn-outline-primary" onclick="showTab('${action.tab}')">Open</button>`}
     </div>
   `).join('');
 
-  const followupName = topLead ? contactName(topLead.contact).split(' ')[0] : 'there';
-  const script1 = topLead
-    ? `Hi ${followupName}, I noticed you may still be keeping an eye on the market. Is there anything specific you want me to look into for you this week?`
+  const followupName = bestOpportunity ? contactName(bestOpportunity.contact).split(' ')[0] : 'there';
+  const script1 = bestOpportunity
+    ? `Hi ${followupName}, I was thinking about your real estate plans and wanted to check in. Are you still keeping an eye on the market, or is there anything specific you want me to look into for you this week?`
     : `Hi there, I just wanted to check in and see if you have any real estate questions or anything you would like me to keep an eye on for you.`;
   const script2 = `Quick market update idea: Send a short note about local inventory, pricing, and why this is a good time for buyers and sellers to review their options.`;
   aiFollowUpScripts.innerHTML = `
@@ -4861,10 +5097,12 @@ function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = 
         <span class="ai-soft-badge ${item.staleDays > 30 ? 'ai-heat-cold' : 'ai-heat-warm'}">${item.staleDays}d</span>
       </div>
       <div class="ai-opportunity-meta">
-        <span class="ai-mini-pill blue">${safe(contactStage(item.contact))}</span>
+        <span class="ai-mini-pill blue">${safe(item.stage)}</span>
         <span class="ai-mini-pill">${safe(item.contact.type || 'Unassigned')}</span>
+        <span class="ai-mini-pill ${item.heat === 'Hot' ? 'red' : item.heat === 'Warm' ? 'green' : ''}">${safe(item.heat)} ${item.leadScore}</span>
         ${item.overdueTasks ? `<span class="ai-mini-pill red">${item.overdueTasks} overdue</span>` : ''}
       </div>
+      <div class="small-muted mt-2"><b>Next:</b> ${safe(item.nextAction)}</div>
     </div>
   `).join('') : '<div class="text-muted">No cooling contacts detected from the available data.</div>';
 
@@ -6871,6 +7109,15 @@ async function loadContacts(){
           <div style="font-size:12px;color:#777;">
             ${c.email || ''} | ${formatPhone(c.phone||'')} | ${c.type||''} | ${inferStageFromContact(c)}
           </div>
+          ${(() => {
+            const insight = buildAIContactInsights([c], activityCache, smsActivityCache)[0] || {};
+            const heatClass = String(insight.heat || 'Cold').toLowerCase();
+            return `<div class="ai-contact-score-row">
+              <span class="ai-contact-badge ${heatClass}">${insight.heat || 'Cold'} Lead ${insight.leadScore ?? 0}</span>
+              <span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span>
+              <span class="ai-contact-badge action">${aiSafe(insight.nextAction || 'Stay in touch')}</span>
+            </div>`;
+          })()}
           ${renderTags(c.tags)}
         </div>
       `;
