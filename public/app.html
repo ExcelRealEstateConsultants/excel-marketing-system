@@ -2150,6 +2150,99 @@ body {
   border-radius:999px;
   transition:width .35s ease;
 }
+
+.ai-briefing-panel {
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:18px;
+  padding:14px;
+  margin-top:14px;
+  position:relative;
+  z-index:2;
+}
+.ai-briefing-line {
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  margin-bottom:8px;
+}
+.ai-briefing-line:last-child { margin-bottom:0; }
+.ai-briefing-line span {
+  width:24px;
+  height:24px;
+  border-radius:999px;
+  background:rgba(255,255,255,.18);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 24px;
+  font-size:12px;
+  font-weight:900;
+}
+.ai-lead-score {
+  min-width:48px;
+  text-align:center;
+}
+.ai-heat-hot { background:#fee2e2!important; color:#991b1b!important; }
+.ai-heat-warm { background:#fef3c7!important; color:#92400e!important; }
+.ai-heat-cold { background:#eef2f7!important; color:#334155!important; }
+.ai-script-box {
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:10px;
+}
+.ai-script-box textarea {
+  min-height:92px;
+  font-size:13px;
+}
+.ai-muted-line {
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.45;
+}
+.ai-opportunity-row {
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:12px;
+  background:#ffffff;
+  margin-bottom:10px;
+}
+.ai-opportunity-top {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+}
+.ai-opportunity-meta {
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.ai-mini-pill {
+  display:inline-flex;
+  border-radius:999px;
+  padding:4px 8px;
+  background:#eef2f7;
+  color:#334155;
+  font-size:11px;
+  font-weight:800;
+}
+.ai-mini-pill.green { background:#dcfce7; color:#166534; }
+.ai-mini-pill.blue { background:#e0f2fe; color:#075985; }
+.ai-mini-pill.red { background:#fee2e2; color:#991b1b; }
+.ai-confidence-note {
+  border-left:4px solid var(--accent);
+  background:#f0fdf4;
+  color:#14532d;
+  border-radius:12px;
+  padding:10px 12px;
+  font-size:13px;
+  font-weight:700;
+}
+
 .snapshot-label {
   display:inline-flex;
   background:#eef2f7;
@@ -2234,10 +2327,11 @@ body {
       <div class="ai-eyebrow">Excel AI Command Center</div>
       <h3 class="mb-2">Today's Game Plan</h3>
       <div id="aiExecutiveSummary" class="ai-summary-text">Loading your daily briefing...</div>
+      <div id="aiGeneratedBriefing" class="ai-briefing-panel"></div>
     </div>
     <div class="ai-hero-actions">
       <button class="btn btn-light" onclick="showTab('contacts')">View Contacts</button>
-      <button class="btn btn-outline-light" onclick="showTab('snapshot')">Open Snapshot</button>
+      <button class="btn btn-outline-light" onclick="showTab('tasks')">View Tasks</button>
     </div>
   </div>
 
@@ -2291,6 +2385,28 @@ body {
         <button class="btn btn-sm btn-outline-primary" onclick="showTab('tasks')">Tasks</button>
       </div>
       <div id="aiRecommendedActions" class="ai-action-list"></div>
+    </div>
+
+    <div class="ai-command-card ai-command-card-large">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">AI Follow-Up Coach</div>
+          <h5>Suggested Messages</h5>
+        </div>
+        <span class="ai-soft-badge">Copy Ready</span>
+      </div>
+      <div id="aiFollowUpScripts"></div>
+    </div>
+
+    <div class="ai-command-card">
+      <div class="ai-card-header">
+        <div>
+          <div class="ai-card-kicker">Hidden Opportunities</div>
+          <h5>Cooling Contacts</h5>
+        </div>
+        <span id="aiQuietCount" class="ai-number-badge">0</span>
+      </div>
+      <div id="aiQuietOpportunities"></div>
     </div>
 
     <div class="ai-command-card">
@@ -4584,78 +4700,173 @@ function showTab(t){
 
 /* DASHBOARD */
 
-function renderAIDashboard(data = {}, campaigns = [], activity = [], smsActivity = [], taskStats = {}){
+function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = [], smsActivity = [], taskStats = {}){
+  const safe = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+  const contactName = contact => {
+    const name = `${contact.firstName || ''} ${contact.lastName || ''}`.trim();
+    return name || contact.email || contact.phone || 'Unnamed Contact';
+  };
+  const daysSince = value => {
+    if(!value) return 999;
+    const d = new Date(value);
+    if(isNaN(d.getTime())) return 999;
+    return Math.floor((Date.now() - d.getTime()) / 86400000);
+  };
+  const contactStage = contact => contact.stage || contact.pipelineStage || 'New Lead';
   const opened = Number(data.totalOpened || 0);
   const clicks = Number(data.totalClicks || 0);
-  const sent = Number(data.totalSent || 0);
   const openRate = Number(data.openRate || 0);
   const clickRate = Number(data.clickRate || 0);
   const dueToday = Number(taskStats.dueToday || 0);
   const overdue = Number(taskStats.overdue || 0);
   const engaged = opened + clicks;
   const campaignCount = Array.isArray(campaigns) ? campaigns.length : 0;
+  const contactsList = Array.isArray(contacts) && contacts.length ? contacts : contactsCache;
+  const activityList = Array.isArray(activity) ? activity : [];
+
+  const activityByEmail = new Map();
+  activityList.forEach(item => {
+    const key = String(item.email || item.contactEmail || '').trim().toLowerCase();
+    if(!key) return;
+    const current = activityByEmail.get(key) || { email:key, opens:0, clicks:0, last:'' };
+    const type = String(item.type || item.event || item.status || '').toLowerCase();
+    if(type.includes('click') || item.url) current.clicks += 1;
+    if(type.includes('open') || item.opened) current.opens += 1;
+    const date = item.date || item.createdAt || item.openedAt || item.clickedAt || item.sentAt || '';
+    if(date && (!current.last || new Date(date) > new Date(current.last))) current.last = date;
+    activityByEmail.set(key, current);
+  });
+
+  const enrichedContacts = contactsList.map(contact => {
+    const emailKey = String(contact.email || '').trim().toLowerCase();
+    const act = activityByEmail.get(emailKey) || { opens:0, clicks:0, last:'' };
+    const tasks = Array.isArray(contact.tasks) ? contact.tasks : [];
+    const openTasks = tasks.filter(task => !task.done).length;
+    const overdueTasks = tasks.filter(task => !task.done && task.due && String(task.due).slice(0,10) < new Date().toISOString().slice(0,10)).length;
+    const lastTouch = act.last || contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || '';
+    const staleDays = daysSince(lastTouch);
+    const score =
+      (act.clicks * 28) +
+      (act.opens * 10) +
+      (overdueTasks * 12) +
+      (openTasks * 4) +
+      (['Appointment Set','Active Prospect','Under Contract','Pending'].includes(contactStage(contact)) ? 18 : 0) -
+      (staleDays > 30 ? 12 : staleDays > 14 ? 6 : 0);
+    const heat = score >= 45 ? 'Hot' : score >= 18 ? 'Warm' : 'Cold';
+    return { contact, ...act, openTasks, overdueTasks, lastTouch, staleDays, score:Math.max(0, Math.round(score)), heat };
+  }).sort((a,b)=>b.score-a.score);
+
+  const hotLeads = enrichedContacts.filter(item => item.heat === 'Hot').slice(0,5);
+  const warmLeads = enrichedContacts.filter(item => item.heat === 'Warm').slice(0,5);
+  const quietContacts = enrichedContacts
+    .filter(item => item.staleDays >= 14 && !item.contact.unsubscribed && !item.contact.bounced)
+    .sort((a,b)=>b.staleDays-a.staleDays)
+    .slice(0,5);
+
+  const topLead = hotLeads[0] || warmLeads[0] || enrichedContacts[0];
+  const activePipeline = contactsList.filter(c => ['Appointment Set','Active Prospect','Under Contract','Pending'].includes(contactStage(c))).length;
+  const newLeads = contactsList.filter(c => contactStage(c) === 'New Lead').length;
 
   const summaryParts = [];
-  summaryParts.push(`You have <b>${data.totalContacts || 0}</b> contacts and <b>${campaignCount}</b> saved email campaigns.`);
-  if(overdue > 0) summaryParts.push(`<b>${overdue}</b> follow-up${overdue === 1 ? '' : 's'} overdue.`);
-  if(dueToday > 0) summaryParts.push(`<b>${dueToday}</b> follow-up${dueToday === 1 ? '' : 's'} due today.`);
-  if(engaged > 0) summaryParts.push(`<b>${engaged}</b> tracked engagement event${engaged === 1 ? '' : 's'} from opens/clicks.`);
-  summaryParts.push(`Current marketing signal: <b>${openRate}% open rate</b> and <b>${clickRate}% click rate</b>.`);
+  summaryParts.push(`I reviewed <b>${contactsList.length}</b> contacts, <b>${campaignCount}</b> email campaigns, follow-up tasks, and engagement activity.`);
+  if(hotLeads.length) summaryParts.push(`<b>${hotLeads.length}</b> hot lead${hotLeads.length === 1 ? '' : 's'} need attention.`);
+  if(overdue > 0) summaryParts.push(`<b>${overdue}</b> follow-up${overdue === 1 ? '' : 's'} are overdue.`);
+  if(dueToday > 0) summaryParts.push(`<b>${dueToday}</b> follow-up${dueToday === 1 ? '' : 's'} are due today.`);
+  if(activePipeline > 0) summaryParts.push(`<b>${activePipeline}</b> active pipeline contact${activePipeline === 1 ? '' : 's'} should keep moving.`);
+  if(!hotLeads.length && !overdue && !dueToday) summaryParts.push(`Your immediate queue is clean, so today is a good day to create new opportunities.`);
   aiExecutiveSummary.innerHTML = summaryParts.join(' ');
 
+  const briefing = [];
+  if(topLead) briefing.push({icon:'1', text:`Start with <b>${safe(contactName(topLead.contact))}</b>. Score ${topLead.score}; ${topLead.clicks} click${topLead.clicks === 1 ? '' : 's'}, ${topLead.opens} open${topLead.opens === 1 ? '' : 's'}, stage: ${safe(contactStage(topLead.contact))}.`});
+  if(overdue > 0) briefing.push({icon:'2', text:`Clear overdue tasks before sending new campaigns. This protects active opportunities and past-client relationships.`});
+  if(quietContacts.length) briefing.push({icon:'3', text:`Re-engage <b>${quietContacts.length}</b> cooling contact${quietContacts.length === 1 ? '' : 's'} that have not had recent movement.`});
+  if(clickRate > 0) briefing.push({icon:'4', text:`Clicks are buying signals. Prioritize anyone who clicked links before reviewing general opens.`});
+  if(!briefing.length) briefing.push({icon:'AI', text:`No urgent risks detected. Best next move: create a short market update campaign and send it to a warm segment.`});
+  aiGeneratedBriefing.innerHTML = briefing.slice(0,4).map(row=>`
+    <div class="ai-briefing-line"><span>${row.icon}</span><div>${row.text}</div></div>
+  `).join('');
+
   const priorities = [];
-  if(overdue > 0) priorities.push({icon:'!', title:'Overdue follow-ups need attention', text:`${overdue} task${overdue === 1 ? '' : 's'} should be handled first today.`, action:'View Tasks', tab:'tasks'});
-  if(dueToday > 0) priorities.push({icon:'✓', title:'Follow-ups due today', text:`${dueToday} contact${dueToday === 1 ? '' : 's'} need a timely touch.`, action:'Open Tasks', tab:'tasks'});
-  if(clicks > 0) priorities.push({icon:'🔥', title:'Follow up with engaged contacts', text:`You have ${clicks} tracked link click${clicks === 1 ? '' : 's'} to review.`, action:'Snapshot', tab:'snapshot'});
-  if(campaignCount === 0) priorities.push({icon:'+', title:'Create your first campaign', text:'Start with a simple seller or buyer nurture campaign.', action:'Campaigns', tab:'campaigns'});
-  if(priorities.length === 0) priorities.push({icon:'AI', title:'System is calm today', text:'No overdue follow-ups detected. Review Snapshot for performance trends.', action:'Snapshot', tab:'snapshot'});
+  if(overdue > 0) priorities.push({icon:'!', title:'Overdue follow-ups need attention', text:`Handle ${overdue} overdue task${overdue === 1 ? '' : 's'} before new outreach.`, action:'View Tasks', tab:'tasks'});
+  if(hotLeads.length) priorities.push({icon:'🔥', title:'Call or text hot leads', text:`${hotLeads.length} contact${hotLeads.length === 1 ? '' : 's'} show strong buying/selling signals.`, action:'Open Contacts', tab:'contacts'});
+  if(dueToday > 0) priorities.push({icon:'✓', title:'Finish today’s follow-ups', text:`${dueToday} follow-up${dueToday === 1 ? '' : 's'} are due today.`, action:'Tasks', tab:'tasks'});
+  if(quietContacts.length) priorities.push({icon:'↺', title:'Wake up quiet contacts', text:`${quietContacts.length} contact${quietContacts.length === 1 ? '' : 's'} may be slipping cold.`, action:'Contacts', tab:'contacts'});
+  if(campaignCount === 0) priorities.push({icon:'+', title:'Create first campaign', text:'Start with a seller, buyer, or past-client nurture campaign.', action:'Campaigns', tab:'campaigns'});
+  if(priorities.length === 0) priorities.push({icon:'AI', title:'Build new demand today', text:'Create a market update or listing-focused campaign to generate engagement.', action:'Campaigns', tab:'campaigns'});
 
   aiTodayPriorities.innerHTML = priorities.slice(0,4).map(item=>`
     <div class="ai-priority-item">
       <span class="ai-priority-icon">${item.icon}</span>
-      <div class="flex-grow-1"><b>${item.title}</b><br><small>${item.text}</small></div>
-      <button class="btn btn-sm btn-outline-primary" onclick="showTab('${item.tab}')">${item.action}</button>
+      <div class="flex-grow-1"><b>${safe(item.title)}</b><br><small>${safe(item.text)}</small></div>
+      <button class="btn btn-sm btn-outline-primary" onclick="showTab('${item.tab}')">${safe(item.action)}</button>
     </div>
   `).join('');
 
-  const leadMap = new Map();
-  (Array.isArray(activity) ? activity : []).forEach(item=>{
-    const key = (item.email || item.contactEmail || '').toLowerCase();
-    if(!key) return;
-    const current = leadMap.get(key) || { email:key, opens:0, clicks:0, last:item.date || item.createdAt || item.openedAt || item.clickedAt || '' };
-    const type = String(item.type || item.event || '').toLowerCase();
-    if(type.includes('click') || item.url) current.clicks += 1;
-    if(type.includes('open') || item.opened) current.opens += 1;
-    const date = item.date || item.createdAt || item.openedAt || item.clickedAt || '';
-    if(date && (!current.last || new Date(date) > new Date(current.last))) current.last = date;
-    leadMap.set(key, current);
-  });
-  const hotLeads = Array.from(leadMap.values()).map(lead=>({ ...lead, score:(lead.clicks * 20) + (lead.opens * 7) })).sort((a,b)=>b.score-a.score).slice(0,5);
   aiHotLeadCount.innerText = hotLeads.length;
   aiHotLeads.innerHTML = hotLeads.length ? hotLeads.map(lead=>`
     <div class="ai-lead-item">
-      <div><b>${lead.email}</b><br><small>${lead.opens} open${lead.opens === 1 ? '' : 's'} · ${lead.clicks} click${lead.clicks === 1 ? '' : 's'}${lead.last ? ` · ${formatDate(lead.last)}` : ''}</small></div>
-      <span class="ai-soft-badge">${lead.score}</span>
+      <div>
+        <b>${safe(contactName(lead.contact))}</b><br>
+        <small>${safe(lead.contact.email || lead.contact.phone || '')}</small><br>
+        <span class="ai-muted-line">${lead.opens} open${lead.opens === 1 ? '' : 's'} · ${lead.clicks} click${lead.clicks === 1 ? '' : 's'} · ${safe(contactStage(lead.contact))}${lead.lastTouch ? ` · ${formatShortDate(lead.lastTouch)}` : ''}</span>
+      </div>
+      <span class="ai-soft-badge ai-lead-score ai-heat-hot">${lead.score}</span>
     </div>
-  `).join('') : '<div class="text-muted">No hot leads yet. Engagement will appear here after contacts open or click campaigns.</div>';
+  `).join('') : '<div class="text-muted">No hot leads yet. Hot leads will appear when contacts open, click, or have active follow-up signals.</div>';
 
-  aiForecastContacts.innerText = data.totalContacts || 0;
+  aiForecastContacts.innerText = contactsList.length || 0;
   aiForecastCampaigns.innerText = campaignCount || 0;
   aiForecastEngaged.innerText = engaged || 0;
   aiForecastFollowups.innerText = dueToday + overdue;
-  aiForecastNote.innerHTML = overdue > 0 ? 'AI note: clearing overdue follow-ups is the fastest way to improve today\'s opportunity score.' : 'AI note: your follow-up queue is clean. Focus on engaged contacts and new campaign creation.';
+  aiForecastNote.innerHTML = `
+    <div class="ai-confidence-note">
+      AI read: ${activePipeline} active pipeline contact${activePipeline === 1 ? '' : 's'}, ${newLeads} new lead${newLeads === 1 ? '' : 's'}, and ${hotLeads.length} hot lead${hotLeads.length === 1 ? '' : 's'}.
+    </div>
+  `;
 
   const actions = [];
-  actions.push({title:'Review hot leads', text:'Start with contacts who clicked or opened recently.', tab:'snapshot'});
+  if(topLead) actions.push({title:`Contact ${contactName(topLead.contact)}`, text:`Best next action: personal call or short text. Lead score ${topLead.score}.`, tab:'contacts'});
   if(overdue > 0) actions.push({title:'Clear overdue tasks', text:'Protect deals and relationships by closing the loop today.', tab:'tasks'});
-  actions.push({title:'Create a market update', text:'Use Email Campaigns or Email Designer to send a valuable update.', tab:'campaigns'});
-  actions.push({title:'Check pipeline momentum', text:'Review stage movement and next opportunities.', tab:'pipeline'});
+  if(hotLeads.length || warmLeads.length) actions.push({title:'Send engaged-lead follow-up', text:'Use the message below for contacts who opened or clicked recently.', tab:'campaigns'});
+  actions.push({title:'Create a market update', text:'Generate fresh activity by sending a useful local market note.', tab:'campaigns'});
+  actions.push({title:'Review pipeline momentum', text:'Move stale opportunities forward or clean up the board.', tab:'pipeline'});
   aiRecommendedActions.innerHTML = actions.slice(0,4).map(action=>`
     <div class="ai-action-item">
-      <div><b>${action.title}</b><br><small>${action.text}</small></div>
+      <div><b>${safe(action.title)}</b><br><small>${safe(action.text)}</small></div>
       <button class="btn btn-sm btn-outline-primary" onclick="showTab('${action.tab}')">Open</button>
     </div>
   `).join('');
+
+  const followupName = topLead ? contactName(topLead.contact).split(' ')[0] : 'there';
+  const script1 = topLead
+    ? `Hi ${followupName}, I noticed you may still be keeping an eye on the market. Is there anything specific you want me to look into for you this week?`
+    : `Hi there, I just wanted to check in and see if you have any real estate questions or anything you would like me to keep an eye on for you.`;
+  const script2 = `Quick market update idea: Send a short note about local inventory, pricing, and why this is a good time for buyers and sellers to review their options.`;
+  aiFollowUpScripts.innerHTML = `
+    <div class="ai-script-box">
+      <b>Personal follow-up text/email</b>
+      <textarea class="form-control mt-2" readonly>${safe(script1)}</textarea>
+    </div>
+    <div class="ai-script-box">
+      <b>Campaign idea</b>
+      <textarea class="form-control mt-2" readonly>${safe(script2)}</textarea>
+    </div>
+  `;
+
+  aiQuietCount.innerText = quietContacts.length;
+  aiQuietOpportunities.innerHTML = quietContacts.length ? quietContacts.map(item=>`
+    <div class="ai-opportunity-row">
+      <div class="ai-opportunity-top">
+        <div><b>${safe(contactName(item.contact))}</b><br><small>${safe(item.contact.email || item.contact.phone || '')}</small></div>
+        <span class="ai-soft-badge ${item.staleDays > 30 ? 'ai-heat-cold' : 'ai-heat-warm'}">${item.staleDays}d</span>
+      </div>
+      <div class="ai-opportunity-meta">
+        <span class="ai-mini-pill blue">${safe(contactStage(item.contact))}</span>
+        <span class="ai-mini-pill">${safe(item.contact.type || 'Unassigned')}</span>
+        ${item.overdueTasks ? `<span class="ai-mini-pill red">${item.overdueTasks} overdue</span>` : ''}
+      </div>
+    </div>
+  `).join('') : '<div class="text-muted">No cooling contacts detected from the available data.</div>';
 
   aiPulseOpenRate.innerText = `${openRate}%`;
   aiPulseClickRate.innerText = `${clickRate}%`;
@@ -4856,10 +5067,11 @@ function renderEngagementBreakdownChart(data){
 }
 
 async function loadDashboard(){
-  const [statsRes, campaignsRes, activityRes, smsRes, taskStatsRes] = await Promise.all([
+  const [statsRes, campaignsRes, activityRes, contactsRes, smsRes, taskStatsRes] = await Promise.all([
     fetch('/api/dashboard-stats'),
     fetch('/api/campaigns'),
     fetch('/api/activity'),
+    fetch('/api/contacts').catch(()=>null),
     fetch('/api/sms-activity').catch(()=>null),
     fetch('/api/task-stats').catch(()=>null)
   ]);
@@ -4867,12 +5079,14 @@ async function loadDashboard(){
   const data = await statsRes.json();
   const campaigns = await campaignsRes.json();
   const activity = await activityRes.json();
+  const contacts = contactsRes ? await contactsRes.json() : contactsCache;
   const smsActivity = smsRes ? await smsRes.json() : [];
   const taskStats = taskStatsRes ? await taskStatsRes.json() : { dueToday:0, overdue:0 };
 
   campaignsCache = Array.isArray(campaigns) ? campaigns : [];
   activityCache = Array.isArray(activity) ? activity : [];
   smsActivityCache = Array.isArray(smsActivity) ? smsActivity : [];
+  if(Array.isArray(contacts)) contactsCache = normalizeContactsForPipeline(contacts);
 
   const textCampaignNames = new Set(
     smsActivityCache
@@ -4897,7 +5111,7 @@ async function loadDashboard(){
   dashOverdue.innerText = taskStats.overdue || 0;
 
   updateNotificationBadge(taskStats);
-  renderAIDashboard(data, campaignsCache, activityCache, smsActivityCache, taskStats);
+  renderAIDashboard(data, contactsCache, campaignsCache, activityCache, smsActivityCache, taskStats);
 
   recentActivityList.innerHTML = '';
 
