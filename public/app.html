@@ -2419,6 +2419,190 @@ body {
   .ai-hero-actions { justify-content:flex-start; }
 }
 
+
+
+/* ================= TRANSACTION CENTER ================= */
+.transaction-command-grid {
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:16px;
+  align-items:start;
+}
+.transaction-summary-grid {
+  display:grid;
+  grid-template-columns:repeat(5, 1fr);
+  gap:12px;
+  margin-bottom:16px;
+}
+.transaction-summary-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:15px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+}
+.transaction-summary-number {
+  color:var(--accent);
+  font-size:25px;
+  font-weight:900;
+  line-height:1.1;
+}
+.transaction-ai-panel {
+  background:linear-gradient(135deg, #042C49 0%, #0f4a70 100%);
+  color:white;
+  border-radius:22px;
+  padding:20px;
+  box-shadow:0 14px 36px rgba(4,44,73,0.22);
+}
+.transaction-ai-panel .small-muted,
+.transaction-ai-panel small { color:rgba(255,255,255,.76)!important; }
+.transaction-alert {
+  background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;
+  padding:12px;
+  margin-bottom:10px;
+}
+.transaction-alert.high { background:rgba(220,38,38,.20); border-color:rgba(254,202,202,.45); }
+.transaction-alert.medium { background:rgba(245,158,11,.20); border-color:rgba(253,230,138,.45); }
+.transaction-alert.good { background:rgba(22,163,74,.20); border-color:rgba(187,247,208,.45); }
+.transaction-card {
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 6px 18px rgba(15,23,42,0.05);
+  margin-bottom:12px;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.transaction-card:hover {
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(15,23,42,0.10);
+  border-color:rgba(0,161,67,.35);
+}
+.transaction-card-title {
+  font-weight:900;
+  color:var(--primary);
+  font-size:16px;
+}
+.transaction-meta-grid {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:10px;
+  margin-top:12px;
+}
+.transaction-meta-box {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:10px;
+}
+.transaction-status-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border-radius:999px;
+  padding:5px 9px;
+  font-size:12px;
+  font-weight:800;
+  background:#eef2f7;
+  color:#334155;
+}
+.transaction-status-pill.active { background:#e0f2fe; color:#075985; }
+.transaction-status-pill.pending { background:#ede9fe; color:#5b21b6; }
+.transaction-status-pill.closed { background:#dcfce7; color:#166534; }
+.transaction-status-pill.risk { background:#fee2e2; color:#991b1b; }
+.transaction-progress-wrap {
+  height:10px;
+  background:#e5e7eb;
+  border-radius:999px;
+  overflow:hidden;
+  margin-top:10px;
+}
+.transaction-progress-fill {
+  height:100%;
+  background:var(--accent);
+  border-radius:999px;
+}
+.transaction-filter-row {
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr auto;
+  gap:10px;
+  align-items:end;
+}
+.transaction-form-grid {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:10px;
+}
+.transaction-form-grid .wide-2 { grid-column:span 2; }
+.transaction-form-grid .wide-4 { grid-column:span 4; }
+.transaction-checklist-grid {
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:8px;
+}
+.transaction-check-item {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:9px;
+  font-size:13px;
+}
+.transaction-check-item input { accent-color:var(--accent); }
+.transaction-doc-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:9px;
+  margin-bottom:7px;
+  background:#fff;
+}
+.transaction-report-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:12px;
+}
+.transaction-report-card {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+}
+#transactionPanel {
+  position:fixed;
+  top:0;
+  right:-780px;
+  width:780px;
+  height:100%;
+  background:white;
+  box-shadow:-2px 0 24px rgba(0,0,0,0.22);
+  transition:0.3s;
+  z-index:9996;
+  padding:24px;
+  overflow:auto;
+}
+#transactionPanel.open { right:0; }
+@media (max-width: 1100px) {
+  .transaction-command-grid,
+  .transaction-summary-grid,
+  .transaction-filter-row,
+  .transaction-report-grid { grid-template-columns:1fr; }
+  .transaction-form-grid { grid-template-columns:1fr; }
+  .transaction-form-grid .wide-2,
+  .transaction-form-grid .wide-4 { grid-column:span 1; }
+  .transaction-meta-grid,
+  .transaction-checklist-grid { grid-template-columns:1fr; }
+  #transactionPanel { width:100%; right:-100%; }
+}
+
 </style>
 </head>
 
@@ -2443,6 +2627,7 @@ body {
   <li class="nav-item"><button class="nav-link" id="tabTextCampaigns" onclick="showTab('textCampaigns')">Text Campaigns</button></li>
   <li class="nav-item"><button class="nav-link" id="tabContacts" onclick="showTab('contacts')">Contacts</button></li>
   <li class="nav-item"><button class="nav-link" id="tabPipeline" onclick="showTab('pipeline')">Pipeline</button></li>
+  <li class="nav-item"><button class="nav-link" id="tabTransactions" onclick="showTab('transactions')">Transactions</button></li>
   <li class="nav-item"><button class="nav-link" id="tabTasks" onclick="showTab('tasks')">Tasks</button></li>
 </ul>
 
@@ -2473,6 +2658,7 @@ body {
           <div class="quick-add-item" onclick="showTab('campaigns')"><b>Email Campaigns</b><br><small>Create and review email campaigns</small></div>
           <div class="quick-add-item" onclick="showTab('emailDesigner')"><b>Email Designer</b><br><small>Build reusable email layouts</small></div>
           <div class="quick-add-item" onclick="showTab('pipeline')"><b>Pipeline</b><br><small>Review active opportunities</small></div>
+          <div class="quick-add-item" onclick="showTab('transactions')"><b>Transactions</b><br><small>Manage contracts, documents, deadlines, and closings</small></div>
         </div>
       </div>
     </div>
@@ -3182,6 +3368,108 @@ body {
   <div id="pipelineBoard" class="pipeline-board"></div>
 </div>
 
+
+
+<!-- TRANSACTIONS -->
+<div id="transactionsTab" class="mt-4" style="display:none;">
+  <div class="dashboard-header-row mb-3">
+    <div>
+      <h4 class="mb-1">Transaction Center</h4>
+      <div class="dashboard-help">Manage contracts, documents, critical dates, broker reporting, and AI transaction coordinator alerts.</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-sm btn-success" onclick="txnStartNew()">+ New Transaction</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="txnLoadDemoData()">Load Demo</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="txnRenderAll()">Refresh</button>
+    </div>
+  </div>
+
+  <div id="transactionSummaryGrid" class="transaction-summary-grid"></div>
+
+  <div class="transaction-command-grid mb-3">
+    <div class="transaction-ai-panel">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+        <div>
+          <h5 class="mb-1">AI Transaction Coordinator</h5>
+          <div class="small-muted">Automated deadline, checklist, document, and risk alerts based on active files.</div>
+        </div>
+        <span class="transaction-status-pill active">AI Watch</span>
+      </div>
+      <div id="transactionAIAlerts"></div>
+    </div>
+
+    <div class="modern-card">
+      <h5 class="mb-1">Broker Reporting</h5>
+      <div class="text-muted small mb-3">Production, pending volume, expected GCI, close forecast, and at-risk files.</div>
+      <div id="transactionBrokerReport" class="transaction-report-grid"></div>
+    </div>
+  </div>
+
+  <div class="modern-card mb-3" id="transactionFormCard" style="display:none;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div>
+        <h5 class="mb-0" id="transactionFormTitle">New Transaction</h5>
+        <div class="small-muted">This first version stores transactions and documents inside this app file/browser. Server storage can be added later.</div>
+      </div>
+      <button class="btn btn-sm btn-outline-danger" onclick="txnCancelEdit()">Cancel</button>
+    </div>
+
+    <input type="hidden" id="txnId">
+    <div class="transaction-form-grid">
+      <div class="wide-2"><label class="form-label small fw-bold">Property Address</label><input id="txnAddress" class="form-control" placeholder="123 Main Street"></div>
+      <div><label class="form-label small fw-bold">Side</label><select id="txnSide" class="form-control"><option>Buyer</option><option>Seller</option><option>Both</option></select></div>
+      <div><label class="form-label small fw-bold">Status</label><select id="txnStatus" class="form-control"><option>Active</option><option>Under Contract</option><option>Pending Closing</option><option>Closed</option><option>Cancelled</option><option>At Risk</option></select></div>
+      <div><label class="form-label small fw-bold">Purchase Price</label><input id="txnPrice" type="number" class="form-control" placeholder="750000"></div>
+      <div><label class="form-label small fw-bold">Commission %</label><input id="txnCommissionPercent" type="number" step="0.01" class="form-control" value="2.5"></div>
+      <div><label class="form-label small fw-bold">Expected GCI</label><input id="txnGci" type="number" class="form-control" placeholder="Auto or manual"></div>
+      <div><label class="form-label small fw-bold">Assigned Agent</label><input id="txnAgent" class="form-control" placeholder="Jeff Peterson"></div>
+      <div><label class="form-label small fw-bold">MLS #</label><input id="txnMls" class="form-control" placeholder="Optional"></div>
+      <div><label class="form-label small fw-bold">Buyer</label><input id="txnBuyer" class="form-control" placeholder="Buyer name"></div>
+      <div><label class="form-label small fw-bold">Seller</label><input id="txnSeller" class="form-control" placeholder="Seller name"></div>
+      <div><label class="form-label small fw-bold">Lender</label><input id="txnLender" class="form-control" placeholder="Lender"></div>
+      <div><label class="form-label small fw-bold">Title / Escrow</label><input id="txnTitleCompany" class="form-control" placeholder="Title company"></div>
+      <div><label class="form-label small fw-bold">Contract Date</label><input id="txnContractDate" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">EMD Due</label><input id="txnEmdDue" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">Inspection Deadline</label><input id="txnInspectionDate" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">Appraisal Deadline</label><input id="txnAppraisalDate" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">Loan Deadline</label><input id="txnLoanDate" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">Final Walkthrough</label><input id="txnWalkthroughDate" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">Close Date</label><input id="txnCloseDate" type="date" class="form-control"></div>
+      <div><label class="form-label small fw-bold">Risk Level</label><select id="txnRisk" class="form-control"><option>Normal</option><option>Watch</option><option>High Risk</option></select></div>
+      <div class="wide-4"><label class="form-label small fw-bold">Notes</label><textarea id="txnNotes" class="form-control" rows="3" placeholder="Transaction notes, special terms, or reminders..."></textarea></div>
+    </div>
+
+    <div class="mt-3">
+      <div class="feature-title mb-2">Transaction Checklist</div>
+      <div id="txnChecklistEditor" class="transaction-checklist-grid"></div>
+    </div>
+
+    <div class="mt-3">
+      <div class="feature-title mb-2">Document Storage</div>
+      <input id="txnDocumentUpload" type="file" class="form-control" multiple onchange="txnHandleDocumentUpload(event)">
+      <div class="small-muted mt-1">Upload contracts, disclosures, inspection reports, appraisal files, HOA docs, or closing statements.</div>
+      <div id="txnDocumentList" class="mt-2"></div>
+    </div>
+
+    <div class="mt-3 d-flex gap-2 flex-wrap">
+      <button class="btn btn-success" onclick="txnSaveTransaction()">Save Transaction</button>
+      <button class="btn btn-outline-danger" onclick="txnDeleteCurrent()">Delete</button>
+    </div>
+  </div>
+
+  <div class="pipeline-toolbar">
+    <div class="transaction-filter-row">
+      <div><label class="form-label small fw-bold">Search Transactions</label><input id="txnSearch" class="form-control" placeholder="Address, buyer, seller, agent, lender, title company..." oninput="txnRenderList()"></div>
+      <div><label class="form-label small fw-bold">Status</label><select id="txnStatusFilter" class="form-control" onchange="txnRenderList()"><option value="">All Statuses</option><option>Active</option><option>Under Contract</option><option>Pending Closing</option><option>Closed</option><option>Cancelled</option><option>At Risk</option></select></div>
+      <div><label class="form-label small fw-bold">Side</label><select id="txnSideFilter" class="form-control" onchange="txnRenderList()"><option value="">All Sides</option><option>Buyer</option><option>Seller</option><option>Both</option></select></div>
+      <div><label class="form-label small fw-bold">Risk</label><select id="txnRiskFilter" class="form-control" onchange="txnRenderList()"><option value="">All Risk</option><option>Normal</option><option>Watch</option><option>High Risk</option></select></div>
+      <div><button class="btn btn-outline-primary w-100" onclick="txnClearFilters()">Clear</button></div>
+    </div>
+  </div>
+
+  <div id="transactionList"></div>
+</div>
+
 <!-- TASKS -->
 <div id="tasksTab" class="mt-4" style="display:none;">
   <div class="dashboard-header-row mb-3">
@@ -3302,6 +3590,13 @@ body {
 </div>
 
 <!-- CAMPAIGN ANALYTICS PANEL -->
+
+
+<div id="transactionPanel">
+  <button class="btn btn-sm btn-outline-danger float-end" onclick="txnClosePanel()">Close</button>
+  <div id="transactionPanelContent"></div>
+</div>
+
 <div id="campaignPanel">
   <button class="btn btn-sm btn-secondary mb-3" onclick="closeCampaignPanel()">Close</button>
 
@@ -4822,10 +5117,11 @@ function showTab(t){
   textCampaignsTab.style.display = t==='textCampaigns'?'block':'none';
   contactsTab.style.display = t==='contacts'?'block':'none';
   pipelineTab.style.display = t==='pipeline'?'block':'none';
+  transactionsTab.style.display = t==='transactions'?'block':'none';
   tasksTab.style.display = t==='tasks'?'block':'none';
   calendarTab.style.display = t==='calendar'?'block':'none';
 
-  [tabDashboard, tabSnapshot, tabCampaigns, tabEmailDesigner, tabTextCampaigns, tabContacts, tabPipeline, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
+  [tabDashboard, tabSnapshot, tabCampaigns, tabEmailDesigner, tabTextCampaigns, tabContacts, tabPipeline, tabTransactions, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
 
   if(t === 'dashboard'){
     tabDashboard.classList.add('active');
@@ -4872,6 +5168,11 @@ function showTab(t){
   if(t === 'pipeline'){
     tabPipeline.classList.add('active');
     loadPipeline();
+  }
+
+  if(t === 'transactions'){
+    tabTransactions.classList.add('active');
+    txnInit();
   }
 
   if(t === 'tasks'){
@@ -8865,6 +9166,513 @@ function openGlobalCampaign(id){
   setTimeout(()=>openCampaignPanel(id), 150);
 }
 
+
+
+/* ================= TRANSACTION CENTER ================= */
+const TXN_STORAGE_KEY = 'excelMarketingTransactionsV1';
+const TXN_DOC_STORAGE_NOTICE = 'Browser storage version';
+const TXN_CHECKLIST_ITEMS = [
+  'Purchase Agreement Executed',
+  'Earnest Money Received',
+  'Disclosures Sent',
+  'Inspection Ordered',
+  'Inspection Complete',
+  'Repair Negotiation Complete',
+  'Appraisal Ordered',
+  'Appraisal Received',
+  'Loan Approval Received',
+  'HOA Docs Received',
+  'Closing Scheduled',
+  'Final Walkthrough Complete',
+  'Closing Statement Reviewed',
+  'Closed / Recorded'
+];
+let txnCache = [];
+let txnWorkingDocs = [];
+
+function txnSafe(value){
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+}
+
+function txnMoney(value){
+  const num = Number(value || 0);
+  return num.toLocaleString('en-US', {style:'currency', currency:'USD', maximumFractionDigits:0});
+}
+
+function txnDate(value){
+  if(!value) return '';
+  const d = new Date(String(value).includes('T') ? value : `${value}T00:00:00`);
+  if(isNaN(d.getTime())) return '';
+  return d.toLocaleDateString();
+}
+
+function txnDaysUntil(value){
+  if(!value) return 9999;
+  const d = new Date(`${value}T00:00:00`);
+  if(isNaN(d.getTime())) return 9999;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return Math.ceil((d - today) / 86400000);
+}
+
+function txnLoad(){
+  try {
+    const parsed = JSON.parse(localStorage.getItem(TXN_STORAGE_KEY) || '[]');
+    txnCache = Array.isArray(parsed) ? parsed : [];
+  } catch(e){ txnCache = []; }
+  return txnCache;
+}
+
+function txnSaveAll(){
+  localStorage.setItem(TXN_STORAGE_KEY, JSON.stringify(txnCache));
+}
+
+function txnDefaultChecklist(existing = {}){
+  const checklist = {};
+  TXN_CHECKLIST_ITEMS.forEach(item => checklist[item] = !!existing[item]);
+  return checklist;
+}
+
+function txnProgress(txn = {}){
+  const checklist = txnDefaultChecklist(txn.checklist || {});
+  const done = Object.values(checklist).filter(Boolean).length;
+  return Math.round((done / TXN_CHECKLIST_ITEMS.length) * 100);
+}
+
+function txnGci(txn = {}){
+  const manual = Number(txn.gci || 0);
+  if(manual > 0) return manual;
+  const price = Number(txn.price || 0);
+  const pct = Number(txn.commissionPercent || 0);
+  return Math.round(price * (pct / 100));
+}
+
+function txnStatusClass(status = ''){
+  const s = String(status).toLowerCase();
+  if(s.includes('closed')) return 'closed';
+  if(s.includes('pending')) return 'pending';
+  if(s.includes('risk') || s.includes('cancel')) return 'risk';
+  return 'active';
+}
+
+function txnIsActive(txn = {}){
+  return !['Closed','Cancelled'].includes(txn.status || '');
+}
+
+function txnCriticalAlerts(txn = {}){
+  const alerts = [];
+  const checklist = txnDefaultChecklist(txn.checklist || {});
+  const status = txn.status || 'Active';
+  if(status === 'Closed' || status === 'Cancelled') return alerts;
+
+  const addDeadlineAlert = (label, field, checklistItem, highText) => {
+    const days = txnDaysUntil(txn[field]);
+    if(days === 9999 || checklist[checklistItem]) return;
+    if(days < 0) alerts.push({severity:'high', title:`${label} overdue`, text:`${txn.address || 'Transaction'} is ${Math.abs(days)} day(s) past the ${label.toLowerCase()}. ${highText || ''}`});
+    else if(days <= 2) alerts.push({severity:'high', title:`${label} due soon`, text:`${txn.address || 'Transaction'} has ${label.toLowerCase()} due in ${days} day(s).`});
+    else if(days <= 5) alerts.push({severity:'medium', title:`${label} approaching`, text:`${txn.address || 'Transaction'} has ${label.toLowerCase()} due in ${days} day(s).`});
+  };
+
+  addDeadlineAlert('Earnest money', 'emdDue', 'Earnest Money Received', 'Confirm receipt with escrow/title.');
+  addDeadlineAlert('Inspection deadline', 'inspectionDate', 'Inspection Complete', 'Confirm inspection status and repair negotiations.');
+  addDeadlineAlert('Appraisal deadline', 'appraisalDate', 'Appraisal Received', 'Check with lender for appraisal status.');
+  addDeadlineAlert('Loan deadline', 'loanDate', 'Loan Approval Received', 'Follow up with lender immediately.');
+  addDeadlineAlert('Final walkthrough', 'walkthroughDate', 'Final Walkthrough Complete', 'Schedule walkthrough with the client.');
+
+  const closeDays = txnDaysUntil(txn.closeDate);
+  if(closeDays !== 9999 && closeDays < 0 && status !== 'Closed') alerts.push({severity:'high', title:'Closing date passed', text:`${txn.address || 'Transaction'} has a past close date and is not marked closed.`});
+  else if(closeDays !== 9999 && closeDays <= 5 && status !== 'Closed') alerts.push({severity:'medium', title:'Closing coming up', text:`${txn.address || 'Transaction'} is scheduled to close in ${closeDays} day(s). Review settlement statement and closing status.`});
+
+  const docs = Array.isArray(txn.documents) ? txn.documents : [];
+  const docNames = docs.map(d => String(d.name || '').toLowerCase()).join(' ');
+  if(txnIsActive(txn) && !docNames.includes('contract') && !docNames.includes('purchase')) alerts.push({severity:'medium', title:'Purchase contract missing', text:`Upload the purchase agreement for ${txn.address || 'this transaction'}.`});
+  if(txn.risk === 'High Risk') alerts.push({severity:'high', title:'High risk file', text:`${txn.address || 'Transaction'} is marked High Risk. Broker review recommended.`});
+  if(txn.risk === 'Watch') alerts.push({severity:'medium', title:'Watch file', text:`${txn.address || 'Transaction'} is marked Watch. Keep this file on your radar.`});
+
+  if(alerts.length === 0 && txnIsActive(txn)) alerts.push({severity:'good', title:'On track', text:`${txn.address || 'Transaction'} has no urgent AI coordinator alerts right now.`});
+  return alerts;
+}
+
+function txnAllAlerts(){
+  return txnCache.flatMap(txn => txnCriticalAlerts(txn).map(alert => ({...alert, txn})))
+    .sort((a,b)=>({high:0,medium:1,good:2}[a.severity] ?? 3)-({high:0,medium:1,good:2}[b.severity] ?? 3));
+}
+
+function txnInit(){
+  txnLoad();
+  txnRenderChecklistEditor({});
+  txnRenderAll();
+}
+
+function txnRenderAll(){
+  txnLoad();
+  txnRenderSummary();
+  txnRenderAIAlerts();
+  txnRenderBrokerReport();
+  txnRenderList();
+}
+
+function txnSummaryStats(){
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  const active = txnCache.filter(t=>txnIsActive(t));
+  const underContract = txnCache.filter(t=>t.status === 'Under Contract').length;
+  const pending = txnCache.filter(t=>t.status === 'Pending Closing').length;
+  const closedThisMonth = txnCache.filter(t=>{
+    if(t.status !== 'Closed' || !t.closeDate) return false;
+    const d = new Date(`${t.closeDate}T00:00:00`);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+  const activeGci = active.reduce((sum,t)=>sum+txnGci(t),0);
+  const pendingVolume = active.reduce((sum,t)=>sum+Number(t.price || 0),0);
+  const atRisk = active.filter(t=>t.status === 'At Risk' || t.risk === 'High Risk' || txnCriticalAlerts(t).some(a=>a.severity === 'high')).length;
+  return {activeCount:active.length, underContract, pending, closedThisMonth:closedThisMonth.length, activeGci, pendingVolume, atRisk};
+}
+
+function txnRenderSummary(){
+  const el = document.getElementById('transactionSummaryGrid');
+  if(!el) return;
+  const s = txnSummaryStats();
+  const cards = [
+    ['Active Files', s.activeCount, 'Open transactions'],
+    ['Under Contract', s.underContract, 'Contracts in progress'],
+    ['Pending Closing', s.pending, 'Near the finish line'],
+    ['Closed This Month', s.closedThisMonth, 'Recorded / closed'],
+    ['Expected GCI', txnMoney(s.activeGci), 'Active forecast']
+  ];
+  el.innerHTML = cards.map(([label,num,sub])=>`<div class="transaction-summary-card"><div class="small-muted">${label}</div><div class="transaction-summary-number">${num}</div><div class="kpi-label">${sub}</div></div>`).join('');
+}
+
+function txnRenderAIAlerts(){
+  const el = document.getElementById('transactionAIAlerts');
+  if(!el) return;
+  const alerts = txnAllAlerts().slice(0,8);
+  if(alerts.length === 0){
+    el.innerHTML = '<div class="transaction-alert good"><b>No active files yet.</b><br><small>Create your first transaction to activate AI coordinator alerts.</small></div>';
+    return;
+  }
+  el.innerHTML = alerts.map(item=>`
+    <div class="transaction-alert ${item.severity}" onclick="txnOpenPanel('${item.txn.id}')" style="cursor:pointer;">
+      <b>${txnSafe(item.title)}</b><br>
+      <small>${txnSafe(item.text)}</small>
+    </div>
+  `).join('');
+}
+
+function txnRenderBrokerReport(){
+  const el = document.getElementById('transactionBrokerReport');
+  if(!el) return;
+  const s = txnSummaryStats();
+  const closingSoon = txnCache.filter(t=>txnIsActive(t) && txnDaysUntil(t.closeDate) <= 30 && txnDaysUntil(t.closeDate) >= 0).length;
+  const avgProgress = txnCache.length ? Math.round(txnCache.reduce((sum,t)=>sum+txnProgress(t),0)/txnCache.length) : 0;
+  const cards = [
+    ['Pending Volume', txnMoney(s.pendingVolume), 'Open file value'],
+    ['At-Risk Files', s.atRisk, 'Needs attention'],
+    ['Closing ≤ 30 Days', closingSoon, 'Next 30 days'],
+    ['Avg. Progress', `${avgProgress}%`, 'Checklist completion'],
+    ['Active GCI', txnMoney(s.activeGci), 'Forecast'],
+    ['Files Stored', txnCache.length, 'All transactions']
+  ];
+  el.innerHTML = cards.map(([label,num,sub])=>`<div class="transaction-report-card"><div class="small-muted">${label}</div><div class="transaction-summary-number">${num}</div><div class="kpi-label">${sub}</div></div>`).join('');
+}
+
+function txnRenderList(){
+  const el = document.getElementById('transactionList');
+  if(!el) return;
+  const search = String(document.getElementById('txnSearch')?.value || '').toLowerCase();
+  const status = document.getElementById('txnStatusFilter')?.value || '';
+  const side = document.getElementById('txnSideFilter')?.value || '';
+  const risk = document.getElementById('txnRiskFilter')?.value || '';
+  let list = [...txnCache];
+  if(search){
+    list = list.filter(t => [t.address,t.buyer,t.seller,t.agent,t.lender,t.titleCompany,t.mls,t.status,t.side].join(' ').toLowerCase().includes(search));
+  }
+  if(status) list = list.filter(t=>t.status === status);
+  if(side) list = list.filter(t=>t.side === side);
+  if(risk) list = list.filter(t=>t.risk === risk);
+  list.sort((a,b)=>{
+    const sev = tx => txnCriticalAlerts(tx).some(x=>x.severity==='high') ? 0 : txnCriticalAlerts(tx).some(x=>x.severity==='medium') ? 1 : 2;
+    return sev(a)-sev(b) || txnDaysUntil(a.closeDate)-txnDaysUntil(b.closeDate);
+  });
+  if(list.length === 0){
+    el.innerHTML = '<div class="modern-card text-muted">No transactions yet. Click <b>+ New Transaction</b> to create your first file.</div>';
+    return;
+  }
+  el.innerHTML = list.map(txn=>txnCardHtml(txn)).join('');
+}
+
+function txnCardHtml(txn){
+  const progress = txnProgress(txn);
+  const alerts = txnCriticalAlerts(txn).filter(a=>a.severity !== 'good');
+  const closeDays = txnDaysUntil(txn.closeDate);
+  const statusClass = txnStatusClass(txn.status);
+  return `
+    <div class="transaction-card" onclick="txnOpenPanel('${txn.id}')">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <div class="transaction-card-title">${txnSafe(txn.address || 'Untitled Transaction')}</div>
+          <div class="small-muted">${txnSafe(txn.side || '')} • Buyer: ${txnSafe(txn.buyer || '—')} • Seller: ${txnSafe(txn.seller || '—')}</div>
+        </div>
+        <span class="transaction-status-pill ${statusClass}">${txnSafe(txn.status || 'Active')}</span>
+      </div>
+      <div class="transaction-meta-grid">
+        <div class="transaction-meta-box"><div class="small-muted">Close Date</div><b>${txnDate(txn.closeDate) || 'Not set'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Price</div><b>${txnMoney(txn.price)}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Expected GCI</div><b>${txnMoney(txnGci(txn))}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">AI Status</div><b>${alerts.length ? `${alerts.length} Alert${alerts.length>1?'s':''}` : 'On Track'}</b></div>
+      </div>
+      <div class="transaction-progress-wrap"><div class="transaction-progress-fill" style="width:${progress}%"></div></div>
+      <div class="small-muted mt-1">Progress: ${progress}% ${closeDays !== 9999 ? `• ${closeDays >= 0 ? closeDays + ' days to close' : Math.abs(closeDays) + ' days past close'}` : ''}</div>
+      ${alerts.slice(0,2).map(a=>`<div class="mt-2"><span class="pipeline-warning-pill">${txnSafe(a.title)}</span></div>`).join('')}
+    </div>
+  `;
+}
+
+function txnStartNew(){
+  txnWorkingDocs = [];
+  document.getElementById('transactionFormCard').style.display = 'block';
+  document.getElementById('transactionFormTitle').innerText = 'New Transaction';
+  ['txnId','txnAddress','txnPrice','txnGci','txnAgent','txnMls','txnBuyer','txnSeller','txnLender','txnTitleCompany','txnContractDate','txnEmdDue','txnInspectionDate','txnAppraisalDate','txnLoanDate','txnWalkthroughDate','txnCloseDate','txnNotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  if(document.getElementById('txnCommissionPercent')) document.getElementById('txnCommissionPercent').value='2.5';
+  if(document.getElementById('txnSide')) document.getElementById('txnSide').value='Buyer';
+  if(document.getElementById('txnStatus')) document.getElementById('txnStatus').value='Active';
+  if(document.getElementById('txnRisk')) document.getElementById('txnRisk').value='Normal';
+  txnRenderChecklistEditor({});
+  txnRenderDocumentList();
+  document.getElementById('transactionFormCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function txnCancelEdit(){
+  document.getElementById('transactionFormCard').style.display = 'none';
+}
+
+function txnRenderChecklistEditor(checklist = {}){
+  const el = document.getElementById('txnChecklistEditor');
+  if(!el) return;
+  const full = txnDefaultChecklist(checklist);
+  el.innerHTML = TXN_CHECKLIST_ITEMS.map(item=>`
+    <label class="transaction-check-item"><input type="checkbox" data-txn-check="${txnSafe(item)}" ${full[item] ? 'checked' : ''}> ${txnSafe(item)}</label>
+  `).join('');
+}
+
+function txnReadChecklistEditor(){
+  const checklist = {};
+  document.querySelectorAll('[data-txn-check]').forEach(input => checklist[input.getAttribute('data-txn-check')] = input.checked);
+  return checklist;
+}
+
+function txnHandleDocumentUpload(event){
+  const files = Array.from(event.target.files || []);
+  if(files.length === 0) return;
+  let pending = files.length;
+  files.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = () => {
+      txnWorkingDocs.push({id:Date.now()+Math.floor(Math.random()*100000), name:file.name, type:file.type || 'file', size:file.size || 0, data:reader.result, uploadedAt:new Date().toISOString(), storage:TXN_DOC_STORAGE_NOTICE});
+      pending--;
+      if(pending === 0){ txnRenderDocumentList(); event.target.value=''; }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function txnRenderDocumentList(){
+  const el = document.getElementById('txnDocumentList');
+  if(!el) return;
+  if(!txnWorkingDocs.length){ el.innerHTML = '<div class="small-muted">No documents uploaded yet.</div>'; return; }
+  el.innerHTML = txnWorkingDocs.map(doc=>`
+    <div class="transaction-doc-row">
+      <div><b>${txnSafe(doc.name)}</b><br><small>${txnSafe(doc.type || 'file')} • ${Math.round((doc.size || 0)/1024)} KB</small></div>
+      <div class="d-flex gap-1">
+        <a class="btn btn-sm btn-outline-primary" href="${doc.data}" download="${txnSafe(doc.name)}">Download</a>
+        <button class="btn btn-sm btn-outline-danger" onclick="txnRemoveDocument('${doc.id}')">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function txnRemoveDocument(id){
+  txnWorkingDocs = txnWorkingDocs.filter(doc=>String(doc.id) !== String(id));
+  txnRenderDocumentList();
+}
+
+function txnSaveTransaction(){
+  txnLoad();
+  const id = document.getElementById('txnId').value || String(Date.now());
+  const price = Number(document.getElementById('txnPrice').value || 0);
+  const pct = Number(document.getElementById('txnCommissionPercent').value || 0);
+  const manualGci = Number(document.getElementById('txnGci').value || 0);
+  const existing = txnCache.find(t=>String(t.id) === String(id));
+  const txn = {
+    id,
+    address: document.getElementById('txnAddress').value.trim(),
+    side: document.getElementById('txnSide').value,
+    status: document.getElementById('txnStatus').value,
+    price,
+    commissionPercent: pct,
+    gci: manualGci || Math.round(price * (pct/100)),
+    agent: document.getElementById('txnAgent').value.trim(),
+    mls: document.getElementById('txnMls').value.trim(),
+    buyer: document.getElementById('txnBuyer').value.trim(),
+    seller: document.getElementById('txnSeller').value.trim(),
+    lender: document.getElementById('txnLender').value.trim(),
+    titleCompany: document.getElementById('txnTitleCompany').value.trim(),
+    contractDate: document.getElementById('txnContractDate').value,
+    emdDue: document.getElementById('txnEmdDue').value,
+    inspectionDate: document.getElementById('txnInspectionDate').value,
+    appraisalDate: document.getElementById('txnAppraisalDate').value,
+    loanDate: document.getElementById('txnLoanDate').value,
+    walkthroughDate: document.getElementById('txnWalkthroughDate').value,
+    closeDate: document.getElementById('txnCloseDate').value,
+    risk: document.getElementById('txnRisk').value,
+    notes: document.getElementById('txnNotes').value.trim(),
+    checklist: txnReadChecklistEditor(),
+    documents: txnWorkingDocs,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  if(!txn.address){ alert('Please enter a property address.'); return; }
+  const idx = txnCache.findIndex(t=>String(t.id) === String(id));
+  if(idx >= 0) txnCache[idx] = txn; else txnCache.unshift(txn);
+  txnSaveAll();
+  document.getElementById('transactionFormCard').style.display = 'none';
+  txnRenderAll();
+}
+
+function txnEdit(id){
+  txnLoad();
+  const txn = txnCache.find(t=>String(t.id) === String(id));
+  if(!txn) return;
+  document.getElementById('transactionFormCard').style.display = 'block';
+  document.getElementById('transactionFormTitle').innerText = 'Edit Transaction';
+  document.getElementById('txnId').value = txn.id;
+  document.getElementById('txnAddress').value = txn.address || '';
+  document.getElementById('txnSide').value = txn.side || 'Buyer';
+  document.getElementById('txnStatus').value = txn.status || 'Active';
+  document.getElementById('txnPrice').value = txn.price || '';
+  document.getElementById('txnCommissionPercent').value = txn.commissionPercent || 2.5;
+  document.getElementById('txnGci').value = txn.gci || '';
+  document.getElementById('txnAgent').value = txn.agent || '';
+  document.getElementById('txnMls').value = txn.mls || '';
+  document.getElementById('txnBuyer').value = txn.buyer || '';
+  document.getElementById('txnSeller').value = txn.seller || '';
+  document.getElementById('txnLender').value = txn.lender || '';
+  document.getElementById('txnTitleCompany').value = txn.titleCompany || '';
+  document.getElementById('txnContractDate').value = txn.contractDate || '';
+  document.getElementById('txnEmdDue').value = txn.emdDue || '';
+  document.getElementById('txnInspectionDate').value = txn.inspectionDate || '';
+  document.getElementById('txnAppraisalDate').value = txn.appraisalDate || '';
+  document.getElementById('txnLoanDate').value = txn.loanDate || '';
+  document.getElementById('txnWalkthroughDate').value = txn.walkthroughDate || '';
+  document.getElementById('txnCloseDate').value = txn.closeDate || '';
+  document.getElementById('txnRisk').value = txn.risk || 'Normal';
+  document.getElementById('txnNotes').value = txn.notes || '';
+  txnWorkingDocs = Array.isArray(txn.documents) ? [...txn.documents] : [];
+  txnRenderChecklistEditor(txn.checklist || {});
+  txnRenderDocumentList();
+  txnClosePanel();
+  document.getElementById('transactionFormCard').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function txnDeleteCurrent(){
+  const id = document.getElementById('txnId').value;
+  if(!id){ txnCancelEdit(); return; }
+  if(!confirm('Delete this transaction?')) return;
+  txnCache = txnCache.filter(t=>String(t.id) !== String(id));
+  txnSaveAll();
+  txnCancelEdit();
+  txnRenderAll();
+}
+
+function txnOpenPanel(id){
+  txnLoad();
+  const txn = txnCache.find(t=>String(t.id) === String(id));
+  if(!txn) return;
+  const alerts = txnCriticalAlerts(txn);
+  const checklist = txnDefaultChecklist(txn.checklist || {});
+  const docs = Array.isArray(txn.documents) ? txn.documents : [];
+  const progress = txnProgress(txn);
+  const el = document.getElementById('transactionPanelContent');
+  el.innerHTML = `
+    <h4 class="panel-title mb-1">${txnSafe(txn.address || 'Transaction Detail')}</h4>
+    <div class="small-muted mb-3">${txnSafe(txn.side || '')} • ${txnSafe(txn.status || '')} • Expected GCI ${txnMoney(txnGci(txn))}</div>
+    <div class="transaction-progress-wrap mb-2"><div class="transaction-progress-fill" style="width:${progress}%"></div></div>
+    <div class="small-muted mb-3">Checklist progress: ${progress}%</div>
+
+    <div class="transaction-ai-panel mb-3">
+      <h5>AI Transaction Coordinator</h5>
+      ${alerts.map(a=>`<div class="transaction-alert ${a.severity}"><b>${txnSafe(a.title)}</b><br><small>${txnSafe(a.text)}</small></div>`).join('')}
+    </div>
+
+    <div class="analytics-grid">
+      <div class="analytics-card"><div class="analytics-label">Price</div><div class="analytics-number">${txnMoney(txn.price)}</div></div>
+      <div class="analytics-card"><div class="analytics-label">GCI</div><div class="analytics-number">${txnMoney(txnGci(txn))}</div></div>
+      <div class="analytics-card"><div class="analytics-label">Close Date</div><div class="analytics-number" style="font-size:18px;">${txnDate(txn.closeDate) || '—'}</div></div>
+      <div class="analytics-card"><div class="analytics-label">Risk</div><div class="analytics-number" style="font-size:18px;">${txnSafe(txn.risk || 'Normal')}</div></div>
+    </div>
+
+    <div class="section"><h6>People & Vendors</h6>
+      <div class="transaction-meta-grid">
+        <div class="transaction-meta-box"><div class="small-muted">Buyer</div><b>${txnSafe(txn.buyer || '—')}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Seller</div><b>${txnSafe(txn.seller || '—')}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Lender</div><b>${txnSafe(txn.lender || '—')}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Title / Escrow</div><b>${txnSafe(txn.titleCompany || '—')}</b></div>
+      </div>
+    </div>
+
+    <div class="section"><h6>Critical Dates</h6>
+      <div class="transaction-meta-grid">
+        <div class="transaction-meta-box"><div class="small-muted">Contract</div><b>${txnDate(txn.contractDate) || '—'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Inspection</div><b>${txnDate(txn.inspectionDate) || '—'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Appraisal</div><b>${txnDate(txn.appraisalDate) || '—'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Loan</div><b>${txnDate(txn.loanDate) || '—'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">EMD</div><b>${txnDate(txn.emdDue) || '—'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Walkthrough</div><b>${txnDate(txn.walkthroughDate) || '—'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Closing</div><b>${txnDate(txn.closeDate) || '—'}</b></div>
+      </div>
+    </div>
+
+    <div class="section"><h6>Checklist</h6>
+      <div class="transaction-checklist-grid">${TXN_CHECKLIST_ITEMS.map(item=>`<div class="transaction-check-item">${checklist[item] ? '✅' : '☐'} ${txnSafe(item)}</div>`).join('')}</div>
+    </div>
+
+    <div class="section"><h6>Documents</h6>
+      ${docs.length ? docs.map(doc=>`<div class="transaction-doc-row"><div><b>${txnSafe(doc.name)}</b><br><small>${txnDate(doc.uploadedAt)} • ${Math.round((doc.size || 0)/1024)} KB</small></div><a class="btn btn-sm btn-outline-primary" href="${doc.data}" download="${txnSafe(doc.name)}">Download</a></div>`).join('') : '<div class="small-muted">No documents uploaded.</div>'}
+    </div>
+
+    <div class="section"><h6>Notes</h6><div class="note">${txnSafe(txn.notes || 'No notes yet.')}</div></div>
+
+    <div class="mt-3 d-flex gap-2 flex-wrap">
+      <button class="btn btn-success" onclick="txnEdit('${txn.id}')">Edit Transaction</button>
+      <button class="btn btn-outline-primary" onclick="showTab('calendar')">Open Calendar</button>
+    </div>
+  `;
+  document.getElementById('transactionPanel').classList.add('open');
+}
+
+function txnClosePanel(){
+  document.getElementById('transactionPanel')?.classList.remove('open');
+}
+
+function txnClearFilters(){
+  ['txnSearch','txnStatusFilter','txnSideFilter','txnRiskFilter'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  txnRenderList();
+}
+
+function txnLoadDemoData(){
+  if(txnCache.length && !confirm('Add demo transactions to your existing transaction list?')) return;
+  const today = new Date();
+  const addDays = days => { const d = new Date(today); d.setDate(d.getDate()+days); return d.toISOString().slice(0,10); };
+  const demo = [
+    {id:String(Date.now()+1), address:'9278 Red Spring Dr', side:'Buyer', status:'Under Contract', price:725000, commissionPercent:2.5, agent:'Jeff Peterson', buyer:'Sample Buyer', seller:'Sample Seller', lender:'ABC Mortgage', titleCompany:'First Centennial Title', contractDate:addDays(-5), emdDue:addDays(-1), inspectionDate:addDays(2), appraisalDate:addDays(9), loanDate:addDays(17), walkthroughDate:addDays(28), closeDate:addDays(30), risk:'Watch', checklist:{'Purchase Agreement Executed':true,'Disclosures Sent':true,'Inspection Ordered':true}, documents:[], notes:'Demo file showing AI deadline alerts.'},
+    {id:String(Date.now()+2), address:'1200 Tahoe Glen Dr', side:'Seller', status:'Pending Closing', price:1350000, commissionPercent:2.5, agent:'Jeff Peterson', buyer:'Lake Buyer', seller:'Tahoe Seller', lender:'Mountain Lending', titleCompany:'Western Title', contractDate:addDays(-18), emdDue:addDays(-16), inspectionDate:addDays(-10), appraisalDate:addDays(-4), loanDate:addDays(3), walkthroughDate:addDays(5), closeDate:addDays(7), risk:'Normal', checklist:{'Purchase Agreement Executed':true,'Earnest Money Received':true,'Disclosures Sent':true,'Inspection Ordered':true,'Inspection Complete':true,'Appraisal Ordered':true,'Appraisal Received':true}, documents:[], notes:'Demo pending closing file.'}
+  ];
+  txnCache = [...demo, ...txnCache];
+  txnSaveAll();
+  txnRenderAll();
+}
+
 document.addEventListener('click', function(event){
   const searchWrap = document.querySelector('.global-search-wrap');
   if(searchWrap && !searchWrap.contains(event.target)){
@@ -8893,6 +9701,7 @@ editPhone.addEventListener('input', () => normalizePhoneInput(editPhone));
 renderTypes();
 
 loadPipelineStages().then(()=>{
+  txnLoad();
   loadContacts();
   loadDashboard();
   loadCampaigns();
