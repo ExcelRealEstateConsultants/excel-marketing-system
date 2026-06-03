@@ -2736,6 +2736,47 @@ body {
   .ai-assistant-command-grid { grid-template-columns:1fr; }
 }
 
+
+/* ===== TRANSACTION AUTOMATION ENGINE ===== */
+.transaction-automation-panel {
+  background:#f8fafc;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+}
+.transaction-automation-grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+}
+.transaction-auto-task {
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  margin-bottom:10px;
+}
+.transaction-auto-task.done { opacity:.62; background:#f9fafb; }
+.transaction-auto-task.high { border-left:5px solid #dc2626; }
+.transaction-auto-task.normal { border-left:5px solid #0284c7; }
+.transaction-auto-task.low { border-left:5px solid #16a34a; }
+.automation-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  border-radius:999px;
+  padding:4px 8px;
+  background:#eef2f7;
+  color:#334155;
+  font-size:11px;
+  font-weight:800;
+  margin:2px;
+}
+.automation-pill.high { background:#fee2e2; color:#991b1b; }
+.automation-pill.normal { background:#e0f2fe; color:#075985; }
+.automation-pill.low { background:#dcfce7; color:#166534; }
+@media (max-width: 992px){ .transaction-automation-grid { grid-template-columns:1fr; } }
+
 </style>
 </head>
 
@@ -3512,6 +3553,7 @@ body {
     </div>
     <div class="d-flex gap-2 flex-wrap">
       <button class="btn btn-sm btn-success" onclick="txnStartNew()">+ New Transaction</button>
+      <button class="btn btn-sm btn-outline-primary" onclick="txnRunAutomationAll()">Run Automation</button>
       <button class="btn btn-sm btn-outline-primary" onclick="txnLoadDemoData()">Load Demo</button>
       <button class="btn btn-sm btn-outline-primary" onclick="txnRenderAll()">Refresh</button>
     </div>
@@ -3575,6 +3617,22 @@ body {
     <div class="mt-3">
       <div class="feature-title mb-2">Transaction Checklist</div>
       <div id="txnChecklistEditor" class="transaction-checklist-grid"></div>
+    </div>
+
+    <div class="mt-3 transaction-automation-panel">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap mb-2">
+        <div>
+          <div class="feature-title mb-1">AI Automation Engine</div>
+          <div class="small-muted">Automatically creates transaction action items from status, close date, contract date, deadlines, checklist status, and missing documents.</div>
+        </div>
+        <span class="automation-pill normal">Auto Tasks</span>
+      </div>
+      <div class="transaction-automation-grid">
+        <label class="transaction-check-item"><input id="txnAutomationEnabled" type="checkbox" checked> Enable automation for this file</label>
+        <label class="transaction-check-item"><input id="txnAutoCreateDates" type="checkbox" checked> Create date-based action items</label>
+        <label class="transaction-check-item"><input id="txnAutoCreateDocs" type="checkbox" checked> Watch required documents</label>
+      </div>
+      <div id="txnAutomationPreview" class="mt-2"></div>
     </div>
 
     <div class="mt-3">
@@ -9156,6 +9214,20 @@ function changeCalendarMonth(delta){
   renderCalendar();
 }
 
+
+function txnCalendarEvents(){
+  txnLoad();
+  const events = [];
+  txnCache.forEach(txn=>{
+    if(txn.closeDate) events.push({type:'Transaction', title:`Close: ${txn.address || 'Transaction'}`, date:txn.closeDate, transactionId:txn.id, priority:'Normal'});
+    txnApplyAutomation(txn);
+    (txn.automationTasks || []).filter(task=>!task.done && task.due).forEach(task=>{
+      events.push({type:'Transaction Task', title:`${task.title} - ${txn.address || ''}`, date:task.due, transactionId:txn.id, priority:task.priority || 'Normal'});
+    });
+  });
+  return events;
+}
+
 function renderCalendar(){
   const year = calendarDate.getFullYear();
   const month = calendarDate.getMonth();
@@ -9181,14 +9253,18 @@ function renderCalendar(){
   for(let day=1; day<=totalDays; day++){
     const dateKey = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const events = calendarEventsCache.filter(event=>event.date === dateKey);
+    const txnEvents = txnCalendarEvents().filter(event=>event.date === dateKey);
+    const allDayEvents = [...events, ...txnEvents];
 
-    const eventsHtml = events.map(event=>{
+    const eventsHtml = allDayEvents.map(event=>{
       let cls = '';
       if(event.type === 'Task') cls = event.done ? 'task' : (event.date < todayKey() ? 'overdue' : 'task');
       if(event.type === 'Scheduled Campaign') cls = 'campaign';
+      if(event.type === 'Transaction' || event.type === 'Transaction Task') cls = event.priority === 'High' ? 'overdue' : 'campaign';
 
+      const clickAction = event.transactionId ? `showTab('transactions'); txnOpenPanel('${event.transactionId}')` : (event.contactId ? `openContact(${event.contactId})` : '');
       return `
-        <div class="calendar-event ${cls}" onclick="${event.contactId ? `openContact(${event.contactId})` : ''}">
+        <div class="calendar-event ${cls}" onclick="${clickAction}">
           <b>${event.type}</b><br>${event.title || ''}
           ${event.contactName ? `<br><small>${event.contactName}</small>` : ''}
         </div>
@@ -9348,6 +9424,28 @@ const TXN_CHECKLIST_ITEMS = [
   'Closing Statement Reviewed',
   'Closed / Recorded'
 ];
+const TXN_AUTOMATION_RULES = [
+  {field:'contractDate', title:'Send executed contract to title/escrow', offset:0, priority:'High', category:'Opening', checklist:'Purchase Agreement Executed'},
+  {field:'contractDate', title:'Send disclosure package to client', offset:1, priority:'Normal', category:'Opening', checklist:'Disclosures Sent'},
+  {field:'emdDue', title:'Confirm earnest money deposit received', offset:0, priority:'High', category:'Escrow', checklist:'Earnest Money Received'},
+  {field:'inspectionDate', title:'Confirm inspection is ordered', offset:-3, priority:'High', category:'Inspection', checklist:'Inspection Ordered'},
+  {field:'inspectionDate', title:'Confirm inspection is complete', offset:0, priority:'High', category:'Inspection', checklist:'Inspection Complete'},
+  {field:'inspectionDate', title:'Resolve inspection / repair negotiations', offset:1, priority:'High', category:'Inspection', checklist:'Repair Negotiation Complete'},
+  {field:'appraisalDate', title:'Confirm appraisal has been ordered', offset:-5, priority:'Normal', category:'Appraisal', checklist:'Appraisal Ordered'},
+  {field:'appraisalDate', title:'Confirm appraisal has been received', offset:0, priority:'High', category:'Appraisal', checklist:'Appraisal Received'},
+  {field:'loanDate', title:'Confirm loan approval status with lender', offset:0, priority:'High', category:'Loan', checklist:'Loan Approval Received'},
+  {field:'walkthroughDate', title:'Schedule and complete final walkthrough', offset:0, priority:'Normal', category:'Closing', checklist:'Final Walkthrough Complete'},
+  {field:'closeDate', title:'Confirm closing appointment is scheduled', offset:-5, priority:'High', category:'Closing', checklist:'Closing Scheduled'},
+  {field:'closeDate', title:'Review closing statement / settlement statement', offset:-2, priority:'High', category:'Closing', checklist:'Closing Statement Reviewed'},
+  {field:'closeDate', title:'Confirm closed and recorded', offset:0, priority:'High', category:'Closing', checklist:'Closed / Recorded'}
+];
+const TXN_REQUIRED_DOC_RULES = [
+  {keyword:'contract|purchase|agreement', title:'Upload purchase agreement / executed contract', priority:'High'},
+  {keyword:'disclosure|srpd|seller', title:'Upload required disclosure package', priority:'Normal'},
+  {keyword:'inspection', title:'Upload inspection report when received', priority:'Normal'},
+  {keyword:'appraisal', title:'Upload appraisal when received', priority:'Normal'},
+  {keyword:'closing|settlement|cd|alta', title:'Upload closing statement / settlement statement', priority:'High'}
+];
 let txnCache = [];
 let txnWorkingDocs = [];
 
@@ -9379,7 +9477,7 @@ function txnDaysUntil(value){
 function txnLoad(){
   try {
     const parsed = JSON.parse(localStorage.getItem(TXN_STORAGE_KEY) || '[]');
-    txnCache = Array.isArray(parsed) ? parsed : [];
+    txnCache = Array.isArray(parsed) ? parsed.map(txn => txnApplyAutomation ? txnApplyAutomation(txn) : txn) : [];
   } catch(e){ txnCache = []; }
   return txnCache;
 }
@@ -9392,6 +9490,159 @@ function txnDefaultChecklist(existing = {}){
   const checklist = {};
   TXN_CHECKLIST_ITEMS.forEach(item => checklist[item] = !!existing[item]);
   return checklist;
+}
+
+
+function txnAddDays(dateValue, offset){
+  if(!dateValue) return '';
+  const d = new Date(`${dateValue}T00:00:00`);
+  if(isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + Number(offset || 0));
+  return d.toISOString().slice(0,10);
+}
+
+function txnAutomationId(txnId, title, due){
+  return `auto_${txnId}_${String(title || '').toLowerCase().replace(/[^a-z0-9]+/g,'_')}_${due || 'nodate'}`;
+}
+
+function txnDocKeywordFound(txn = {}, keyword = ''){
+  const docs = Array.isArray(txn.documents) ? txn.documents : [];
+  const haystack = docs.map(d=>String(d.name || '').toLowerCase()).join(' ');
+  return String(keyword || '').split('|').some(k => k && haystack.includes(k.toLowerCase()));
+}
+
+function txnBuildAutomationTasks(txn = {}){
+  if(txn.automationEnabled === false) return [];
+  const checklist = txnDefaultChecklist(txn.checklist || {});
+  const existingAuto = Array.isArray(txn.automationTasks) ? txn.automationTasks : [];
+  const existingDoneMap = {};
+  existingAuto.forEach(task => { existingDoneMap[String(task.id)] = !!task.done; });
+  const tasks = [];
+
+  TXN_AUTOMATION_RULES.forEach(rule => {
+    if(rule.checklist && checklist[rule.checklist]) return;
+    if(txn.autoCreateDates === false) return;
+    const due = txnAddDays(txn[rule.field], rule.offset || 0);
+    if(!due) return;
+    const id = txnAutomationId(txn.id || 'new', rule.title, due);
+    tasks.push({
+      id,
+      title: rule.title,
+      due,
+      priority: rule.priority || 'Normal',
+      category: rule.category || 'Transaction',
+      source: 'AI Automation',
+      done: !!existingDoneMap[id]
+    });
+  });
+
+  if(txn.autoCreateDocs !== false){
+    TXN_REQUIRED_DOC_RULES.forEach(rule => {
+      if(txnDocKeywordFound(txn, rule.keyword)) return;
+      const due = txn.contractDate || txn.closeDate || todayKey();
+      const id = txnAutomationId(txn.id || 'new', rule.title, due);
+      tasks.push({
+        id,
+        title: rule.title,
+        due,
+        priority: rule.priority || 'Normal',
+        category: 'Documents',
+        source: 'AI Document Watch',
+        done: !!existingDoneMap[id]
+      });
+    });
+  }
+
+  return tasks.sort((a,b)=>{
+    const priorityWeight = {High:3, Normal:2, Low:1};
+    const da = a.due || '9999-12-31';
+    const db = b.due || '9999-12-31';
+    return da.localeCompare(db) || (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+  });
+}
+
+function txnApplyAutomation(txn = {}){
+  const prior = Array.isArray(txn.automationTasks) ? txn.automationTasks : [];
+  const manual = prior.filter(task => task && task.source === 'Manual');
+  txn.automationTasks = [...txnBuildAutomationTasks(txn), ...manual];
+  return txn;
+}
+
+function txnAutomationSummary(txn = {}){
+  const tasks = Array.isArray(txn.automationTasks) ? txn.automationTasks : txnBuildAutomationTasks(txn);
+  const open = tasks.filter(t=>!t.done);
+  const high = open.filter(t=>t.priority === 'High');
+  const overdue = open.filter(t=>t.due && txnDaysUntil(t.due) < 0);
+  return {total:tasks.length, open:open.length, high:high.length, overdue:overdue.length, tasks};
+}
+
+function txnRenderAutomationPreview(){
+  const el = document.getElementById('txnAutomationPreview');
+  if(!el) return;
+  const temp = txnReadTransactionForm(false);
+  temp.automationTasks = txnBuildAutomationTasks(temp);
+  const summary = txnAutomationSummary(temp);
+  if(!temp.automationEnabled){ el.innerHTML = '<div class="small-muted">Automation is turned off for this transaction.</div>'; return; }
+  if(!summary.open){ el.innerHTML = '<div class="small-muted">No automation items yet. Add dates/documents or save the transaction.</div>'; return; }
+  el.innerHTML = `<div class="small-muted mb-2">Preview: ${summary.open} open automated action item(s), ${summary.high} high priority.</div>` + summary.tasks.filter(t=>!t.done).slice(0,5).map(t=>`
+    <span class="automation-pill ${String(t.priority || 'Normal').toLowerCase()}">${txnSafe(t.priority)} • ${txnSafe(t.title)}${t.due ? ' • '+txnDate(t.due) : ''}</span>
+  `).join('');
+}
+
+function txnRenderAutomationTasks(txn = {}){
+  const tasks = Array.isArray(txn.automationTasks) ? txn.automationTasks : txnBuildAutomationTasks(txn);
+  const openTasks = tasks.filter(t=>!t.done);
+  if(!tasks.length) return '<div class="small-muted">No automated transaction tasks yet.</div>';
+  return tasks.map(task=>`
+    <div class="transaction-auto-task ${task.done ? 'done' : ''} ${String(task.priority || 'Normal').toLowerCase()}" >
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div>
+          <b>${task.done ? '✅' : '☐'} ${txnSafe(task.title)}</b><br>
+          <small>${txnSafe(task.category || 'Transaction')} • Due: ${txnDate(task.due) || 'No due date'} • ${txnSafe(task.source || 'AI Automation')}</small>
+        </div>
+        <div class="text-end">
+          <span class="automation-pill ${String(task.priority || 'Normal').toLowerCase()}">${txnSafe(task.priority || 'Normal')}</span><br>
+          <button class="btn btn-sm btn-outline-primary mt-2" onclick="txnToggleAutomationTask('${txn.id}','${task.id}')">${task.done ? 'Reopen' : 'Done'}</button>
+        </div>
+      </div>
+    </div>
+  `).join('') + (openTasks.length ? '' : '<div class="small-muted">All automated action items are complete.</div>');
+}
+
+function txnReadTransactionForm(requireAddress = true){
+  const id = document.getElementById('txnId')?.value || String(Date.now());
+  const price = Number(document.getElementById('txnPrice')?.value || 0);
+  const pct = Number(document.getElementById('txnCommissionPercent')?.value || 0);
+  const manualGci = Number(document.getElementById('txnGci')?.value || 0);
+  return {
+    id,
+    address: document.getElementById('txnAddress')?.value.trim() || '',
+    side: document.getElementById('txnSide')?.value || 'Buyer',
+    status: document.getElementById('txnStatus')?.value || 'Active',
+    price,
+    commissionPercent: pct,
+    gci: manualGci || Math.round(price * (pct/100)),
+    agent: document.getElementById('txnAgent')?.value.trim() || '',
+    mls: document.getElementById('txnMls')?.value.trim() || '',
+    buyer: document.getElementById('txnBuyer')?.value.trim() || '',
+    seller: document.getElementById('txnSeller')?.value.trim() || '',
+    lender: document.getElementById('txnLender')?.value.trim() || '',
+    titleCompany: document.getElementById('txnTitleCompany')?.value.trim() || '',
+    contractDate: document.getElementById('txnContractDate')?.value || '',
+    emdDue: document.getElementById('txnEmdDue')?.value || '',
+    inspectionDate: document.getElementById('txnInspectionDate')?.value || '',
+    appraisalDate: document.getElementById('txnAppraisalDate')?.value || '',
+    loanDate: document.getElementById('txnLoanDate')?.value || '',
+    walkthroughDate: document.getElementById('txnWalkthroughDate')?.value || '',
+    closeDate: document.getElementById('txnCloseDate')?.value || '',
+    risk: document.getElementById('txnRisk')?.value || 'Normal',
+    notes: document.getElementById('txnNotes')?.value.trim() || '',
+    checklist: txnReadChecklistEditor(),
+    documents: txnWorkingDocs,
+    automationEnabled: document.getElementById('txnAutomationEnabled')?.checked !== false,
+    autoCreateDates: document.getElementById('txnAutoCreateDates')?.checked !== false,
+    autoCreateDocs: document.getElementById('txnAutoCreateDocs')?.checked !== false,
+  };
 }
 
 function txnProgress(txn = {}){
@@ -9581,7 +9832,7 @@ function txnCardHtml(txn){
         <div class="transaction-meta-box"><div class="small-muted">Close Date</div><b>${txnDate(txn.closeDate) || 'Not set'}</b></div>
         <div class="transaction-meta-box"><div class="small-muted">Price</div><b>${txnMoney(txn.price)}</b></div>
         <div class="transaction-meta-box"><div class="small-muted">Expected GCI</div><b>${txnMoney(txnGci(txn))}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">AI Status</div><b>${alerts.length ? `${alerts.length} Alert${alerts.length>1?'s':''}` : 'On Track'}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">AI Status</div><b>${alerts.length ? `${alerts.length} Alert${alerts.length>1?'s':''}` : 'On Track'}</b><br><small>${autoSummary.open} auto task(s)</small></div>
       </div>
       <div class="transaction-progress-wrap"><div class="transaction-progress-fill" style="width:${progress}%"></div></div>
       <div class="small-muted mt-1">Progress: ${progress}% ${closeDays !== 9999 ? `• ${closeDays >= 0 ? closeDays + ' days to close' : Math.abs(closeDays) + ' days past close'}` : ''}</div>
@@ -9599,8 +9850,10 @@ function txnStartNew(){
   if(document.getElementById('txnSide')) document.getElementById('txnSide').value='Buyer';
   if(document.getElementById('txnStatus')) document.getElementById('txnStatus').value='Active';
   if(document.getElementById('txnRisk')) document.getElementById('txnRisk').value='Normal';
+  ['txnAutomationEnabled','txnAutoCreateDates','txnAutoCreateDocs'].forEach(id=>{ const el=document.getElementById(id); if(el) el.checked=true; });
   txnRenderChecklistEditor({});
   txnRenderDocumentList();
+  txnRenderAutomationPreview();
   document.getElementById('transactionFormCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
@@ -9660,45 +9913,43 @@ function txnRemoveDocument(id){
 
 function txnSaveTransaction(){
   txnLoad();
-  const id = document.getElementById('txnId').value || String(Date.now());
-  const price = Number(document.getElementById('txnPrice').value || 0);
-  const pct = Number(document.getElementById('txnCommissionPercent').value || 0);
-  const manualGci = Number(document.getElementById('txnGci').value || 0);
+  const txn = txnReadTransactionForm(true);
+  const id = txn.id;
   const existing = txnCache.find(t=>String(t.id) === String(id));
-  const txn = {
-    id,
-    address: document.getElementById('txnAddress').value.trim(),
-    side: document.getElementById('txnSide').value,
-    status: document.getElementById('txnStatus').value,
-    price,
-    commissionPercent: pct,
-    gci: manualGci || Math.round(price * (pct/100)),
-    agent: document.getElementById('txnAgent').value.trim(),
-    mls: document.getElementById('txnMls').value.trim(),
-    buyer: document.getElementById('txnBuyer').value.trim(),
-    seller: document.getElementById('txnSeller').value.trim(),
-    lender: document.getElementById('txnLender').value.trim(),
-    titleCompany: document.getElementById('txnTitleCompany').value.trim(),
-    contractDate: document.getElementById('txnContractDate').value,
-    emdDue: document.getElementById('txnEmdDue').value,
-    inspectionDate: document.getElementById('txnInspectionDate').value,
-    appraisalDate: document.getElementById('txnAppraisalDate').value,
-    loanDate: document.getElementById('txnLoanDate').value,
-    walkthroughDate: document.getElementById('txnWalkthroughDate').value,
-    closeDate: document.getElementById('txnCloseDate').value,
-    risk: document.getElementById('txnRisk').value,
-    notes: document.getElementById('txnNotes').value.trim(),
-    checklist: txnReadChecklistEditor(),
-    documents: txnWorkingDocs,
-    createdAt: existing?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  };
+  txn.createdAt = existing?.createdAt || new Date().toISOString();
+  txn.updatedAt = new Date().toISOString();
+  txn.automationTasks = Array.isArray(existing?.automationTasks) ? existing.automationTasks : [];
+  txnApplyAutomation(txn);
   if(!txn.address){ alert('Please enter a property address.'); return; }
   const idx = txnCache.findIndex(t=>String(t.id) === String(id));
   if(idx >= 0) txnCache[idx] = txn; else txnCache.unshift(txn);
   txnSaveAll();
   document.getElementById('transactionFormCard').style.display = 'none';
   txnRenderAll();
+  loadCalendar();
+}
+
+function txnRunAutomationAll(){
+  txnLoad();
+  txnCache = txnCache.map(txn => txnApplyAutomation(txn));
+  txnSaveAll();
+  txnRenderAll();
+  loadCalendar();
+  alert('AI automation updated transaction action items.');
+}
+
+function txnToggleAutomationTask(txnId, taskId){
+  txnLoad();
+  const txn = txnCache.find(t=>String(t.id) === String(txnId));
+  if(!txn) return;
+  txnApplyAutomation(txn);
+  const task = (txn.automationTasks || []).find(t=>String(t.id) === String(taskId));
+  if(task) task.done = !task.done;
+  txn.updatedAt = new Date().toISOString();
+  txnSaveAll();
+  txnRenderAll();
+  txnOpenPanel(txnId);
+  loadCalendar();
 }
 
 function txnEdit(id){
@@ -9729,9 +9980,13 @@ function txnEdit(id){
   document.getElementById('txnCloseDate').value = txn.closeDate || '';
   document.getElementById('txnRisk').value = txn.risk || 'Normal';
   document.getElementById('txnNotes').value = txn.notes || '';
+  if(document.getElementById('txnAutomationEnabled')) document.getElementById('txnAutomationEnabled').checked = txn.automationEnabled !== false;
+  if(document.getElementById('txnAutoCreateDates')) document.getElementById('txnAutoCreateDates').checked = txn.autoCreateDates !== false;
+  if(document.getElementById('txnAutoCreateDocs')) document.getElementById('txnAutoCreateDocs').checked = txn.autoCreateDocs !== false;
   txnWorkingDocs = Array.isArray(txn.documents) ? [...txn.documents] : [];
   txnRenderChecklistEditor(txn.checklist || {});
   txnRenderDocumentList();
+  txnRenderAutomationPreview();
   txnClosePanel();
   document.getElementById('transactionFormCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -9750,7 +10005,9 @@ function txnOpenPanel(id){
   txnLoad();
   const txn = txnCache.find(t=>String(t.id) === String(id));
   if(!txn) return;
+  txnApplyAutomation(txn);
   const alerts = txnCriticalAlerts(txn);
+  const autoSummary = txnAutomationSummary(txn);
   const checklist = txnDefaultChecklist(txn.checklist || {});
   const docs = Array.isArray(txn.documents) ? txn.documents : [];
   const progress = txnProgress(txn);
@@ -9764,6 +10021,7 @@ function txnOpenPanel(id){
     <div class="transaction-ai-panel mb-3">
       <h5>AI Transaction Coordinator</h5>
       ${alerts.map(a=>`<div class="transaction-alert ${a.severity}"><b>${txnSafe(a.title)}</b><br><small>${txnSafe(a.text)}</small></div>`).join('')}
+      <div class="mt-2"><span class="automation-pill normal">${autoSummary.open} open auto task(s)</span><span class="automation-pill high">${autoSummary.high} high priority</span><span class="automation-pill high">${autoSummary.overdue} overdue</span></div>
     </div>
 
     <div class="analytics-grid">
@@ -9796,6 +10054,10 @@ function txnOpenPanel(id){
 
     <div class="section"><h6>Checklist</h6>
       <div class="transaction-checklist-grid">${TXN_CHECKLIST_ITEMS.map(item=>`<div class="transaction-check-item">${checklist[item] ? '✅' : '☐'} ${txnSafe(item)}</div>`).join('')}</div>
+    </div>
+
+    <div class="section"><h6>AI Automated Action Items</h6>
+      ${txnRenderAutomationTasks(txn)}
     </div>
 
     <div class="section"><h6>Documents</h6>
@@ -10137,6 +10399,11 @@ extraRecipients.addEventListener('input', updateRecipientCount);
 
 phone.addEventListener('input', () => normalizePhoneInput(phone));
 editPhone.addEventListener('input', () => normalizePhoneInput(editPhone));
+['txnStatus','txnContractDate','txnEmdDue','txnInspectionDate','txnAppraisalDate','txnLoanDate','txnWalkthroughDate','txnCloseDate','txnAutomationEnabled','txnAutoCreateDates','txnAutoCreateDocs'].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('change', txnRenderAutomationPreview);
+});
+document.addEventListener('change', e=>{ if(e.target && e.target.hasAttribute('data-txn-check')) txnRenderAutomationPreview(); });
 
 renderTypes();
 
