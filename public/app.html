@@ -4858,6 +4858,131 @@ function aiExtractDealValue(contact = {}){
   return 1000;
 }
 
+
+function aiAddScoreDriver(drivers, label, value, type){
+  if(!Array.isArray(drivers)) return;
+  const num = Number(value || 0);
+  if(!label || num === 0) return;
+  drivers.push({ label, value:num, type:type || (num > 0 ? 'positive' : 'negative') });
+}
+
+function aiScoreHeatLabel(score){
+  const num = Number(score || 0);
+  if(num >= 80) return 'Hot';
+  if(num >= 50) return 'Warm';
+  if(num >= 20) return 'Cold';
+  return 'Inactive';
+}
+
+function aiContactSearchText(contact = {}){
+  const parts = [];
+  Object.keys(contact || {}).forEach(key => {
+    const value = contact[key];
+    if(typeof value === 'string' || typeof value === 'number') parts.push(String(value));
+  });
+  if(Array.isArray(contact.notes)) parts.push(contact.notes.map(n => typeof n === 'string' ? n : (n.text || n.note || '')).join(' '));
+  if(Array.isArray(contact.tasks)) parts.push(contact.tasks.map(t => `${t.title || ''} ${t.notes || ''}`).join(' '));
+  if(Array.isArray(contact.tags)) parts.push(contact.tags.join(' '));
+  return parts.join(' ').toLowerCase();
+}
+
+function aiAnalyzeContactIntent(contact = {}, emailActivity = {}, phoneActivity = {}, stage = ''){
+  const text = aiContactSearchText(contact);
+  const drivers = [];
+  let heatDelta = 0;
+  let opportunityDelta = 0;
+  let sentiment = 'Neutral';
+  let intentLabel = 'Needs Review';
+
+  const positivePatterns = [
+    ['favorable response', 24, 22], ['responded favorably', 24, 22], ['interested', 20, 20], ['wants to meet', 28, 30],
+    ['schedule appointment', 30, 32], ['appointment scheduled', 30, 34], ['listing appointment', 30, 36], ['buyer consultation', 26, 30],
+    ['cma', 24, 32], ['market analysis', 22, 30], ['pre approved', 26, 36], ['pre-approved', 26, 36],
+    ['ready to buy', 34, 42], ['ready to sell', 34, 42], ['make offer', 36, 45], ['showing', 26, 32], ['hot lead', 24, 24]
+  ];
+
+  const neutralPatterns = [
+    ['not ready yet', -6, -14], ['follow up next month', -4, -8], ['follow up later', -6, -10],
+    ['next quarter', -10, -18], ['six months', -12, -22], ['6 months', -12, -22], ['next year', -18, -30],
+    ['future', -5, -10], ['nurture', -4, -8]
+  ];
+
+  const negativePatterns = [
+    ['not interested', -42, -48], ['do not contact', -55, -55], ['stop contacting', -55, -55],
+    ['wrong number', -35, -35], ['bad phone', -30, -30], ['bad email', -25, -25], ['dead lead', -45, -50],
+    ['lost deal', -40, -48], ['went with another agent', -45, -50], ['unsubscribe', -50, -45], ['unsubscribed', -50, -45]
+  ];
+
+  positivePatterns.forEach(([phrase, heat, opp]) => {
+    if(text.includes(phrase)) {
+      heatDelta += heat;
+      opportunityDelta += opp;
+      sentiment = 'Positive';
+      intentLabel = phrase.includes('ready') ? 'Ready Soon' : phrase.includes('appointment') || phrase.includes('meet') ? 'Appointment Opportunity' : 'Engaged';
+      aiAddScoreDriver(drivers, phrase.replace(/\b\w/g, c=>c.toUpperCase()), heat, 'positive');
+    }
+  });
+
+  neutralPatterns.forEach(([phrase, heat, opp]) => {
+    if(text.includes(phrase)) {
+      heatDelta += heat;
+      opportunityDelta += opp;
+      if(sentiment !== 'Positive') sentiment = 'Neutral';
+      if(intentLabel === 'Needs Review') intentLabel = 'Longer-Term Nurture';
+      aiAddScoreDriver(drivers, phrase.replace(/\b\w/g, c=>c.toUpperCase()), heat, 'neutral');
+    }
+  });
+
+  negativePatterns.forEach(([phrase, heat, opp]) => {
+    if(text.includes(phrase)) {
+      heatDelta += heat;
+      opportunityDelta += opp;
+      sentiment = 'Negative';
+      intentLabel = 'Cool Down';
+      aiAddScoreDriver(drivers, phrase.replace(/\b\w/g, c=>c.toUpperCase()), heat, 'negative');
+    }
+  });
+
+  const clicks = Number(emailActivity.clicks || 0);
+  const opens = Number(emailActivity.opens || 0);
+  const texts = Number(phoneActivity.texts || 0);
+
+  if(clicks >= 3){ heatDelta += 18; opportunityDelta += 12; aiAddScoreDriver(drivers, 'Clicked multiple links', 18, 'positive'); }
+  else if(clicks > 0){ heatDelta += 8; opportunityDelta += 5; aiAddScoreDriver(drivers, 'Clicked email link', 8, 'positive'); }
+
+  if(opens >= 5){ heatDelta += 12; opportunityDelta += 6; aiAddScoreDriver(drivers, 'Opened multiple emails', 12, 'positive'); }
+  else if(opens > 0){ heatDelta += 4; aiAddScoreDriver(drivers, 'Opened email', 4, 'positive'); }
+
+  if(texts > 0){ heatDelta += Math.min(18, texts * 6); opportunityDelta += Math.min(12, texts * 4); aiAddScoreDriver(drivers, 'Text activity', Math.min(18, texts * 6), 'positive'); }
+
+  if(contact.unsubscribed){ heatDelta -= 55; opportunityDelta -= 45; sentiment = 'Negative'; intentLabel = 'Do Not Email'; aiAddScoreDriver(drivers, 'Unsubscribed', -55, 'negative'); }
+  if(contact.bounced){ heatDelta -= 30; opportunityDelta -= 25; aiAddScoreDriver(drivers, 'Email bounced', -30, 'negative'); }
+
+  if(['Under Contract','Pending'].includes(stage)){ opportunityDelta += 35; aiAddScoreDriver(drivers, `${stage} stage`, 35, 'positive'); }
+  if(stage === 'Closed'){ opportunityDelta -= 10; if(intentLabel === 'Needs Review') intentLabel = 'Past Client Follow-Up'; }
+  if(stage === 'Past Client'){ opportunityDelta -= 5; if(intentLabel === 'Needs Review') intentLabel = 'Past Client Nurture'; }
+
+  return { heatDelta, opportunityDelta, sentiment, intentLabel, drivers };
+}
+
+function aiScoreRecommendedAction({stage = '', staleDays = 999, overdueTasks = 0, dueTodayTasks = 0, emailActivity = {}, phoneActivity = {}, intent = {}, heat = 'Cold', leadScore = 0, opportunityScore = 0} = {}){
+  const sentiment = intent.sentiment || 'Neutral';
+  const label = intent.intentLabel || '';
+
+  if(sentiment === 'Negative' || label === 'Cool Down') return { nextAction:'Cool down / do not pursue', nextActionReason:'The contact appears uninterested or should not be actively contacted.' };
+  if(label === 'Do Not Email') return { nextAction:'Do not email', nextActionReason:'The contact is unsubscribed or should not receive email campaigns.' };
+  if(overdueTasks > 0) return { nextAction:'Complete overdue follow-up', nextActionReason:`${overdueTasks} overdue task${overdueTasks === 1 ? '' : 's'} need attention.` };
+  if(dueTodayTasks > 0) return { nextAction:'Follow up today', nextActionReason:`${dueTodayTasks} task${dueTodayTasks === 1 ? ' is' : 's are'} due today.` };
+  if(['Under Contract','Pending'].includes(stage)) return { nextAction:'Check transaction status', nextActionReason:'This contact is in an active transaction stage.' };
+  if(opportunityScore >= 80) return { nextAction:'Call today', nextActionReason:'High opportunity score and strong transaction potential.' };
+  if(leadScore >= 80) return { nextAction:'Call or text today', nextActionReason:'High engagement indicates the contact is hot.' };
+  if(staleDays >= 90) return { nextAction:'Add to re-engagement campaign', nextActionReason:'No recent activity for 90+ days.' };
+  if(staleDays >= 30) return { nextAction:'Send value follow-up', nextActionReason:'The contact is cooling and needs a soft touch.' };
+  if(Number(emailActivity.clicks || 0) > 0) return { nextAction:'Follow up on clicked link', nextActionReason:'The contact clicked something and may be interested.' };
+  if(heat === 'Warm') return { nextAction:'Follow up this week', nextActionReason:'The contact is warm but not urgent.' };
+  return { nextAction:'Stay in nurture campaign', nextActionReason:'No urgent action yet.' };
+}
+
 function buildAIContactInsights(contactList = [], activityList = [], smsActivityList = []){
   const contacts = Array.isArray(contactList) ? contactList : [];
   const activityByEmail = new Map();
