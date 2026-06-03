@@ -2186,6 +2186,19 @@ body {
 .ai-heat-hot { background:#fee2e2!important; color:#991b1b!important; }
 .ai-heat-warm { background:#fef3c7!important; color:#92400e!important; }
 .ai-heat-cold { background:#eef2f7!important; color:#334155!important; }
+.ai-heat-inactive { background:#e5e7eb!important; color:#374151!important; }
+.ai-score-driver-list { display:grid; gap:6px; margin-top:8px; }
+.ai-score-driver { display:flex; justify-content:space-between; gap:10px; align-items:center; background:#fff; border:1px solid var(--border); border-radius:12px; padding:7px 9px; font-size:12px; }
+.ai-score-driver.positive { border-left:4px solid #16a34a; }
+.ai-score-driver.negative { border-left:4px solid #dc2626; }
+.ai-score-driver.neutral { border-left:4px solid #64748b; }
+.ai-score-delta { font-weight:900; white-space:nowrap; }
+.ai-score-delta.positive { color:#166534; }
+.ai-score-delta.negative { color:#991b1b; }
+.ai-score-delta.neutral { color:#334155; }
+.ai-next-action-box { background:#f8fafc; border:1px solid var(--border); border-radius:14px; padding:11px; margin-top:10px; }
+.ai-mini-metric-row { display:flex; flex-wrap:wrap; gap:7px; margin-top:8px; }
+
 .ai-script-box {
   background:#f8fafc;
   border:1px solid var(--border);
@@ -4897,36 +4910,24 @@ function buildAIContactInsights(contactList = [], activityList = [], smsActivity
     const stageBoost = stageBoostMap[stage] || 8;
     const lastTouch = emailActivity.last || phoneActivity.last || contact.lastContactedAt || contact.stageUpdatedAt || contact.updatedAt || contact.createdAt || '';
     const staleDays = aiDaysSince(lastTouch);
-    const recencyBoost = staleDays <= 2 ? 18 : staleDays <= 7 ? 12 : staleDays <= 14 ? 6 : staleDays <= 30 ? 0 : -12;
+    const recencyBoost = staleDays <= 2 ? 18 : staleDays <= 7 ? 12 : staleDays <= 14 ? 6 : staleDays <= 30 ? 0 : staleDays <= 60 ? -10 : staleDays <= 90 ? -20 : -35;
     const engagementScore = (emailActivity.clicks * 18) + (emailActivity.opens * 8) + (phoneActivity.texts * 8);
     const taskScore = (overdueTasks * 8) + (dueTodayTasks * 10) + (openTasks * 3);
-    const rawLeadScore = engagementScore + taskScore + stageBoost + recencyBoost;
-    const leadScore = Math.max(0, Math.min(100, Math.round(rawLeadScore)));
-    const opportunityScore = Math.max(0, Math.min(100, Math.round((leadScore * .58) + (stageBoost * .72) + (emailActivity.clicks * 6) + (dueTodayTasks * 4) - (staleDays > 45 ? 8 : 0))));
-    const heat = leadScore >= 75 ? 'Hot' : leadScore >= 45 ? 'Warm' : 'Cold';
-    const estimatedGCI = aiExtractDealValue(contact) * (opportunityScore / 100);
+    const intent = aiAnalyzeContactIntent(contact, emailActivity, phoneActivity, stage);
+    const scoreDrivers = [...intent.drivers];
+    if(recencyBoost > 0) aiAddScoreDriver(scoreDrivers, staleDays <= 2 ? 'Very recent activity' : 'Recent activity', recencyBoost, 'positive');
+    if(recencyBoost < 0) aiAddScoreDriver(scoreDrivers, `No activity for ${staleDays} days`, recencyBoost, 'negative');
+    if(overdueTasks > 0) aiAddScoreDriver(scoreDrivers, `${overdueTasks} overdue task${overdueTasks === 1 ? '' : 's'}`, overdueTasks * 8, 'positive');
+    if(dueTodayTasks > 0) aiAddScoreDriver(scoreDrivers, `${dueTodayTasks} task${dueTodayTasks === 1 ? '' : 's'} due today`, dueTodayTasks * 10, 'positive');
 
-    let nextAction = 'Stay in touch';
-    let nextActionReason = 'Keep this contact warm with useful market information.';
-    if(overdueTasks > 0){
-      nextAction = 'Handle overdue task';
-      nextActionReason = `${overdueTasks} overdue follow-up${overdueTasks === 1 ? '' : 's'} need attention.`;
-    } else if(emailActivity.clicks > 0 && staleDays <= 14){
-      nextAction = 'Call or text today';
-      nextActionReason = `${emailActivity.clicks} link click${emailActivity.clicks === 1 ? '' : 's'} show strong intent.`;
-    } else if(emailActivity.opens >= 2 && staleDays <= 14){
-      nextAction = 'Send personal follow-up';
-      nextActionReason = `${emailActivity.opens} recent open${emailActivity.opens === 1 ? '' : 's'} show interest.`;
-    } else if(stage === 'New Lead'){
-      nextAction = 'Make first contact';
-      nextActionReason = 'New leads should not sit without a personal touch.';
-    } else if(staleDays >= 30){
-      nextAction = 'Re-engage';
-      nextActionReason = `No clear movement for ${staleDays} days.`;
-    } else if(['Appointment Set','Active Prospect'].includes(stage)){
-      nextAction = 'Move opportunity forward';
-      nextActionReason = `Stage is ${stage}; schedule the next step.`;
-    }
+    const rawLeadScore = engagementScore + taskScore + stageBoost + recencyBoost + intent.heatDelta;
+    const leadScore = Math.max(0, Math.min(100, Math.round(rawLeadScore)));
+    const opportunityScore = Math.max(0, Math.min(100, Math.round((leadScore * .48) + (stageBoost * .70) + (emailActivity.clicks * 6) + (dueTodayTasks * 4) + intent.opportunityDelta - (staleDays > 45 ? 8 : 0))));
+    const heat = aiScoreHeatLabel(leadScore);
+    const estimatedGCI = aiExtractDealValue(contact) * (opportunityScore / 100);
+    const actionResult = aiScoreRecommendedAction({stage, staleDays, overdueTasks, dueTodayTasks, emailActivity, phoneActivity, intent, heat, leadScore, opportunityScore});
+    const nextAction = actionResult.nextAction;
+    const nextActionReason = actionResult.nextActionReason;
 
     return {
       contact,
@@ -4943,6 +4944,9 @@ function buildAIContactInsights(contactList = [], activityList = [], smsActivity
       opportunityScore,
       heat,
       estimatedGCI,
+      sentiment: intent.sentiment,
+      intentLabel: intent.intentLabel,
+      scoreDrivers,
       nextAction,
       nextActionReason
     };
@@ -4968,7 +4972,7 @@ function renderAIDashboard(data = {}, contacts = [], campaigns = [], activity = 
 
   const hotLeads = enrichedContacts.filter(item => item.heat === 'Hot').slice(0,6);
   const warmLeads = enrichedContacts.filter(item => item.heat === 'Warm').slice(0,6);
-  const coldLeads = enrichedContacts.filter(item => item.heat === 'Cold');
+  const coldLeads = enrichedContacts.filter(item => item.heat === 'Cold' || item.heat === 'Inactive');
   const quietContacts = enrichedContacts
     .filter(item => item.staleDays >= 14 && !item.contact.unsubscribed && !item.contact.bounced)
     .sort((a,b)=>b.staleDays-a.staleDays)
@@ -6688,6 +6692,9 @@ function openContact(id){
 function renderContactQuickSummary(){
   const taskCount = (currentContact.tasks || []).filter(t=>!t.done).length;
   const tagText = Array.isArray(currentContact.tags) && currentContact.tags.length ? currentContact.tags.join(', ') : 'No tags yet';
+  const insight = buildAIContactInsights([currentContact], activityCache, smsActivityCache)[0] || {};
+  const heatClass = String(insight.heat || 'Cold').toLowerCase();
+  const topDrivers = Array.isArray(insight.scoreDrivers) ? insight.scoreDrivers.slice(0,4) : [];
 
   contactQuickSummary.innerHTML = `
     <div class="d-flex justify-content-between align-items-start gap-2">
@@ -6701,6 +6708,26 @@ function renderContactQuickSummary(){
         <span class="stage-pill">${inferStageFromContact(currentContact)}</span><br>
         <small class="text-muted">${taskCount} open task(s)</small>
       </div>
+    </div>
+    <div class="ai-next-action-box">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <b>AI Contact Intelligence</b><br>
+          <small>${aiSafe(insight.intentLabel || 'No clear intent yet')} • ${aiSafe(insight.sentiment || 'Neutral')} signal</small>
+        </div>
+        <div class="text-end">
+          <span class="ai-contact-badge ${heatClass}">${aiSafe(insight.heat || 'Cold')} ${insight.leadScore ?? 0}</span>
+          <span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span>
+        </div>
+      </div>
+      <div class="ai-mini-metric-row">
+        <span class="ai-soft-badge">Opens: ${insight.opens ?? 0}</span>
+        <span class="ai-soft-badge">Clicks: ${insight.clicks ?? 0}</span>
+        <span class="ai-soft-badge">Texts: ${insight.texts ?? 0}</span>
+        <span class="ai-soft-badge">Last touch: ${insight.staleDays === 9999 ? 'None' : `${insight.staleDays}d ago`}</span>
+      </div>
+      <div class="mt-2"><b>Recommended Action:</b> ${aiSafe(insight.nextAction || 'Stay in touch')}<br><small>${aiSafe(insight.nextActionReason || '')}</small></div>
+      ${topDrivers.length ? `<div class="ai-score-driver-list">${topDrivers.map(driver=>`<div class="ai-score-driver ${driver.type}"><span>${aiSafe(driver.label)}</span><span class="ai-score-delta ${driver.type}">${driver.delta > 0 ? '+' : ''}${driver.delta}</span></div>`).join('')}</div>` : ''}
     </div>
   `;
 }
@@ -7930,6 +7957,10 @@ function renderPipelineKanban(filteredContacts){
 
   stages.forEach(stage=>{
     const stageContacts = (contactsByStage[stage] || []).slice().sort((a,b)=>{
+      const aiA = buildAIContactInsights([a], activityCache, smsActivityCache)[0] || {};
+      const aiB = buildAIContactInsights([b], activityCache, smsActivityCache)[0] || {};
+      const scoreDiff = (aiB.opportunityScore || 0) - (aiA.opportunityScore || 0) || (aiB.leadScore || 0) - (aiA.leadScore || 0);
+      if(scoreDiff) return scoreDiff;
       const overdueDiff = getOverdueTasksForContact(b).length - getOverdueTasksForContact(a).length;
       if(overdueDiff) return overdueDiff;
       return contactName(a).localeCompare(contactName(b));
@@ -7955,6 +7986,8 @@ function renderPipelineKanban(filteredContacts){
       const openTasks = getOpenTasksForContact(c);
       const overdueTasks = getOverdueTasksForContact(c);
       const lastActivity = getLastContactActivityDate(c);
+      const insight = buildAIContactInsights([c], activityCache, smsActivityCache)[0] || {};
+      const heatClass = String(insight.heat || 'Cold').toLowerCase();
 
       const card = document.createElement('div');
       card.className = 'pipeline-card';
@@ -7970,8 +8003,11 @@ function renderPipelineKanban(filteredContacts){
         </div>
         <div class="pipeline-meta-row">
           <span class="stage-pill">${c.type || 'Unassigned'}</span>
+          <span class="ai-contact-badge ${heatClass}">${aiSafe(insight.heat || 'Cold')} ${insight.leadScore ?? 0}</span>
+          <span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span>
           ${openTasks.length ? `<span class="priority-pill priority-normal">${openTasks.length} task(s)</span>` : ''}
         </div>
+        <div class="small-muted mt-1"><b>AI:</b> ${aiSafe(insight.nextAction || 'Stay in touch')}</div>
         ${renderTags(c.tags)}
         ${lastActivity ? `<small class="text-muted">Last activity: ${formatDate(lastActivity)}</small>` : ''}
         <div class="mt-2">
@@ -8034,6 +8070,10 @@ function renderPipelineCompact(filteredContacts){
   pipelineBoard.className = 'pipeline-compact-table';
 
   const rows = filteredContacts.slice().sort((a,b)=>{
+    const aiA = buildAIContactInsights([a], activityCache, smsActivityCache)[0] || {};
+    const aiB = buildAIContactInsights([b], activityCache, smsActivityCache)[0] || {};
+    const scoreDiff = (aiB.opportunityScore || 0) - (aiA.opportunityScore || 0) || (aiB.leadScore || 0) - (aiA.leadScore || 0);
+    if(scoreDiff) return scoreDiff;
     const stageCompare = inferStageFromContact(a).localeCompare(inferStageFromContact(b));
     if(stageCompare) return stageCompare;
     return contactName(a).localeCompare(contactName(b));
@@ -8052,6 +8092,8 @@ function renderPipelineCompact(filteredContacts){
             <th>Contact</th>
             <th>Stage</th>
             <th>Type</th>
+            <th>AI Score</th>
+            <th>Next Action</th>
             <th>Tasks</th>
             <th>Tags</th>
             <th>Last Activity</th>
@@ -8063,6 +8105,8 @@ function renderPipelineCompact(filteredContacts){
             const openTasks = getOpenTasksForContact(c);
             const overdueTasks = getOverdueTasksForContact(c);
             const lastActivity = getLastContactActivityDate(c);
+            const insight = buildAIContactInsights([c], activityCache, smsActivityCache)[0] || {};
+            const heatClass = String(insight.heat || 'Cold').toLowerCase();
             return `
               <tr>
                 <td><b>${contactName(c)}</b><br><small>${c.email || ''}<br>${formatPhone(c.phone || '')}</small></td>
@@ -8072,6 +8116,8 @@ function renderPipelineCompact(filteredContacts){
                   </select>
                 </td>
                 <td>${c.type || 'Unassigned'}</td>
+                <td><span class="ai-contact-badge ${heatClass}">${aiSafe(insight.heat || 'Cold')} ${insight.leadScore ?? 0}</span><br><span class="ai-contact-badge action">Opp ${insight.opportunityScore ?? 0}</span></td>
+                <td><small>${aiSafe(insight.nextAction || 'Stay in touch')}</small></td>
                 <td>
                   ${openTasks.length ? `<span class="priority-pill priority-normal">${openTasks.length} open</span>` : '<span class="text-muted small">None</span>'}
                   ${overdueTasks.length ? `<br><span class="pipeline-warning-pill mt-1">${overdueTasks.length} overdue</span>` : ''}
