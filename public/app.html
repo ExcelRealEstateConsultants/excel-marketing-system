@@ -1188,11 +1188,128 @@ body {
 }
 
 @media (max-width: 992px) {
+  .contact-management-grid {
+  display:grid;
+  grid-template-columns:1.2fr .8fr;
+  gap:14px;
+}
+
+.contact-filter-row {
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr auto;
+  gap:10px;
+  align-items:end;
+}
+
+.bulk-toolbar {
+  background:#f9fafb;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:14px;
+  margin-top:12px;
+}
+
+.bulk-action-row {
+  display:grid;
+  grid-template-columns:1fr 1fr 1.5fr auto auto;
+  gap:10px;
+  align-items:end;
+}
+
+.contact-checkbox {
+  margin-right:10px;
+  transform:scale(1.1);
+  accent-color:var(--accent);
+}
+
+.saved-filter-pill {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 10px;
+  background:white;
+  border:1px solid var(--border);
+  border-radius:999px;
+  margin:4px;
+  font-size:13px;
+  cursor:pointer;
+}
+
+.saved-filter-pill:hover {
+  background:#f3f4f6;
+}
+
+.duplicate-group {
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  margin-bottom:10px;
+}
+
+.duplicate-contact-row {
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  border-top:1px solid var(--border);
+  padding-top:8px;
+  margin-top:8px;
+}
+
+/* ===== CONTACTS REDESIGN ===== */
+
+.contact-slide-panel {
+  position:fixed;
+  top:0;
+  right:-640px;
+  width:640px;
+  max-width:100%;
+  height:100%;
+  background:white;
+  box-shadow:-2px 0 24px rgba(0,0,0,0.22);
+  transition:0.3s;
+  z-index:10000;
+  padding:24px;
+  overflow:auto;
+}
+
+.contact-slide-panel.open {
+  right:0;
+}
+
+.contact-address-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.contact-address-header h4 {
+  margin:0;
+  color:var(--primary);
+  font-weight:800;
+}
+
+.contact-tools-button-row {
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+@media (max-width: 992px) {
+
   .contact-management-grid,
   .contact-filter-row,
   .bulk-action-row {
     grid-template-columns:1fr;
   }
+
+  .contact-slide-panel {
+    width:100%;
+    right:-100%;
+  }
+
 }
 
 
@@ -3414,9 +3531,73 @@ body {
 <!-- CONTACTS -->
 <div id="contactsTab" class="mt-4" style="display:none;">
 
-  <h4>Contacts</h4>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+    <div>
+      <h4 class="mb-1">Contacts</h4>
+      <div class="dashboard-help">Search, review, and manage your contact address book.</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn btn-success" onclick="document.getElementById('addContactPanel').classList.add('open')">+ Add Contact</button>
+      <button class="btn btn-outline-primary" onclick="document.getElementById('contactToolsPanel').classList.add('open'); renderDuplicateContacts();">Contact Tools</button>
+    </div>
+  </div>
 
   <div class="modern-card mb-3">
+    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+      <div>
+        <h5 class="mb-1">Contact Address Book</h5>
+        <div class="small-muted">Your full contact list with AI score, opportunity rating, tags, type, and stage.</div>
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-primary" onclick="saveCurrentContactFilter()">Save Filter</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="clearContactFilters()">Clear Filters</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="selectVisibleContacts()">Select Visible</button>
+      </div>
+    </div>
+
+    <div class="contact-filter-row">
+      <div>
+        <label class="form-label small fw-bold">Search Contacts</label>
+        <input id="contactSearch" class="form-control" placeholder="Search name, email, phone, type, stage, tag, unsubscribed, or bounced...">
+      </div>
+      <div>
+        <label class="form-label small fw-bold">Type</label>
+        <select id="contactTypeFilter" class="form-control" onchange="loadContacts()">
+          <option value="">All Types</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label small fw-bold">Stage</label>
+        <select id="contactStageFilter" class="form-control" onchange="loadContacts()">
+          <option value="">All Stages</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label small fw-bold">Tag</label>
+        <select id="contactTagFilter" class="form-control" onchange="loadContacts()">
+          <option value="">All Tags</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label small fw-bold">&nbsp;</label>
+        <button class="btn btn-outline-primary w-100" onclick="document.getElementById('contactToolsPanel').classList.add('open')">Tools</button>
+      </div>
+    </div>
+
+    <div id="savedContactFilters" class="mt-3"></div>
+  </div>
+
+  <div id="contactList"></div>
+
+  <div id="addContactPanel" class="contact-slide-panel">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h4 class="mb-1">Add Contact</h4>
+        <div class="small-muted">Create a new contact without leaving the address book.</div>
+      </div>
+      <button class="btn btn-sm btn-outline-danger" onclick="document.getElementById('addContactPanel').classList.remove('open')">Close</button>
+    </div>
+
     <input id="firstName" class="form-control mb-2" placeholder="First Name">
     <input id="lastName" class="form-control mb-2" placeholder="Last Name">
     <input id="email" class="form-control mb-2" placeholder="Email">
@@ -3430,128 +3611,98 @@ body {
 
     <label class="form-label fw-bold small mb-1">Pipeline Stage</label>
     <select id="contactStage" class="form-control mb-2"></select>
-    <input id="contactTags" class="form-control mb-2" placeholder="Tags, comma separated. Example: Investor, Reno, Hot Lead">
 
-    <button class="btn btn-success" onclick="addContact()">Add Contact</button>
+    <input id="contactTags" class="form-control mb-3" placeholder="Tags, comma separated. Example: Investor, Reno, Hot Lead">
+
+    <button class="btn btn-success w-100" onclick="addContact(); document.getElementById('addContactPanel').classList.remove('open')">Add Contact</button>
   </div>
 
-  <div class="modern-card mb-3">
-    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+  <div id="contactToolsPanel" class="contact-slide-panel">
+    <div class="d-flex justify-content-between align-items-start mb-3">
       <div>
-        <h5 class="mb-1">Bulk Contact Import / Export</h5>
-        <div class="small-muted">Upload a CSV or Excel file, preview the contacts, skip duplicates, then import them into the CRM.</div>
+        <h4 class="mb-1">Contact Tools</h4>
+        <div class="small-muted">Import, export, bulk update, and check for duplicates.</div>
       </div>
-      <div>
+      <button class="btn btn-sm btn-outline-danger" onclick="document.getElementById('contactToolsPanel').classList.remove('open')">Close</button>
+    </div>
+
+    <div class="modern-card mb-3">
+      <h5 class="mb-1">Bulk Contact Import / Export</h5>
+      <div class="small-muted mb-3">Upload a CSV or Excel file, preview contacts, skip duplicates, then import them.</div>
+
+      <div class="d-flex gap-2 flex-wrap mb-3">
         <button class="btn btn-sm btn-outline-primary" onclick="downloadContactTemplate()">Download Template</button>
         <button class="btn btn-sm btn-outline-primary" onclick="exportContactsCsv()">Export Contacts CSV</button>
       </div>
-    </div>
 
-    <div class="row g-2 mt-3 align-items-end">
-      <div class="col-lg-5">
-        <label class="form-label small fw-bold">Upload CSV or Excel File</label>
-        <input id="contactImportFile" type="file" class="form-control" accept=".csv,.xlsx,.xls" onchange="handleContactImportFile(event)">
-      </div>
-      <div class="col-lg-2">
-        <label class="form-label small fw-bold">Default Type</label>
-        <select id="importDefaultType" class="form-control"></select>
-      </div>
-      <div class="col-lg-2">
-        <label class="form-label small fw-bold">Default Stage</label>
-        <select id="importDefaultStage" class="form-control"></select>
-      </div>
-      <div class="col-lg-3">
-        <label class="form-label small fw-bold">Add Tags To All</label>
-        <input id="importDefaultTags" class="form-control" placeholder="Example: Imported, Reno">
-      </div>
-    </div>
+      <label class="form-label small fw-bold">Upload CSV or Excel File</label>
+      <input id="contactImportFile" type="file" class="form-control mb-2" accept=".csv,.xlsx,.xls" onchange="handleContactImportFile(event)">
 
-    <div id="importPreviewArea" class="mt-3" style="display:none;">
-      <div id="importSummary" class="import-summary-grid"></div>
-      <div id="importWarnings" class="mb-2"></div>
-      <div id="importPreviewTable" class="import-preview-table"></div>
-      <div class="mt-3">
-        <button id="runImportButton" class="btn btn-success" onclick="runContactImport()">Import Contacts</button>
-        <button class="btn btn-outline-danger" onclick="clearContactImport()">Clear Import</button>
-      </div>
-    </div>
-  </div>
+      <label class="form-label small fw-bold">Default Type</label>
+      <select id="importDefaultType" class="form-control mb-2"></select>
 
-  <div class="modern-card mb-3">
-    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
-      <div>
-        <h5 class="mb-1">Contact Filters & Bulk Actions</h5>
-        <div class="small-muted">Search, save views, select multiple contacts, and update contacts in batches.</div>
-      </div>
-      <div>
-        <button class="btn btn-sm btn-outline-primary" onclick="saveCurrentContactFilter()">Save Current Filter</button>
-        <button class="btn btn-sm btn-outline-primary" onclick="clearContactFilters()">Clear Filters</button>
+      <label class="form-label small fw-bold">Default Stage</label>
+      <select id="importDefaultStage" class="form-control mb-2"></select>
+
+      <label class="form-label small fw-bold">Add Tags To All</label>
+      <input id="importDefaultTags" class="form-control mb-2" placeholder="Example: Imported, Reno">
+
+      <div id="importPreviewArea" class="mt-3" style="display:none;">
+        <div id="importSummary" class="import-summary-grid"></div>
+        <div id="importWarnings" class="mb-2"></div>
+        <div id="importPreviewTable" class="import-preview-table"></div>
+        <div class="mt-3">
+          <button id="runImportButton" class="btn btn-success" onclick="runContactImport()">Import Contacts</button>
+          <button class="btn btn-outline-danger" onclick="clearContactImport()">Clear Import</button>
+        </div>
       </div>
     </div>
 
-    <div class="contact-filter-row">
-      <div>
-        <label class="form-label small fw-bold">Search Contacts</label>
-        <input id="contactSearch" class="form-control" placeholder="Search name, email, phone, type, stage, tag, unsubscribed, or bounced...">
-      </div>
-      <div>
-        <label class="form-label small fw-bold">Type</label>
-        <select id="contactTypeFilter" class="form-control" onchange="loadContacts()"><option value="">All Types</option></select>
-      </div>
-      <div>
-        <label class="form-label small fw-bold">Stage</label>
-        <select id="contactStageFilter" class="form-control" onchange="loadContacts()"><option value="">All Stages</option></select>
-      </div>
-      <div>
-        <label class="form-label small fw-bold">Tag</label>
-        <select id="contactTagFilter" class="form-control" onchange="loadContacts()"><option value="">All Tags</option></select>
-      </div>
-      <div>
-        <button class="btn btn-outline-primary w-100" onclick="selectVisibleContacts()">Select Visible</button>
-      </div>
-    </div>
+    <div class="modern-card mb-3">
+      <h5 class="mb-1">Bulk Actions</h5>
+      <div class="small-muted mb-3">Bulk updates only affect selected contacts from the address book.</div>
 
-    <div id="savedContactFilters" class="mt-3"></div>
-
-    <div class="bulk-toolbar">
       <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-        <b>Bulk Actions</b>
+        <b>Selected Contacts</b>
         <span id="bulkSelectedCount" class="status-badge">0 selected</span>
       </div>
-      <div class="bulk-action-row">
-        <div>
-          <label class="form-label small fw-bold">Set Type</label>
-          <select id="bulkTypeSelect" class="form-control"><option value="">Do not change</option></select>
-        </div>
-        <div>
-          <label class="form-label small fw-bold">Set Stage</label>
-          <select id="bulkStageSelect" class="form-control"><option value="">Do not change</option></select>
-        </div>
-        <div>
-          <label class="form-label small fw-bold">Add Tags</label>
-          <input id="bulkTagsInput" class="form-control" placeholder="Example: Hot Lead, Imported">
-        </div>
+
+      <label class="form-label small fw-bold">Set Type</label>
+      <select id="bulkTypeSelect" class="form-control mb-2">
+        <option value="">Do not change</option>
+      </select>
+
+      <label class="form-label small fw-bold">Set Stage</label>
+      <select id="bulkStageSelect" class="form-control mb-2">
+        <option value="">Do not change</option>
+      </select>
+
+      <label class="form-label small fw-bold">Add Tags</label>
+      <input id="bulkTagsInput" class="form-control mb-3" placeholder="Example: Hot Lead, Imported">
+
+      <div class="d-flex gap-2 flex-wrap">
         <button class="btn btn-success" onclick="applyBulkContactUpdate()">Apply</button>
         <button class="btn btn-outline-danger" onclick="deleteSelectedContacts()">Delete</button>
+        <button class="btn btn-outline-primary" onclick="clearBulkSelection()">Clear Selection</button>
       </div>
-      <div class="small-muted mt-2">Bulk updates only affect selected contacts. Tags are added without removing existing tags.</div>
+
+      <div class="small-muted mt-2">Tags are added without removing existing tags.</div>
+    </div>
+
+    <div class="modern-card mb-3">
+      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+        <div>
+          <h5 class="mb-1">Duplicate Detection</h5>
+          <div class="small-muted">Find likely duplicates by matching email addresses or phone numbers.</div>
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="renderDuplicateContacts()">Refresh Duplicates</button>
+      </div>
+      <div id="duplicateContactList" class="mt-3"></div>
     </div>
   </div>
 
-  <div class="modern-card mb-3">
-    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-      <div>
-        <h5 class="mb-1">Duplicate Detection</h5>
-        <div class="small-muted">Find likely duplicates by matching email addresses or phone numbers.</div>
-      </div>
-      <button class="btn btn-sm btn-outline-primary" onclick="renderDuplicateContacts()">Refresh Duplicates</button>
-    </div>
-    <div id="duplicateContactList" class="mt-3"></div>
-  </div>
-
-  <div id="contactList"></div>
 </div>
-
+  
 <!-- PIPELINE -->
 <div id="pipelineTab" class="mt-4" style="display:none;">
   <div class="dashboard-header-row mb-3">
