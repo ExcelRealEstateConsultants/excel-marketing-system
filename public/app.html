@@ -7766,10 +7766,6 @@ function renderContactQuickSummary(){
     Array.isArray(t.contactIds) && t.contactIds.map(String).includes(String(currentContact.id))
   ).length;
 
-  const tagText = Array.isArray(currentContact.tags) && currentContact.tags.length
-    ? currentContact.tags.join(', ')
-    : 'No tags yet';
-
   const insight = buildAIContactInsights([currentContact], activityCache, smsActivityCache)[0] || {};
   const heatClass = aiHeatClass(insight.heat || 'Cold');
   const leadScore = Number(insight.leadScore || 0);
@@ -7778,32 +7774,28 @@ function renderContactQuickSummary(){
 
   contactQuickSummary.innerHTML = `
     <div class="modern-card mb-3">
-      <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
-        <div>
-          <h3 class="mb-1">${contactName(currentContact)}</h3>
-          <div class="small-muted">
-            ${currentContact.email || 'No email'} ${currentContact.phone ? ' | ' + formatPhone(currentContact.phone || '') : ''}
-          </div>
-          <div class="mt-2">
-            <span class="stage-pill">${inferStageFromContact(currentContact)}</span>
-            <span class="tag-pill">${currentContact.type || 'Unassigned'}</span>
-            <span class="tag-pill">${taskCount} open task(s)</span>
-            <span class="tag-pill">${transactionCount} transaction(s)</span>
-          </div>
-        </div>
+      <h3 class="mb-1">${contactName(currentContact)}</h3>
+      <div class="small-muted mb-2">
+        ${currentContact.email || 'No email'} ${currentContact.phone ? ' | ' + formatPhone(currentContact.phone || '') : ''}
+      </div>
 
-        <div class="text-end">
-          <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
-          <span class="ai-contact-badge action">Lead ${leadScore}</span>
-          <span class="ai-contact-badge action">Opp ${oppScore}</span>
-        </div>
+      <div class="mb-2">
+        <span class="stage-pill">${inferStageFromContact(currentContact)}</span>
+        <span class="tag-pill">${currentContact.type || 'Unassigned'}</span>
+        <span class="tag-pill">${taskCount} open task(s)</span>
+        <span class="tag-pill">${transactionCount} transaction(s)</span>
       </div>
     </div>
 
     <div class="modern-card mb-3">
       <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
         <div>
-          <h5 class="mb-1">AI Recommendation</h5>
+          <h5 class="mb-1">AI Contact Intelligence</h5>
+          <div class="mb-2">
+            <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
+            <span class="ai-contact-badge action">Lead ${leadScore}</span>
+            <span class="ai-contact-badge action">Opportunity ${oppScore}</span>
+          </div>
           <div>${aiSafe(aiCoach)}</div>
           <div class="small-muted mt-2">
             Recommended action: ${aiSafe(insight.nextAction || 'Stay in touch')}
@@ -7819,7 +7811,6 @@ function renderContactQuickSummary(){
     </div>
   `;
 }
-
 function renderQuickTagButtons(){
   if(!document.getElementById('quickTagButtons')) return;
   const currentTags = Array.isArray(currentContact.tags) ? currentContact.tags : [];
