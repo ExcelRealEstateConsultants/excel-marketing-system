@@ -8038,9 +8038,14 @@ function renderContactQuickSummary(){
   if(!currentContact) return;
 
   const taskCount = (currentContact.tasks || []).filter(t=>!t.done).length;
-  const transactionCount = (transactionsCache || []).filter(t =>
-    Array.isArray(t.contactIds) && t.contactIds.map(String).includes(String(currentContact.id))
-  ).length;
+  const transactionCount = (Array.isArray(txnCache) ? txnCache : []).filter(t => {
+    const transactionText = JSON.stringify(t || {}).toLowerCase();
+    const contactId = String(currentContact.id || '').toLowerCase();
+    const contactEmail = String(currentContact.email || '').toLowerCase();
+
+    return (contactId && transactionText.includes(contactId)) ||
+           (contactEmail && transactionText.includes(contactEmail));
+  }).length;
 
   const insight = buildAIContactInsights([currentContact], activityCache, smsActivityCache)[0] || {};
   const heatClass = aiHeatClass(insight.heat || 'Cold');
