@@ -9724,7 +9724,10 @@ function renderQuickStageButtons(){
 async function quickMoveStage(stage){
   if(!currentContact) return;
   editStage.value = stage;
-
+  currentContact.stage = stage;
+  currentContact.pipelineStage = stage;
+  currentContact.status = stage;
+  
   const res = await fetch('/api/contacts/'+currentContact.id+'/stage',{
     method:'PUT',
     headers:{'Content-Type':'application/json'},
