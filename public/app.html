@@ -8195,7 +8195,18 @@ async function saveContact(){
       lastName:editLast.value,
       email:editEmail.value,
       phone:editPhone.value,
-      type:editType.value,
+      roles:[
+  ...(document.getElementById('roleBuyer').checked ? ['Buyer'] : []),
+  ...(document.getElementById('roleSeller').checked ? ['Seller'] : []),
+  ...(document.getElementById('roleInvestor').checked ? ['Investor'] : []),
+  ...(document.getElementById('roleReferralPartner').checked ? ['Referral Partner'] : [])
+],
+type:[
+  ...(document.getElementById('roleBuyer').checked ? ['Buyer'] : []),
+  ...(document.getElementById('roleSeller').checked ? ['Seller'] : []),
+  ...(document.getElementById('roleInvestor').checked ? ['Investor'] : []),
+  ...(document.getElementById('roleReferralPartner').checked ? ['Referral Partner'] : [])
+].join(', '),
       stage:editStage.value,
       tags:parseCommaList(editTags.value),
 
