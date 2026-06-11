@@ -7876,6 +7876,9 @@ function openContact(id){
   editFirst.value=currentContact.firstName || '';
   editLast.value=currentContact.lastName || '';
   editEmail.value=currentContact.email || '';
+  setContactFieldValue('editWorkEmail', currentContact.workEmail);
+  setContactFieldValue('editSecondaryEmail', currentContact.secondaryEmail);
+  setContactFieldValue('editSpouseEmailAlt', currentContact.spouseEmailAlt);
   editPhone.value=formatPhone(currentContact.phone || '');
   const currentRoles = Array.isArray(currentContact.roles)
   ? currentContact.roles
