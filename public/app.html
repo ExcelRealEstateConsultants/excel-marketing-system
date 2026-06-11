@@ -5650,6 +5650,9 @@ async function loadPipelineStages(){
     if(!Array.isArray(pipelineStagesCache) || pipelineStagesCache.length === 0){
       pipelineStagesCache = getFallbackPipelineStages();
     }
+    
+    if(!pipelineStagesCache.includes('Listed')) pipelineStagesCache.splice(pipelineStagesCache.indexOf('Under Contract'), 0, 'Listed');
+    
   } catch(e) {
     pipelineStagesCache = getFallbackPipelineStages();
   }
