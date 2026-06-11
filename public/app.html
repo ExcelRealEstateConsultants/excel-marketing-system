@@ -4087,6 +4087,11 @@ body {
       <div id="smsSendStatus" class="small-muted mt-2"></div>
     </div>
 
+   <div class="section">
+      <h5>Email History</h5>
+      <div id="contactEmailHistory"></div>
+    </div>
+
     <div class="section">
       <h5>SMS History</h5>
       <div id="contactSmsHistory"></div>
@@ -7857,68 +7862,87 @@ function openContact(id){
   loadActivity(currentContact.email);
   loadSmsHistory();
 }
-
 function renderContactAIProfilePanel(){
-  if(!currentContact) return;
-
   const panel = document.getElementById('contactAIProfilePanel');
-  if(!panel) return;
+  if(!panel || !currentContact) return;
 
-  const insight = buildAIContactInsights([currentContact], activityCache, smsActivityCache)[0] || {};
-  const heatClass = aiHeatClass(insight.heat || 'Cold');
-  const leadScore = Number(insight.leadScore || 0);
-  const oppScore = Number(insight.opportunityScore || 0);
-  const aiCoach = getAIContactCoachMessage(insight);
+  try {
+    const insight = typeof buildAIContactInsights === 'function'
+      ? (buildAIContactInsights([currentContact], activityCache || [], smsActivityCache || [])[0] || {})
+      : {};
 
-  panel.innerHTML = `
-    <div class="modern-card mb-3">
-      <h5 class="mb-2">AI Contact Intelligence</h5>
-      <div class="mb-3">
-        <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
-        <span class="ai-contact-badge action">Lead Score ${leadScore}</span>
-        <span class="ai-contact-badge action">Opportunity Score ${oppScore}</span>
-      </div>
+    const leadScore = Number(insight.leadScore || 0);
+    const oppScore = Number(insight.opportunityScore || 0);
+    const heat = insight.heat || 'Cold';
+    const heatClass = typeof aiHeatClass === 'function' ? aiHeatClass(heat) : 'cold';
+    const badgeText = typeof aiHeatBadgeText === 'function' ? aiHeatBadgeText(insight) : `${heat} ${leadScore}`;
+    const coach = typeof getAIContactCoachMessage === 'function'
+      ? getAIContactCoachMessage(insight)
+      : 'AI is reviewing this contact based on activity, tasks, stage, and communication history.';
 
-      <div class="ai-contact-detail-grid">
-        <div class="ai-contact-detail-card">
-          <div class="ai-contact-detail-number">${leadScore}</div>
-          <div class="ai-contact-detail-label">Lead Score</div>
-          <div class="ai-score-bar"><div class="ai-score-bar-fill" style="width:${Math.min(100, leadScore)}%;"></div></div>
+    panel.innerHTML = `
+      <div class="modern-card mb-3">
+        <h5 class="mb-2">AI Contact Intelligence</h5>
+
+        <div class="mb-3">
+          <span class="ai-contact-badge ${heatClass}">${aiSafe(badgeText)}</span>
+          <span class="ai-contact-badge action">Lead Score ${leadScore}</span>
+          <span class="ai-contact-badge action">Opportunity Score ${oppScore}</span>
         </div>
-        <div class="ai-contact-detail-card">
-          <div class="ai-contact-detail-number">${oppScore}</div>
-          <div class="ai-contact-detail-label">Opportunity Score</div>
-          <div class="ai-score-bar"><div class="ai-score-bar-fill" style="width:${Math.min(100, oppScore)}%;"></div></div>
-        </div>
-        <div class="ai-contact-detail-card">
-          <div class="ai-contact-detail-number">${Number(insight.opens || 0)}</div>
-          <div class="ai-contact-detail-label">Email Opens</div>
-        </div>
-        <div class="ai-contact-detail-card">
-          <div class="ai-contact-detail-number">${Number(insight.clicks || 0)}</div>
-          <div class="ai-contact-detail-label">Link Clicks</div>
-        </div>
-      </div>
 
-      <div class="ai-contact-coach-note mt-3">
-        <b>AI Coach:</b> ${aiSafe(aiCoach)}
-      </div>
+        <div class="ai-contact-detail-grid">
+          <div class="ai-contact-detail-card">
+            <div class="ai-contact-detail-number">${leadScore}</div>
+            <div class="ai-contact-detail-label">Lead Score</div>
+            <div class="ai-score-bar"><div class="ai-score-bar-fill" style="width:${Math.min(100, leadScore)}%;"></div></div>
+          </div>
 
-      <div class="ai-score-explanation">
-        <b>Recommended Next Action:</b><br>
-        ${aiSafe(insight.nextAction || 'Stay in touch')}
-        ${insight.nextActionReason ? `<br><small>${aiSafe(insight.nextActionReason)}</small>` : ''}
-      </div>
+          <div class="ai-contact-detail-card">
+            <div class="ai-contact-detail-number">${oppScore}</div>
+            <div class="ai-contact-detail-label">Opportunity Score</div>
+            <div class="ai-score-bar"><div class="ai-score-bar-fill" style="width:${Math.min(100, oppScore)}%;"></div></div>
+          </div>
 
-      <div class="ai-contact-action-grid">
-        <button class="btn btn-primary" onclick="aiPrepareFollowUpTask()">Add Follow-Up Task</button>
-        <button class="btn btn-outline-primary" onclick="aiPrepareTextMessage()">Draft Text</button>
-        <button class="btn btn-outline-primary" onclick="aiSuggestStageMove()">Suggest Stage</button>
-        <button class="btn btn-outline-primary" onclick="aiAddContactToCampaignFromPanel()">Add to Campaign</button>
+          <div class="ai-contact-detail-card">
+            <div class="ai-contact-detail-number">${Number(insight.opens || 0)}</div>
+            <div class="ai-contact-detail-label">Email Opens</div>
+          </div>
+
+          <div class="ai-contact-detail-card">
+            <div class="ai-contact-detail-number">${Number(insight.clicks || 0)}</div>
+            <div class="ai-contact-detail-label">Link Clicks</div>
+          </div>
+        </div>
+
+        <div class="ai-contact-coach-note mt-3">
+          <b>AI Coach:</b> ${aiSafe(coach)}
+        </div>
+
+        <div class="ai-score-explanation">
+          <b>Recommended Next Action:</b><br>
+          ${aiSafe(insight.nextAction || 'Stay in touch')}
+          ${insight.nextActionReason ? `<br><small>${aiSafe(insight.nextActionReason)}</small>` : ''}
+        </div>
+
+        <div class="ai-contact-action-grid">
+          <button class="btn btn-primary" onclick="aiPrepareFollowUpTask()">Add Follow-Up Task</button>
+          <button class="btn btn-outline-primary" onclick="aiPrepareTextMessage()">Draft Text</button>
+          <button class="btn btn-outline-primary" onclick="aiSuggestStageMove()">Suggest Stage</button>
+          <button class="btn btn-outline-primary" onclick="aiAddContactToCampaignFromPanel()">Add to Campaign</button>
+        </div>
       </div>
-    </div>
-  `;
+    `;
+  } catch(error) {
+    panel.innerHTML = `
+      <div class="modern-card">
+        <h5>AI Contact Intelligence</h5>
+        <div class="text-muted small">AI could not load for this contact yet. Check the browser console for the exact error.</div>
+      </div>
+    `;
+    console.error('Contact AI tab error:', error);
+  }
 }
+
 
 function getAIContactCoachMessage(insight = {}){
   const name = insight.contact ? contactName(insight.contact) : 'This contact';
@@ -8211,7 +8235,51 @@ async function sendSmsToCurrentContact(){
     console.error('SMS send error:', error);
   }
 }
+async function loadContactEmailHistory(){
+  if(!currentContact) return;
 
+  const el = document.getElementById('contactEmailHistory');
+  if(!el) return;
+
+  try {
+    let activityRows = [];
+
+    try {
+      const res = await fetch('/api/activity');
+      activityRows = await res.json();
+      if(Array.isArray(activityRows)) activityCache = activityRows;
+    } catch(e) {
+      activityRows = Array.isArray(activityCache) ? activityCache : [];
+    }
+
+    const email = String(currentContact.email || '').toLowerCase().trim();
+
+    const rows = (activityRows || []).filter(a => {
+      return String(a.email || a.to || a.recipientEmail || '').toLowerCase().trim() === email;
+    });
+
+    renderContactTimeline(rows);
+
+    if(!rows.length){
+      el.innerHTML = '<div class="text-muted small">No email activity yet.</div>';
+      panelCampaigns.innerHTML = '<div class="text-muted small">No campaign history yet.</div>';
+      return;
+    }
+
+    el.innerHTML = rows.slice().sort((a,b)=>new Date(b.date || b.sentAt || b.sentDate || 0) - new Date(a.date || a.sentAt || a.sentDate || 0)).map(a=>`
+      <div class="activity-row">
+        <b>${a.campaignName || a.subject || 'Email Campaign'}</b><br>
+        <small>${formatDate(a.date || a.sentAt || a.sentDate)}</small><br>
+        <span class="status-badge">${a.opened ? 'Opened' : 'Sent'}</span>
+        ${Array.isArray(a.clicks) && a.clicks.length ? `<span class="status-badge">${a.clicks.length} click(s)</span>` : ''}
+      </div>
+    `).join('');
+
+    panelCampaigns.innerHTML = el.innerHTML;
+  } catch(error) {
+    el.innerHTML = '<div class="text-muted small">Email history could not be loaded.</div>';
+  }
+}
 async function loadSmsHistory(){
   if(!currentContact) return;
 
@@ -9598,7 +9666,7 @@ async function quickMoveStage(stage){
     renderContactQuickSummary();
     renderQuickStageButtons();
     renderContactTimeline([]);
-    loadActivity(currentContact.email);
+    loadContactEmailHistory();
   }
 }
 
@@ -10250,22 +10318,81 @@ function txnTransactionsForContact(contact){
   }).sort((a,b)=>new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
 }
 
+function txnTransactionsForContact(contact){
+  if(!contact) return [];
+  if(typeof txnLoad === 'function') txnLoad();
+
+  const id = String(contact.id || '');
+  const email = String(contact.email || '').toLowerCase().trim();
+  const name = contactName(contact).toLowerCase().trim();
+
+  return (txnCache || []).filter(txn => {
+    const possibleIds = [
+      txn.contactId,
+      txn.clientContactId,
+      txn.primaryContactId,
+      txn.buyerContactId,
+      txn.sellerContactId,
+      ...(Array.isArray(txn.contactIds) ? txn.contactIds : []),
+      ...(Array.isArray(txn.linkedContactIds) ? txn.linkedContactIds : [])
+    ].map(v=>String(v || ''));
+
+    if(id && possibleIds.includes(id)) return true;
+
+    const possibleEmails = [
+      txn.contactEmail,
+      txn.clientEmail,
+      txn.primaryEmail,
+      txn.buyerEmail,
+      txn.sellerEmail
+    ].map(v=>String(v || '').toLowerCase().trim());
+
+    if(email && possibleEmails.includes(email)) return true;
+
+    const possibleNames = [
+      txn.contactName,
+      txn.clientName,
+      txn.primaryName,
+      txn.buyer,
+      txn.seller
+    ].map(v=>String(v || '').toLowerCase().trim());
+
+    if(name && possibleNames.includes(name)) return true;
+
+    return false;
+  }).sort((a,b)=>new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+}
+
 function renderContactTransactions(){
   const el = document.getElementById('contactTransactionList');
   if(!el || !currentContact) return;
+
   const txns = txnTransactionsForContact(currentContact);
+
   if(!txns.length){
     el.innerHTML = '<div class="small-muted">No transactions linked to this contact yet.</div>';
     return;
   }
+
   el.innerHTML = txns.map(txn => {
-    const role = String(txn.buyerContactId || '') === String(currentContact.id) || String(txn.buyer || '').toLowerCase() === contactName(currentContact).toLowerCase() ? 'Buyer' : 'Seller';
-    const alerts = txnCriticalAlerts(txn).filter(a=>a.severity !== 'good');
+    const isBuyer = String(txn.buyerContactId || '') === String(currentContact.id)
+      || String(txn.buyerEmail || '').toLowerCase() === String(currentContact.email || '').toLowerCase()
+      || String(txn.buyer || '').toLowerCase() === contactName(currentContact).toLowerCase();
+
+    const role = isBuyer ? 'Buyer' : 'Seller';
+    const alerts = typeof txnCriticalAlerts === 'function' ? txnCriticalAlerts(txn).filter(a=>a.severity !== 'good') : [];
+
     return `
-      <div class="contact-transaction-row" onclick="showTab('transactions'); setTimeout(()=>txnOpenPanel('${txn.id}'), 100);">
+      <div class="transaction-card" onclick="showTab('transactions'); setTimeout(()=>txnOpenPanel('${txn.id}'), 100);">
         <div class="d-flex justify-content-between align-items-start gap-2">
-          <div><b>${txnSafe(txn.address || 'Untitled Transaction')}</b><br><small>${role} • ${txnSafe(txn.status || 'Active')} • Close: ${txnDate(txn.closeDate) || 'Not set'}</small></div>
-          <div class="text-end"><span class="transaction-status-pill ${txnStatusClass(txn.status)}">${txnSafe(txn.status || 'Active')}</span><br><small>${alerts.length ? alerts.length + ' alert(s)' : 'On track'}</small></div>
+          <div>
+            <div class="transaction-card-title">${txnSafe(txn.address || txn.propertyAddress || 'Untitled Transaction')}</div>
+            <small>${role} • ${txnSafe(txn.status || 'Active')} • Close: ${txnDate(txn.closeDate) || 'Not set'}</small>
+          </div>
+          <div class="text-end">
+            <span class="transaction-status-pill ${txnStatusClass(txn.status)}">${txnSafe(txn.status || 'Active')}</span><br>
+            <small>${alerts.length ? alerts.length + ' alert(s)' : 'On track'}</small>
+          </div>
         </div>
       </div>`;
   }).join('');
