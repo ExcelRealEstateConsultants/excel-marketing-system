@@ -7846,7 +7846,14 @@ function openContact(id){
   editLast.value=currentContact.lastName || '';
   editEmail.value=currentContact.email || '';
   editPhone.value=formatPhone(currentContact.phone || '');
-  editType.value=currentContact.type || '';
+  const currentRoles = Array.isArray(currentContact.roles)
+  ? currentContact.roles
+  : String(currentContact.type || '').split(',').map(r=>r.trim()).filter(Boolean);
+
+document.getElementById('roleBuyer').checked = currentRoles.includes('Buyer');
+document.getElementById('roleSeller').checked = currentRoles.includes('Seller');
+document.getElementById('roleInvestor').checked = currentRoles.includes('Investor');
+document.getElementById('roleReferralPartner').checked = currentRoles.includes('Referral Partner');
   editStage.value=inferStageFromContact(currentContact);
   editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
 
