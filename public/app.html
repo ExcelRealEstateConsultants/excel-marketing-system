@@ -8228,6 +8228,9 @@ async function saveContact(){
       firstName:editFirst.value,
       lastName:editLast.value,
       email:editEmail.value,
+      workEmail:getContactFieldValue('editWorkEmail'),
+      secondaryEmail:getContactFieldValue('editSecondaryEmail'),
+      spouseEmailAlt:getContactFieldValue('editSpouseEmailAlt'),
       phone:editPhone.value,
       roles:[
   ...(document.getElementById('roleBuyer').checked ? ['Buyer'] : []),
