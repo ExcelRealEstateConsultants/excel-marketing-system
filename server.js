@@ -47,6 +47,7 @@ const PIPELINE_STAGES = [
   'Contacted',
   'Appointment Set',
   'Active Prospect',
+  'Listed',
   'Under Contract',
   'Pending',
   'Closed',
