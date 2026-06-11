@@ -4080,6 +4080,15 @@ body {
     </div>
 
     <div class="feature-card">
+      <div class="feature-title mb-2">Email This Contact</div>
+      <div class="small-muted mb-2">Send a one-on-one email directly to this contact.</div>
+      <input id="contactEmailSubject" class="form-control mb-2" placeholder="Subject">
+      <textarea id="contactEmailMessage" class="form-control mb-2" rows="5" placeholder="Type your email message here..."></textarea>
+      <button class="btn btn-sm btn-primary" onclick="sendEmailToCurrentContact()">Send Email</button>
+      <div id="contactEmailSendStatus" class="small-muted mt-2"></div>
+</div>
+    
+    <div class="feature-card">
       <div class="feature-title mb-2">Text Message</div>
       <div class="small-muted mb-2">Send a one-on-one SMS text to this contact using Twilio.</div>
       <textarea id="smsMessage" class="form-control mb-2" rows="3" maxlength="1500" placeholder="Type your text message here..."></textarea>
@@ -8189,7 +8198,73 @@ async function saveContact(){
   openContact(currentContact.id);
 }
 
-async function sendSmsToCurrentContact(){
+async function sendEmailToCurrentContact(){
+  if(!currentContact){
+    alert('No contact selected.');
+    return;
+  }
+
+  const email = String(currentContact.email || '').trim();
+  const subjectValue = document.getElementById('contactEmailSubject')?.value || '';
+  const messageValue = document.getElementById('contactEmailMessage')?.value || '';
+  const status = document.getElementById('contactEmailSendStatus');
+
+  if(!email){
+    alert('This contact does not have an email address.');
+    return;
+  }
+
+  if(!subjectValue.trim()){
+    alert('Please enter a subject.');
+    return;
+  }
+
+  if(!messageValue.trim()){
+    alert('Please enter an email message.');
+    return;
+  }
+
+  if(status) status.innerText = 'Sending email...';
+
+  try {
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;">
+        ${messageValue.replace(/\n/g,'<br>')}
+      </div>
+    `;
+
+    const payload = {
+      name:'One-to-One Contact Email',
+      recipients:[email],
+      subject:subjectValue,
+      preheader:'',
+      html
+    };
+
+    const response = await fetch('/api/send-campaign',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+
+    if(result.success){
+      if(status) status.innerText = 'Email sent successfully.';
+      document.getElementById('contactEmailSubject').value='';
+      document.getElementById('contactEmailMessage').value='';
+    } else {
+      if(status) status.innerText = result.error || 'Email failed.';
+    }
+
+  } catch(error){
+    console.error(error);
+    if(status) status.innerText = 'Email failed.';
+  }
+}
+  
+  async function sendSmsToCurrentContact(){
   if(!currentContact) return;
 
   const message = (smsMessage.value || '').trim();
