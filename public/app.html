@@ -9747,7 +9747,8 @@ async function quickMoveStage(stage){
 
   currentContact = contactsCache.find(c=>String(c.id) === String(currentContact.id));
   if(currentContact){
-    editStage.value = inferStageFromContact(currentContact);
+    currentContact.stage = stage;
+    editStage.value = stage;
     renderContactQuickSummary();
     renderQuickStageButtons();
     renderContactTimeline([]);
