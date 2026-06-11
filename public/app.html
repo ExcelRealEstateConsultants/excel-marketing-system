@@ -3881,106 +3881,241 @@ body {
 
 <!-- CONTACT PANEL -->
 <div id="contactPanel">
-  <button class="btn btn-sm btn-secondary mb-3" onclick="closePanel()">Close</button>
+  <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+    <div>
+      <button class="btn btn-sm btn-secondary mb-3" onclick="closePanel()">Close</button>
+      <h4 class="mb-1">Contact Profile</h4>
+      <div class="small-muted">RapportLink relationship intelligence, tasks, communications, transactions, and AI in one profile.</div>
+    </div>
+    <button class="btn btn-primary" onclick="saveContact()">Save Changes</button>
+  </div>
 
-  <h4>Edit Contact</h4>
   <div id="contactQuickSummary" class="contact-quick-summary"></div>
-  <div id="contactUnsubscribeStatus" class="mb-2"></div>
-  <div id="contactBounceStatus" class="mb-3"></div>
 
-  <input id="editFirst" class="form-control mb-2">
-  <input id="editLast" class="form-control mb-2">
-  <input id="editEmail" class="form-control mb-2">
-  <input id="editPhone" class="form-control mb-2">
+  <ul class="nav nav-tabs mt-3 mb-3" id="contactProfileTabs">
+    <li class="nav-item"><button class="nav-link active" type="button" onclick="showContactProfileTab('overview')">Overview</button></li>
+    <li class="nav-item"><button class="nav-link" type="button" onclick="showContactProfileTab('profile')">Profile</button></li>
+    <li class="nav-item"><button class="nav-link" type="button" onclick="showContactProfileTab('transactions')">Transactions</button></li>
+    <li class="nav-item"><button class="nav-link" type="button" onclick="showContactProfileTab('tasks')">Tasks</button></li>
+    <li class="nav-item"><button class="nav-link" type="button" onclick="showContactProfileTab('communications')">Communications</button></li>
+    <li class="nav-item"><button class="nav-link" type="button" onclick="showContactProfileTab('ai')">AI</button></li>
+  </ul>
 
-  <select id="editType" class="form-control mb-2"></select>
-  <select id="editStage" class="form-control mb-2"></select>
-  <div class="feature-card">
-  <div class="feature-title mb-2">Pipeline Quick Move</div>
-  <div id="quickStageButtons"></div>
-</div>
-  <input id="editTags" class="form-control mb-2" placeholder="Tags, comma separated">
+  <div id="contactTabOverview" class="contact-profile-tab">
+    <div class="section">
+      <h5>Basic Contact Information</h5>
+      <div id="contactUnsubscribeStatus" class="mb-2"></div>
+      <div id="contactBounceStatus" class="mb-3"></div>
 
-  <div class="feature-card">
-    <div class="feature-title mb-2">Tag Quick Add</div>
-    <div class="input-group mb-2">
-      <input id="quickTagInput" class="form-control" placeholder="Add tag to this contact">
-      <button class="btn btn-outline-primary" onclick="quickAddTagToCurrentContact()">Add Tag</button>
-    </div>
-    <div id="quickTagButtons"></div>
-  </div>
-
-  <div class="feature-card">
-    <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-      <div>
-        <div class="feature-title mb-1">Transactions</div>
-        <div class="small-muted">A contact can be connected to multiple buyer, seller, or dual-side transaction files.</div>
-      </div>
-      <button class="btn btn-sm btn-success" onclick="txnStartFromCurrentContact()">+ Start Transaction</button>
-    </div>
-    <div id="contactTransactionList" class="mt-2"></div>
-  </div>
-
-  <div class="feature-card">
-    <div class="feature-title mb-2">Individual Campaign Selection</div>
-    <div class="small-muted mb-2">Use this for one-off campaign recipients. Group sending still happens from the Campaigns tab.</div>
-    <button id="campaignSelectContactButton" class="btn btn-sm btn-outline-primary" onclick="toggleCurrentContactForCampaign()">Add to Campaign Recipients</button>
-    <button class="btn btn-sm btn-outline-danger" onclick="clearIndividualCampaignContacts()">Clear Selected Individuals</button>
-  </div>
-
-
-
-  <div class="feature-card">
-    <div class="feature-title mb-2">Text Message</div>
-    <div class="small-muted mb-2">Send a one-on-one SMS text to this contact using Twilio.</div>
-    <textarea id="smsMessage" class="form-control mb-2" rows="3" maxlength="1500" placeholder="Type your text message here..."></textarea>
-    <button class="btn btn-sm btn-success" onclick="sendSmsToCurrentContact()">Send Text</button>
-    <div id="smsSendStatus" class="small-muted mt-2"></div>
-  </div>
-
-  <div class="section">
-    <h6>SMS History</h6>
-    <div id="contactSmsHistory"></div>
-  </div>
-
-  <button class="btn btn-primary mb-3" onclick="saveContact()">Save Changes</button>
-
-  <div class="section">
-    <h6>Tasks / Follow-Ups</h6>
-    <input id="taskTitle" class="form-control mb-2" placeholder="Task title">
-    <div class="row g-2 mb-2">
-      <div class="col-md-6"><input id="taskDue" type="date" class="form-control"></div>
-      <div class="col-md-6">
-        <select id="taskPriority" class="form-control">
-          <option>Normal</option>
-          <option>High</option>
-          <option>Low</option>
-        </select>
+      <div class="row g-2">
+        <div class="col-md-6">
+          <label class="form-label small">First Name</label>
+          <input id="editFirst" class="form-control mb-2">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Last Name</label>
+          <input id="editLast" class="form-control mb-2">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Email</label>
+          <input id="editEmail" class="form-control mb-2">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Phone</label>
+          <input id="editPhone" class="form-control mb-2">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Contact Type</label>
+          <select id="editType" class="form-control mb-2"></select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Pipeline Stage</label>
+          <select id="editStage" class="form-control mb-2"></select>
+        </div>
+        <div class="col-md-12">
+          <label class="form-label small">Tags</label>
+          <input id="editTags" class="form-control mb-2" placeholder="Tags, comma separated">
+        </div>
       </div>
     </div>
-    <textarea id="taskNotes" class="form-control mb-2" placeholder="Task notes"></textarea>
-    <button class="btn btn-sm btn-primary mb-2" onclick="addTask()">Add Task</button>
-    <div id="contactTasksList"></div>
+
+    <div class="feature-card">
+      <div class="feature-title mb-2">Pipeline Quick Move</div>
+      <div id="quickStageButtons"></div>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-title mb-2">Tag Quick Add</div>
+      <div class="input-group mb-2">
+        <input id="quickTagInput" class="form-control" placeholder="Add tag to this contact">
+        <button class="btn btn-outline-primary" onclick="quickAddTagToCurrentContact()">Add Tag</button>
+      </div>
+      <div id="quickTagButtons"></div>
+    </div>
   </div>
 
-  <div class="section">
-    <h6>Notes</h6>
-    <textarea id="noteInput" class="form-control mb-2"></textarea>
-    <button class="btn btn-sm btn-primary mb-2" onclick="addNote()">Add Note</button>
-    <div id="notesList"></div>
+  <div id="contactTabProfile" class="contact-profile-tab" style="display:none;">
+    <div class="section">
+      <h5>Personal Profile</h5>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label small">Birthday</label>
+          <input id="editBirthday" type="date" class="form-control mb-2">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Occupation</label>
+          <input id="editOccupation" class="form-control mb-2" placeholder="Occupation">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Company</label>
+          <input id="editCompany" class="form-control mb-2" placeholder="Company">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h5>Spouse / Partner</h5>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label small">Spouse Name</label>
+          <input id="editSpouseName" class="form-control mb-2" placeholder="Spouse name">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Spouse Birthday</label>
+          <input id="editSpouseBirthday" type="date" class="form-control mb-2">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Spouse Occupation</label>
+          <input id="editSpouseOccupation" class="form-control mb-2" placeholder="Spouse occupation">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Spouse Email</label>
+          <input id="editSpouseEmail" class="form-control mb-2" placeholder="Spouse email">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Spouse Phone</label>
+          <input id="editSpousePhone" class="form-control mb-2" placeholder="Spouse phone">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h5>Family & Relationship Details</h5>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label small">Anniversary</label>
+          <input id="editAnniversary" type="date" class="form-control mb-2">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label small">Children</label>
+          <input id="editChildren" class="form-control mb-2" placeholder="Children names and birthdays">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Pets</label>
+          <input id="editPets" class="form-control mb-2" placeholder="Pets">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Hobbies</label>
+          <input id="editHobbies" class="form-control mb-2" placeholder="Hobbies">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Favorite Restaurant</label>
+          <input id="editFavoriteRestaurant" class="form-control mb-2" placeholder="Favorite restaurant">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Favorite Sports Teams</label>
+          <input id="editFavoriteTeams" class="form-control mb-2" placeholder="Favorite teams">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small">Interests</label>
+          <input id="editInterests" class="form-control mb-2" placeholder="Interests">
+        </div>
+        <div class="col-md-12">
+          <label class="form-label small">Relationship Notes</label>
+          <textarea id="editRelationshipNotes" class="form-control mb-2" rows="4" placeholder="Important relationship details, family notes, preferences, reminders, etc."></textarea>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="section">
-    <h6>Activity Timeline</h6>
-    <div id="contactTimeline"></div>
+  <div id="contactTabTransactions" class="contact-profile-tab" style="display:none;">
+    <div class="feature-card">
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <div class="feature-title mb-1">Transactions</div>
+          <div class="small-muted">A contact can be connected to multiple buyer, seller, or dual-side transaction files.</div>
+        </div>
+        <button class="btn btn-sm btn-success" onclick="txnStartFromCurrentContact()">+ Start Transaction</button>
+      </div>
+      <div id="contactTransactionList" class="mt-2"></div>
+    </div>
   </div>
 
-  <div class="section">
-    <h6>Campaign History</h6>
-    <div id="panelCampaigns"></div>
+  <div id="contactTabTasks" class="contact-profile-tab" style="display:none;">
+    <div class="section">
+      <h5>Tasks / Follow-Ups</h5>
+      <input id="taskTitle" class="form-control mb-2" placeholder="Task title">
+      <div class="row g-2 mb-2">
+        <div class="col-md-6"><input id="taskDue" type="date" class="form-control"></div>
+        <div class="col-md-6">
+          <select id="taskPriority" class="form-control">
+            <option>Normal</option>
+            <option>High</option>
+            <option>Low</option>
+          </select>
+        </div>
+      </div>
+      <textarea id="taskNotes" class="form-control mb-2" placeholder="Task notes"></textarea>
+      <button class="btn btn-sm btn-primary mb-2" onclick="addTask()">Add Task</button>
+      <div id="contactTasksList"></div>
+    </div>
+  </div>
+
+  <div id="contactTabCommunications" class="contact-profile-tab" style="display:none;">
+    <div class="feature-card">
+      <div class="feature-title mb-2">Individual Campaign Selection</div>
+      <div class="small-muted mb-2">Use this for one-off campaign recipients. Group sending still happens from the Campaigns tab.</div>
+      <button id="campaignSelectContactButton" class="btn btn-sm btn-outline-primary" onclick="toggleCurrentContactForCampaign()">Add to Campaign Recipients</button>
+      <button class="btn btn-sm btn-outline-danger" onclick="clearIndividualCampaignContacts()">Clear Selected Individuals</button>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-title mb-2">Text Message</div>
+      <div class="small-muted mb-2">Send a one-on-one SMS text to this contact using Twilio.</div>
+      <textarea id="smsMessage" class="form-control mb-2" rows="3" maxlength="1500" placeholder="Type your text message here..."></textarea>
+      <button class="btn btn-sm btn-success" onclick="sendSmsToCurrentContact()">Send Text</button>
+      <div id="smsSendStatus" class="small-muted mt-2"></div>
+    </div>
+
+    <div class="section">
+      <h5>SMS History</h5>
+      <div id="contactSmsHistory"></div>
+    </div>
+
+    <div class="section">
+      <h5>Notes</h5>
+      <textarea id="noteInput" class="form-control mb-2"></textarea>
+      <button class="btn btn-sm btn-primary mb-2" onclick="addNote()">Add Note</button>
+      <div id="notesList"></div>
+    </div>
+
+    <div class="section">
+      <h5>Activity Timeline</h5>
+      <div id="contactTimeline"></div>
+    </div>
+
+    <div class="section">
+      <h5>Campaign History</h5>
+      <div id="panelCampaigns"></div>
+    </div>
+  </div>
+
+  <div id="contactTabAI" class="contact-profile-tab" style="display:none;">
+    <div id="contactAIProfilePanel"></div>
   </div>
 </div>
 
+<!-- CAMPAIGN ANALYTICS PANEL -->
 <!-- CAMPAIGN ANALYTICS PANEL -->
 
 
@@ -7633,6 +7768,34 @@ async function addContact(){
   loadDashboard();
   loadPipeline();
 }
+function showContactProfileTab(tabName){
+  const tabs = ['overview','profile','transactions','tasks','communications','ai'];
+
+  tabs.forEach(name=>{
+    const panel = document.getElementById('contactTab' + name.charAt(0).toUpperCase() + name.slice(1));
+    if(panel) panel.style.display = name === tabName ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('#contactProfileTabs .nav-link').forEach(btn=>{
+    btn.classList.remove('active');
+  });
+
+  const buttons = Array.from(document.querySelectorAll('#contactProfileTabs .nav-link'));
+  const activeButton = buttons.find(btn => (btn.innerText || '').toLowerCase() === tabName);
+  if(activeButton) activeButton.classList.add('active');
+
+  if(tabName === 'ai') renderContactAIProfilePanel();
+}
+
+function setContactFieldValue(id, value){
+  const field = document.getElementById(id);
+  if(field) field.value = value || '';
+}
+
+function getContactFieldValue(id){
+  const field = document.getElementById(id);
+  return field ? field.value : '';
+}
 
 function openContact(id){
   currentContact = contactsCache.find(c=>String(c.id) === String(id));
@@ -7651,6 +7814,23 @@ function openContact(id){
   editType.value=currentContact.type || '';
   editStage.value=inferStageFromContact(currentContact);
   editTags.value = Array.isArray(currentContact.tags) ? currentContact.tags.join(', ') : '';
+
+  setContactFieldValue('editBirthday', currentContact.birthday);
+  setContactFieldValue('editOccupation', currentContact.occupation);
+  setContactFieldValue('editCompany', currentContact.company);
+  setContactFieldValue('editSpouseName', currentContact.spouseName);
+  setContactFieldValue('editSpouseBirthday', currentContact.spouseBirthday);
+  setContactFieldValue('editSpouseOccupation', currentContact.spouseOccupation);
+  setContactFieldValue('editSpouseEmail', currentContact.spouseEmail);
+  setContactFieldValue('editSpousePhone', currentContact.spousePhone);
+  setContactFieldValue('editAnniversary', currentContact.anniversary);
+  setContactFieldValue('editChildren', currentContact.children);
+  setContactFieldValue('editPets', currentContact.pets);
+  setContactFieldValue('editHobbies', currentContact.hobbies);
+  setContactFieldValue('editFavoriteRestaurant', currentContact.favoriteRestaurant);
+  setContactFieldValue('editFavoriteTeams', currentContact.favoriteTeams);
+  setContactFieldValue('editInterests', currentContact.interests);
+  setContactFieldValue('editRelationshipNotes', currentContact.relationshipNotes);
 
   renderContactQuickSummary();
   renderContactTransactions();
@@ -7672,10 +7852,73 @@ function openContact(id){
 
   renderContactTasks();
   renderContactTimeline([]);
+  renderContactAIProfilePanel();
+  showContactProfileTab('overview');
   loadActivity(currentContact.email);
   loadSmsHistory();
 }
 
+function renderContactAIProfilePanel(){
+  if(!currentContact) return;
+
+  const panel = document.getElementById('contactAIProfilePanel');
+  if(!panel) return;
+
+  const insight = buildAIContactInsights([currentContact], activityCache, smsActivityCache)[0] || {};
+  const heatClass = aiHeatClass(insight.heat || 'Cold');
+  const leadScore = Number(insight.leadScore || 0);
+  const oppScore = Number(insight.opportunityScore || 0);
+  const aiCoach = getAIContactCoachMessage(insight);
+
+  panel.innerHTML = `
+    <div class="modern-card mb-3">
+      <h5 class="mb-2">AI Contact Intelligence</h5>
+      <div class="mb-3">
+        <span class="ai-contact-badge ${heatClass}">${aiSafe(aiHeatBadgeText(insight))}</span>
+        <span class="ai-contact-badge action">Lead Score ${leadScore}</span>
+        <span class="ai-contact-badge action">Opportunity Score ${oppScore}</span>
+      </div>
+
+      <div class="ai-contact-detail-grid">
+        <div class="ai-contact-detail-card">
+          <div class="ai-contact-detail-number">${leadScore}</div>
+          <div class="ai-contact-detail-label">Lead Score</div>
+          <div class="ai-score-bar"><div class="ai-score-bar-fill" style="width:${Math.min(100, leadScore)}%;"></div></div>
+        </div>
+        <div class="ai-contact-detail-card">
+          <div class="ai-contact-detail-number">${oppScore}</div>
+          <div class="ai-contact-detail-label">Opportunity Score</div>
+          <div class="ai-score-bar"><div class="ai-score-bar-fill" style="width:${Math.min(100, oppScore)}%;"></div></div>
+        </div>
+        <div class="ai-contact-detail-card">
+          <div class="ai-contact-detail-number">${Number(insight.opens || 0)}</div>
+          <div class="ai-contact-detail-label">Email Opens</div>
+        </div>
+        <div class="ai-contact-detail-card">
+          <div class="ai-contact-detail-number">${Number(insight.clicks || 0)}</div>
+          <div class="ai-contact-detail-label">Link Clicks</div>
+        </div>
+      </div>
+
+      <div class="ai-contact-coach-note mt-3">
+        <b>AI Coach:</b> ${aiSafe(aiCoach)}
+      </div>
+
+      <div class="ai-score-explanation">
+        <b>Recommended Next Action:</b><br>
+        ${aiSafe(insight.nextAction || 'Stay in touch')}
+        ${insight.nextActionReason ? `<br><small>${aiSafe(insight.nextActionReason)}</small>` : ''}
+      </div>
+
+      <div class="ai-contact-action-grid">
+        <button class="btn btn-primary" onclick="aiPrepareFollowUpTask()">Add Follow-Up Task</button>
+        <button class="btn btn-outline-primary" onclick="aiPrepareTextMessage()">Draft Text</button>
+        <button class="btn btn-outline-primary" onclick="aiSuggestStageMove()">Suggest Stage</button>
+        <button class="btn btn-outline-primary" onclick="aiAddContactToCampaignFromPanel()">Add to Campaign</button>
+      </div>
+    </div>
+  `;
+}
 
 function getAIContactCoachMessage(insight = {}){
   const name = insight.contact ? contactName(insight.contact) : 'This contact';
@@ -7877,7 +8120,6 @@ function renderContactTimeline(activityRows){
     </div>
   `).join('');
 }
-
 async function saveContact(){
   await fetch('/api/contacts/'+currentContact.id,{
     method:'PUT',
@@ -7889,7 +8131,26 @@ async function saveContact(){
       phone:editPhone.value,
       type:editType.value,
       stage:editStage.value,
-      tags:parseCommaList(editTags.value)
+      tags:parseCommaList(editTags.value),
+
+      birthday:getContactFieldValue('editBirthday'),
+      occupation:getContactFieldValue('editOccupation'),
+      company:getContactFieldValue('editCompany'),
+
+      spouseName:getContactFieldValue('editSpouseName'),
+      spouseBirthday:getContactFieldValue('editSpouseBirthday'),
+      spouseOccupation:getContactFieldValue('editSpouseOccupation'),
+      spouseEmail:getContactFieldValue('editSpouseEmail'),
+      spousePhone:getContactFieldValue('editSpousePhone'),
+
+      anniversary:getContactFieldValue('editAnniversary'),
+      children:getContactFieldValue('editChildren'),
+      pets:getContactFieldValue('editPets'),
+      hobbies:getContactFieldValue('editHobbies'),
+      favoriteRestaurant:getContactFieldValue('editFavoriteRestaurant'),
+      favoriteTeams:getContactFieldValue('editFavoriteTeams'),
+      interests:getContactFieldValue('editInterests'),
+      relationshipNotes:getContactFieldValue('editRelationshipNotes')
     })
   });
 
@@ -7903,7 +8164,6 @@ async function saveContact(){
   currentContact = contactsCache.find(c=>c.id==currentContact.id);
   openContact(currentContact.id);
 }
-
 
 async function sendSmsToCurrentContact(){
   if(!currentContact) return;
