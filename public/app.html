@@ -7856,63 +7856,11 @@ function setContactFieldValue(id, value){
   const field = document.getElementById(id);
   if(field) field.value = value || '';
 }
-
 function getContactFieldValue(id){
   const field = document.getElementById(id);
   return field ? field.value : '';
 }
-function addChildField(child = {}) {
-  const container = document.getElementById('childrenContainer');
-  if (!container) return;
 
-  const row = document.createElement('div');
-  row.className = 'row g-2 mb-2 child-row';
-
-  row.innerHTML = `
-    <div class="col-md-3">
-      <input class="form-control child-name" placeholder="Child name" value="${child.name || ''}">
-    </div>
-    <div class="col-md-2">
-      <input type="date" class="form-control child-birthday" value="${child.birthday || ''}">
-    </div>
-    <div class="col-md-3">
-      <input class="form-control child-phone" placeholder="Child phone" value="${formatPhone(child.phone || '')}" oninput="this.value=formatPhone(this.value)">
-    </div>
-    <div class="col-md-3">
-      <input type="email" class="form-control child-email" placeholder="Child email" value="${child.email || ''}">
-    </div>
-    <div class="col-md-1">
-      <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.child-row').remove()">×</button>
-    </div>
-  `;
-
-  container.appendChild(row);
-}
-
-function renderChildrenFields(children) {
-  const container = document.getElementById('childrenContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  const list = Array.isArray(children) ? children : [];
-
-  if (list.length === 0) {
-    addChildField();
-    return;
-  }
-
-  list.forEach(child => addChildField(child));
-}
-
-function getChildrenFromProfile() {
-  return Array.from(document.querySelectorAll('#childrenContainer .child-row')).map(row => ({
-    name: row.querySelector('.child-name')?.value || '',
-    birthday: row.querySelector('.child-birthday')?.value || '',
-    phone: formatPhone(row.querySelector('.child-phone')?.value || ''),
-    email: row.querySelector('.child-email')?.value || ''
-  })).filter(child => child.name || child.birthday || child.phone || child.email);
-}
 function addChildField(child = {}) {
   const container = document.getElementById('childrenContainer');
   if (!container) return;
