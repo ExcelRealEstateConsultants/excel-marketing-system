@@ -7905,6 +7905,50 @@ function getChildrenFromProfile() {
     birthday: row.querySelector('.child-birthday')?.value || ''
   })).filter(child => child.name || child.birthday);
 }
+  function addChildField(child = {}) {
+  const container = document.getElementById('childrenContainer');
+  if (!container) return;
+
+  const row = document.createElement('div');
+  row.className = 'row g-2 mb-2 child-row';
+
+  row.innerHTML = `
+    <div class="col-md-5">
+      <input class="form-control child-name" placeholder="Child name" value="${child.name || ''}">
+    </div>
+    <div class="col-md-5">
+      <input type="date" class="form-control child-birthday" value="${child.birthday || ''}">
+    </div>
+    <div class="col-md-2">
+      <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.child-row').remove()">Remove</button>
+    </div>
+  `;
+
+  container.appendChild(row);
+}
+
+function renderChildrenFields(children) {
+  const container = document.getElementById('childrenContainer');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  const list = Array.isArray(children) ? children : [];
+
+  if (list.length === 0) {
+    addChildField();
+    return;
+  }
+
+  list.forEach(child => addChildField(child));
+}
+
+function getChildrenFromProfile() {
+  return Array.from(document.querySelectorAll('#childrenContainer .child-row')).map(row => ({
+    name: row.querySelector('.child-name')?.value || '',
+    birthday: row.querySelector('.child-birthday')?.value || ''
+  })).filter(child => child.name || child.birthday);
+}
 function openContact(id){
   currentContact = contactsCache.find(c=>String(c.id) === String(id));
   if(!currentContact){
