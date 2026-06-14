@@ -518,7 +518,26 @@ app.put('/api/contacts/:id', (req, res) => {
           { from: oldStage, stage: newStage, date: new Date().toISOString() }
         ]
       : (Array.isArray(contacts[i].stageHistory) ? contacts[i].stageHistory : []),
-    tags: Array.isArray(req.body.tags) ? req.body.tags : []
+        tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+
+    occupation: req.body.occupation || '',
+    birthday: req.body.birthday || '',
+
+    spouseName: req.body.spouseName || '',
+    spouseOccupation: req.body.spouseOccupation || '',
+    spouseBirthday: req.body.spouseBirthday || '',
+    spousePhone: req.body.spousePhone || '',
+
+    anniversary: req.body.anniversary || '',
+
+    children: Array.isArray(req.body.children) ? req.body.children : [],
+
+    pets: req.body.pets || '',
+    hobbies: req.body.hobbies || '',
+    favoriteRestaurant: req.body.favoriteRestaurant || '',
+    favoriteTeams: req.body.favoriteTeams || '',
+    interests: req.body.interests || '',
+    relationshipNotes: req.body.relationshipNotes || ''
   };
 
   saveContacts(contacts);
