@@ -4041,39 +4041,24 @@ body {
         <div class="col-md-6">
           <label class="form-label small">Spouse Phone</label>
           <input id="editSpousePhone" class="form-control mb-2" placeholder="Spouse phone">
+                 </div>
+        <div class="col-md-4">
+          <label class="form-label small">Anniversary</label>
+          <input id="editAnniversary" type="date" class="form-control mb-2"> 
         </div>
       </div>
     </div>
 
-    <div class="section">
+       <div class="section">
       <h5>Family & Relationship Details</h5>
       <div class="row g-2">
-        <div class="col-md-4">
-          <label class="form-label small">Anniversary</label>
-          <input id="editAnniversary" type="date" class="form-control mb-2">
-        </div>
-        <div class="col-md-8">
+
+        <div class="col-md-12">
           <label class="form-label small">Children</label>
-          <input id="editChildren" class="form-control mb-2" placeholder="Children names and birthdays">
-                    <div class="row g-2 mt-2">
-            <div class="col-md-6">
-              <label class="form-label small">Child 1 Name</label>
-              <input id="editChild1Name" class="form-control mb-2" placeholder="Child 1 name">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small">Child 1 Birthday</label>
-              <input id="editChild1Birthday" type="date" class="form-control mb-2">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small">Child 2 Name</label>
-              <input id="editChild2Name" class="form-control mb-2" placeholder="Child 2 name">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label small">Child 2 Birthday</label>
-              <input id="editChild2Birthday" type="date" class="form-control mb-2">
-            </div>
-          </div>
+          <div id="childrenContainer"></div>
+          <button type="button" class="btn btn-outline-primary btn-sm mt-2" onclick="addChildField()">+ Add Child</button>
         </div>
+
         <div class="col-md-4">
           <label class="form-label small">Pets</label>
           <input id="editPets" class="form-control mb-2" placeholder="Pets">
@@ -4101,7 +4086,6 @@ body {
       </div>
     </div>
   </div>
-
   <div id="contactTabTransactions" class="contact-profile-tab" style="display:none;">
     <div class="feature-card">
       <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
