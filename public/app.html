@@ -4118,65 +4118,89 @@ body {
       <div id="contactTasksList"></div>
     </div>
   </div>
-
   <div id="contactTabCommunications" class="contact-profile-tab" style="display:none;">
-    <div class="feature-card">
-      <div class="feature-title mb-2">Individual Campaign Selection</div>
-      <div class="small-muted mb-2">Use this for one-off campaign recipients. Group sending still happens from the Campaigns tab.</div>
-      <button id="campaignSelectContactButton" class="btn btn-sm btn-outline-primary" onclick="toggleCurrentContactForCampaign()">Add to Campaign Recipients</button>
-      <button class="btn btn-sm btn-outline-danger" onclick="clearIndividualCampaignContacts()">Clear Selected Individuals</button>
-    </div>
 
     <div class="feature-card">
-      <div class="feature-title mb-2">Email This Contact</div>
-      <div class="small-muted mb-2">Send a one-on-one email directly to this contact.</div>
-      <input id="contactEmailSubject" class="form-control mb-2" placeholder="Subject">
-      <textarea id="contactEmailMessage" class="form-control mb-2" rows="5" placeholder="Type your email message here..."></textarea>
-      <button class="btn btn-sm btn-success" onclick="sendEmailToCurrentContact()">Send Email</button>
-      <div id="contactEmailSendStatus" class="small-muted mt-2"></div>
-</div>
-    
-    <div class="feature-card">
-      <div class="feature-title mb-2">Text Message</div>
-      <div class="small-muted mb-2">Send a one-on-one SMS text to this contact using Twilio.</div>
-      <textarea id="smsMessage" class="form-control mb-2" rows="3" maxlength="1500" placeholder="Type your text message here..."></textarea>
-      <button class="btn btn-sm btn-success" onclick="sendSmsToCurrentContact()">Send Text</button>
-      <div id="smsSendStatus" class="small-muted mt-2"></div>
+      <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+        <div>
+          <div class="feature-title mb-1">Communication Center</div>
+          <div class="small-muted">Send emails, texts, and review all recent communication from one place.</div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <button id="campaignSelectContactButton" class="btn btn-sm btn-outline-primary" onclick="toggleCurrentContactForCampaign()">Add to Campaign Recipients</button>
+          <button class="btn btn-sm btn-outline-danger" onclick="clearIndividualCampaignContacts()">Clear Selected Individuals</button>
+        </div>
+      </div>
+      <div id="contactCommunicationSummary" class="mt-3"></div>
     </div>
 
-   <div class="section">
-      <h5>Email History</h5>
-      <div id="contactEmailHistory"></div>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="feature-card h-100">
+          <div class="feature-title mb-2">Email This Contact</div>
+          <div class="small-muted mb-2">Send a one-on-one email directly to this contact.</div>
+
+          <div class="mb-2">
+            <label class="form-label small">Subject</label>
+            <input id="contactEmailSubject" class="form-control" placeholder="Subject">
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label small">Message</label>
+            <textarea id="contactEmailMessage" class="form-control" rows="7" placeholder="Type your email message here."></textarea>
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-success" onclick="sendEmailToCurrentContact()">Send Email</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="insertContactEmailTemplate('checkin')">Check-In</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="insertContactEmailTemplate('market')">Market Update</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="insertContactEmailTemplate('thanks')">Thank You</button>
+          </div>
+
+          <div id="contactEmailSendStatus" class="small-muted mt-2"></div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="feature-card h-100">
+          <div class="feature-title mb-2">Text Message</div>
+          <div class="small-muted mb-2">Send a one-on-one SMS text to this contact using Twilio.</div>
+
+          <div class="mb-2">
+            <label class="form-label small">Message</label>
+            <textarea id="smsMessage" class="form-control" rows="7" maxlength="1500" placeholder="Type your text message here."></textarea>
+          </div>
+
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn btn-sm btn-success" onclick="sendSmsToCurrentContact()">Send Text</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="insertContactTextTemplate('checkin')">Check-In</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="insertContactTextTemplate('showing')">Showing Follow-Up</button>
+            <button class="btn btn-sm btn-outline-primary" onclick="insertContactTextTemplate('thanks')">Thank You</button>
+          </div>
+
+          <div id="smsSendStatus" class="small-muted mt-2"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-      <h5>SMS History</h5>
-      <div id="contactSmsHistory"></div>
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <div class="section">
+          <h5>Email History</h5>
+          <div id="contactEmailHistory"></div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="section">
+          <h5>Text History</h5>
+          <div id="smsHistory"></div>
+        </div>
+      </div>
     </div>
 
-    <div class="section">
-      <h5>Notes</h5>
-      <textarea id="noteInput" class="form-control mb-2"></textarea>
-      <button class="btn btn-sm btn-success mb-2" onclick="addNote()">Add Note</button>
-      <div id="notesList"></div>
-    </div>
-
-    <div class="section">
-      <h5>Activity Timeline</h5>
-      <div id="contactTimeline"></div>
-    </div>
-
-    <div class="section">
-      <h5>Campaign History</h5>
-      <div id="panelCampaigns"></div>
-    </div>
   </div>
-
-  <div id="contactTabAI" class="contact-profile-tab" style="display:none;">
-    <div id="contactAIProfilePanel"></div>
-  </div>
-</div>
-
+ 
 <!-- CAMPAIGN ANALYTICS PANEL -->
 <!-- CAMPAIGN ANALYTICS PANEL -->
 
