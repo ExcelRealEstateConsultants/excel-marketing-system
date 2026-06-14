@@ -525,6 +525,7 @@ app.put('/api/contacts/:id', (req, res) => {
 
     spouseName: req.body.spouseName || '',
     spouseOccupation: req.body.spouseOccupation || '',
+    spouseEmail: req.body.spouseEmail || '',
     spouseBirthday: req.body.spouseBirthday || '',
     spousePhone: req.body.spousePhone || '',
 
