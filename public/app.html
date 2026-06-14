@@ -7869,14 +7869,20 @@ function addChildField(child = {}) {
   row.className = 'row g-2 mb-2 child-row';
 
   row.innerHTML = `
-    <div class="col-md-5">
+    <div class="col-md-3">
       <input class="form-control child-name" placeholder="Child name" value="${child.name || ''}">
     </div>
-    <div class="col-md-5">
+    <div class="col-md-2">
       <input type="date" class="form-control child-birthday" value="${child.birthday || ''}">
     </div>
-    <div class="col-md-2">
-      <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.child-row').remove()">Remove</button>
+    <div class="col-md-3">
+      <input class="form-control child-phone" placeholder="Child phone" value="${formatPhone(child.phone || '')}" oninput="this.value=formatPhone(this.value)">
+    </div>
+    <div class="col-md-3">
+      <input type="email" class="form-control child-email" placeholder="Child email" value="${child.email || ''}">
+    </div>
+    <div class="col-md-1">
+      <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.child-row').remove()">×</button>
     </div>
   `;
 
@@ -7902,53 +7908,12 @@ function renderChildrenFields(children) {
 function getChildrenFromProfile() {
   return Array.from(document.querySelectorAll('#childrenContainer .child-row')).map(row => ({
     name: row.querySelector('.child-name')?.value || '',
-    birthday: row.querySelector('.child-birthday')?.value || ''
-  })).filter(child => child.name || child.birthday);
-}
-  function addChildField(child = {}) {
-  const container = document.getElementById('childrenContainer');
-  if (!container) return;
-
-  const row = document.createElement('div');
-  row.className = 'row g-2 mb-2 child-row';
-
-  row.innerHTML = `
-    <div class="col-md-5">
-      <input class="form-control child-name" placeholder="Child name" value="${child.name || ''}">
-    </div>
-    <div class="col-md-5">
-      <input type="date" class="form-control child-birthday" value="${child.birthday || ''}">
-    </div>
-    <div class="col-md-2">
-      <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.child-row').remove()">Remove</button>
-    </div>
-  `;
-
-  container.appendChild(row);
+    birthday: row.querySelector('.child-birthday')?.value || '',
+    phone: formatPhone(row.querySelector('.child-phone')?.value || ''),
+    email: row.querySelector('.child-email')?.value || ''
+  })).filter(child => child.name || child.birthday || child.phone || child.email);
 }
 
-function renderChildrenFields(children) {
-  const container = document.getElementById('childrenContainer');
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  const list = Array.isArray(children) ? children : [];
-
-  if (list.length === 0) {
-    addChildField();
-    return;
-  }
-
-  list.forEach(child => addChildField(child));
-}
-
-function getChildrenFromProfile() {
-  return Array.from(document.querySelectorAll('#childrenContainer .child-row')).map(row => ({
-    name: row.querySelector('.child-name')?.value || '',
-    birthday: row.querySelector('.child-birthday')?.value || ''
-  })).filter(child => child.name || child.birthday);
-}
 function openContact(id){
   currentContact = contactsCache.find(c=>String(c.id) === String(id));
   if(!currentContact){
@@ -7984,7 +7949,7 @@ document.getElementById('roleReferralPartner').checked = currentRoles.includes('
   setContactFieldValue('editSpouseBirthday', currentContact.spouseBirthday);
   setContactFieldValue('editSpouseOccupation', currentContact.spouseOccupation);
   setContactFieldValue('editSpouseEmail', currentContact.spouseEmail);
-  setContactFieldValue('editSpousePhone', currentContact.spousePhone);
+  setContactFieldValue('editSpousePhone', formatPhone(currentContact.spousePhone || ''));
   setContactFieldValue('editAnniversary', currentContact.anniversary);
   renderChildrenFields(currentContact.children);
   setContactFieldValue('editChild1Name', currentContact.child1Name);
@@ -8345,7 +8310,7 @@ type:[
       spouseBirthday:getContactFieldValue('editSpouseBirthday'),
       spouseOccupation:getContactFieldValue('editSpouseOccupation'),
       spouseEmail:getContactFieldValue('editSpouseEmail'),
-      spousePhone:getContactFieldValue('editSpousePhone'),
+      spousePhone:formatPhone(getContactFieldValue('editSpousePhone')),
 
       anniversary:getContactFieldValue('editAnniversary'),
       children:getChildrenFromProfile(),
