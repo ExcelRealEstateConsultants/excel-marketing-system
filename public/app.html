@@ -3910,7 +3910,8 @@ body {
         <div class="mb-3">
           <b>Google Gmail</b><br>
           <span class="small-muted">Not Connected</span><br>
-          <button class="btn btn-outline-primary" onclick="connectGmailAccount()">Connect Gmail</button>
+          <button id="gmailConnectButton" class="btn btn-outline-primary" onclick="connectGmailAccount()">Connect Gmail</button>
+          <div id="gmailConnectionStatus" class="small-muted mt-2">Checking Gmail connection...</div>
             Connect Gmail
           </button>
         </div>
