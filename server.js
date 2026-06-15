@@ -311,10 +311,6 @@ function saveGmailTokens(data) {
   writeJsonFile(GMAIL_TOKENS_FILE, data);
 }
 
-function saveGmailTokens(data) {
-  writeJsonFile(GMAIL_TOKENS_FILE, data);
-}
-
 /* ================= EMAIL IMAGE LIBRARY ================= */
 app.get('/api/email-images', (req, res) => {
   res.json(loadEmailImages());
