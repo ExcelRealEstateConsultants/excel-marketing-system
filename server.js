@@ -301,8 +301,14 @@ function loadSmsActivity() {
 
 function saveSmsActivity(data) {
   writeJsonFile(SMS_ACTIVITY_FILE, data);
-  function loadGmailTokens() {
+}
+
+function loadGmailTokens() {
   return readJsonFile(GMAIL_TOKENS_FILE, {});
+}
+
+function saveGmailTokens(data) {
+  writeJsonFile(GMAIL_TOKENS_FILE, data);
 }
 
 function saveGmailTokens(data) {
