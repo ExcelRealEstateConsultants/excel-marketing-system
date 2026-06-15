@@ -67,6 +67,7 @@ const SEGMENT_FILE = path.join(__dirname, 'segments.json');
 const SCHEDULED_CAMPAIGN_FILE = path.join(__dirname, 'scheduled-campaigns.json');
 const EMAIL_IMAGE_FILE = path.join(__dirname, 'email-images.json');
 const SMS_ACTIVITY_FILE = path.join(__dirname, 'sms-activity.json');
+const GMAIL_TOKENS_FILE = path.join(__dirname, 'gmail-tokens.json');
 
 const PIPELINE_STAGES = [
   'New Lead',
@@ -300,6 +301,12 @@ function loadSmsActivity() {
 
 function saveSmsActivity(data) {
   writeJsonFile(SMS_ACTIVITY_FILE, data);
+  function loadGmailTokens() {
+  return readJsonFile(GMAIL_TOKENS_FILE, {});
+}
+
+function saveGmailTokens(data) {
+  writeJsonFile(GMAIL_TOKENS_FILE, data);
 }
 
 /* ================= EMAIL IMAGE LIBRARY ================= */
