@@ -5859,7 +5859,15 @@ function showTab(t){
   tasksTab.style.display = t==='tasks'?'block':'none';
   calendarTab.style.display = t==='calendar'?'block':'none';
 
+  if(window.settingsTab){
+    settingsTab.style.display = t==='settings'?'block':'none';
+  }
+
   [tabDashboard, tabSnapshot, tabCampaigns, tabEmailDesigner, tabTextCampaigns, tabContacts, tabPipeline, tabTransactions, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
+
+  if(window.tabSettings){
+    tabSettings.classList.remove('active');
+  }
 
   if(t === 'dashboard'){
     tabDashboard.classList.add('active');
@@ -5881,7 +5889,6 @@ function showTab(t){
     loadTags();
     renderRecipientBuilder();
   }
-
 
   if(t === 'emailDesigner'){
     tabEmailDesigner.classList.add('active');
@@ -5922,9 +5929,14 @@ function showTab(t){
     tabCalendar.classList.add('active');
     loadCalendar();
   }
+
+  if(t === 'settings'){
+    if(window.tabSettings){
+      tabSettings.classList.add('active');
+    }
+  }
 }
-
-
+  
 /* DASHBOARD */
 
 function aiSafe(value){
