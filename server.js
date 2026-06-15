@@ -1418,6 +1418,79 @@ app.delete('/api/scheduled-campaigns/:id', (req, res) => {
   res.json({ success: true });
 });
 
+/* ================= SEND ONE-TO-ONE CONTACT EMAIL ================= */
+app.post('/api/send-contact-email', async (req, res) => {
+  try {
+    if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
+      return res.status(500).json({
+        success: false,
+        error: 'Brevo is not configured. Please check BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.'
+      });
+    }
+
+    const to = normalizeEmail(req.body.to);
+    const subject = String(req.body.subject || '').trim();
+    const message = String(req.body.message || '').trim();
+    const contactId = req.body.contactId || null;
+
+    if (!to || !to.includes('@')) {
+      return res.status(400).json({ success: false, error: 'A valid email address is required.' });
+    }
+
+    if (!subject) {
+      return res.status(400).json({ success: false, error: 'Subject is required.' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ success: false, error: 'Email message is required.' });
+    }
+
+    const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.55;color:#111827;">
+        ${safeMessage}
+      </div>
+    `;
+
+    const brevoResult = await sendBrevoEmail({
+      to,
+      subject,
+      html
+    });
+
+    const activity = loadActivity();
+
+    activity.push({
+      email: to,
+      contactId,
+      campaignName: 'One-to-One Contact Email',
+      subject,
+      sentAt: new Date().toISOString(),
+      opened: false,
+      clicks: [],
+      status: 'sent',
+      provider: 'Brevo',
+      type: 'direct-email',
+      brevoMessageId: brevoResult.messageId || null
+    });
+
+    saveActivity(activity);
+
+    res.json({
+      success: true,
+      message: 'Email sent successfully.',
+      brevoMessageId: brevoResult.messageId || null
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Email failed.'
+    });
+  }
+});
+
 /* ================= SEND CAMPAIGN ================= */
 async function sendCampaignCore({ name, recipients, subject, html, preheader = '', saveCampaignRecord = true, scheduledCampaignId = null }) {
   if (!BREVO_API_KEY || !BREVO_SENDER_EMAIL) {
