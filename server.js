@@ -436,7 +436,95 @@ async function sendTwilioSms({ to, body }) {
 
   return result;
 }
+/* ================= GMAIL CONNECTION ROUTES ================= */
+function getGoogleOAuthClientWithTokens() {
+  const tokens = loadGmailTokens();
 
+  if (!tokens || !tokens.access_token) {
+    return null;
+  }
+
+  const client = new google.auth.OAuth2(
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET,
+    GOOGLE_REDIRECT_URI
+  );
+
+  client.setCredentials(tokens);
+  return client;
+}
+
+app.get('/auth/google', (req, res) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    return res.status(500).send('Google OAuth is not configured. Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to your environment variables.');
+  }
+
+  const authUrl = googleOAuthClient.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: GOOGLE_SCOPES
+  });
+
+  res.redirect(authUrl);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  try {
+    const code = req.query.code;
+
+    if (!code) {
+      return res.status(400).send('Missing Google authorization code.');
+    }
+
+    const { tokens } = await googleOAuthClient.getToken(code);
+    googleOAuthClient.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({
+      auth: googleOAuthClient,
+      version: 'v2'
+    });
+
+    const profile = await oauth2.userinfo.get();
+
+    saveGmailTokens({
+      ...tokens,
+      email: profile.data.email || '',
+      name: profile.data.name || '',
+      connectedAt: new Date().toISOString()
+    });
+
+    res.send(`
+      <html>
+        <body style="font-family:Arial;padding:40px;background:#f4f6f8;">
+          <div style="background:white;padding:30px;border-radius:16px;max-width:620px;margin:auto;">
+            <h2>Gmail Connected</h2>
+            <p>Your Gmail account has been connected successfully.</p>
+            <p><b>Connected account:</b> ${escapeHtml(profile.data.email || '')}</p>
+            <a href="/" style="display:inline-block;margin-top:16px;background:#00A143;color:white;padding:12px 18px;border-radius:10px;text-decoration:none;font-weight:bold;">Return to RapportLink</a>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send(`Google connection failed: ${escapeHtml(error.message || 'Unknown error')}`);
+  }
+});
+
+app.get('/api/gmail/status', (req, res) => {
+  const tokens = loadGmailTokens();
+
+  res.json({
+    connected: !!tokens.access_token,
+    email: tokens.email || '',
+    name: tokens.name || '',
+    connectedAt: tokens.connectedAt || ''
+  });
+});
+
+app.post('/api/gmail/disconnect', (req, res) => {
+  saveGmailTokens({});
+  res.json({ success: true });
+});
 /* ================= CONTACT ROUTES ================= */
 app.get('/api/contacts', (req, res) => {
   res.json(loadContacts());
