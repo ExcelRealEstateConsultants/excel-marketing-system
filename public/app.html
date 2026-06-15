@@ -3910,7 +3910,7 @@ body {
         <div class="mb-3">
           <b>Google Gmail</b><br>
           <span class="small-muted">Not Connected</span><br>
-          <button class="btn btn-sm btn-outline-primary mt-2" onclick="alert('Gmail connection will be added in the next phase.')">
+          <button class="btn btn-outline-primary" onclick="connectGmailAccount()">Connect Gmail</button>
             Connect Gmail
           </button>
         </div>
@@ -11488,6 +11488,10 @@ editPhone.addEventListener('input', () => normalizePhoneInput(editPhone));
 });
 document.addEventListener('change', e=>{ if(e.target && e.target.hasAttribute('data-txn-check')) txnRenderAutomationPreview(); });
 
+function connectGmailAccount(){
+  window.location.href = '/auth/google';
+}
+  
 renderTypes();
 
 loadPipelineStages().then(()=>{
