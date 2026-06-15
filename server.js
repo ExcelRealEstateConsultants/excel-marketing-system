@@ -1453,11 +1453,30 @@ app.post('/api/send-contact-email', async (req, res) => {
       </div>
     `;
 
-    const brevoResult = await sendBrevoEmail({
-      to,
-      subject,
-      html
-    });
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+  method: 'POST',
+  headers: {
+    accept: 'application/json',
+    'content-type': 'application/json',
+    'api-key': BREVO_API_KEY
+  },
+  body: JSON.stringify({
+    sender: {
+      name: BREVO_SENDER_NAME,
+      email: BREVO_SENDER_EMAIL
+    },
+    to: [{ email: to }],
+    subject,
+    textContent: message,
+    htmlContent: html
+  })
+});
+
+const brevoResult = await response.json().catch(() => ({}));
+
+if (!response.ok) {
+  throw new Error(brevoResult.message || `Brevo send failed for ${to}`);
+}
 
     const activity = loadActivity();
 
