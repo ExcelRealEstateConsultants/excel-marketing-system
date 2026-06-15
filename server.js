@@ -5,7 +5,15 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
+const session = require('express-session');
+const { google } = require('googleapis');
+
 const app = express();
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'rapportlink-secret',
+  resave: false,
+  saveUninitialized: false
+}));
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '75mb' }));
