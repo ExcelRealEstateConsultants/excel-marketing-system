@@ -11492,8 +11492,35 @@ document.addEventListener('change', e=>{ if(e.target && e.target.hasAttribute('d
 function connectGmailAccount(){
   window.location.href = '/auth/google';
 }
+
+async function loadGmailStatus(){
+  const statusEl = document.getElementById('gmailConnectionStatus');
+  const buttonEl = document.getElementById('gmailConnectButton');
+
+  if (!statusEl || !buttonEl) return;
+
+  try {
+    const res = await fetch('/api/gmail/status');
+    const data = await res.json();
+
+    if (data.connected) {
+      statusEl.innerHTML = `Connected to Gmail as <b>${data.email || 'your Google account'}</b>`;
+      buttonEl.textContent = 'Reconnect Gmail';
+      buttonEl.className = 'btn btn-success';
+    } else {
+      statusEl.textContent = 'Gmail is not connected yet.';
+      buttonEl.textContent = 'Connect Gmail';
+      buttonEl.className = 'btn btn-outline-primary';
+    }
+  } catch (error) {
+    statusEl.textContent = 'Could not check Gmail connection status.';
+  }
+}
   
 renderTypes();
+
+renderTypes();
+loadGmailStatus();
 
 loadPipelineStages().then(()=>{
   txnLoad();
