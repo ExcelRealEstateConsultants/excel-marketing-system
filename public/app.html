@@ -5848,6 +5848,8 @@ function addContactType(){
 }
 
 function showTab(t){
+  if(window.settingsMenu) settingsMenu.classList.remove('open');
+  if(window.notificationMenu) notificationMenu.classList.remove('open');
   dashboardTab.style.display = t==='dashboard'?'block':'none';
   snapshotTab.style.display = t==='snapshot'?'block':'none';
   campaignsTab.style.display = t==='campaigns'?'block':'none';
