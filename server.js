@@ -78,6 +78,79 @@ function getGmailClient() {
     auth: gmailOAuthClient
   });
 }
+/* ================= GMAIL ROUTES ================= */
+app.get('/auth/google', (req, res) => {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
+    return res.status(500).send('Google OAuth is not configured. Please check GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_REDIRECT_URI.');
+  }
+
+  const url = gmailOAuthClient.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: [
+      'https://www.googleapis.com/auth/gmail.send',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ]
+  });
+
+  res.redirect(url);
+});
+
+app.get('/auth/google/callback', async (req, res) => {
+  try {
+    const code = req.query.code;
+
+    if (!code) {
+      return res.status(400).send('Missing Google authorization code.');
+    }
+
+    const { tokens } = await gmailOAuthClient.getToken(code);
+    saveGmailToken(tokens);
+
+    res.send(`
+      <html>
+        <body style="font-family:Arial;padding:40px;background:#f4f6f8;">
+          <div style="background:white;padding:30px;border-radius:16px;max-width:620px;margin:auto;">
+            <h2>Gmail Connected</h2>
+            <p>Your Gmail account is now connected to RapportLink.</p>
+            <p>You can close this tab and return to RapportLink.</p>
+          </div>
+        </body>
+      </html>
+    `);
+  } catch (error) {
+    res.status(500).send(`Google connection failed: ${error.message}`);
+  }
+});
+
+app.get('/api/gmail/status', async (req, res) => {
+  try {
+    const tokens = loadGmailToken();
+
+    if (!tokens) {
+      return res.json({ connected: false });
+    }
+
+    gmailOAuthClient.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({
+      version: 'v2',
+      auth: gmailOAuthClient
+    });
+
+    const userInfo = await oauth2.userinfo.get();
+
+    res.json({
+      connected: true,
+      email: userInfo.data.email || ''
+    });
+  } catch (error) {
+    res.json({
+      connected: false,
+      error: error.message
+    });
+  }
+});
 
 /* ================= TWILIO SMS ================= */
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
