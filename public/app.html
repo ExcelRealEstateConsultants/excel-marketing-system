@@ -11518,9 +11518,9 @@ async function loadGmailStatus(){
 }
   
 renderTypes();
-
-renderTypes();
 loadGmailStatus();
+
+loadPipelineStages().then(()=>{
 
 loadPipelineStages().then(()=>{
   txnLoad();
