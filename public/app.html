@@ -8547,7 +8547,7 @@ async function sendEmailToCurrentContact(){
       document.getElementById('contactEmailSubject').value = '';
       document.getElementById('contactEmailMessage').value = '';
 
-      if(typeof loadEmailHistory === 'function') await loadEmailHistory();
+      if(typeof loadContactEmailHistory === 'function') await loadContactEmailHistory();
       if(typeof renderContactTimeline === 'function') renderContactTimeline();
     } else {
       if(status) status.innerText = result.error || 'Gmail send failed.';
