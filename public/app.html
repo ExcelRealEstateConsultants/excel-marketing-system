@@ -5903,30 +5903,17 @@ function showTab(t){
     if(btn) btn.classList.remove('active');
   });
 
-  const activeTab = document.getElementById(tabs[t]);
-  if(activeTab) activeTab.style.display = 'block';
+  const panel = document.getElementById(tabs[t]);
+  if(panel) panel.style.display = 'block';
 
-  const activeButton = document.getElementById(buttons[t]);
-  if(activeButton) activeButton.classList.add('active');
+  const btn = document.getElementById(buttons[t]);
+  if(btn) btn.classList.add('active');
 
-  closeToolbarMenus?.();
+  if(typeof closeToolbarMenus === 'function') closeToolbarMenus();
 
   try {
-    if(t === 'dashboard'){
-      if(typeof loadDashboard === 'function') loadDashboard();
-    }
-
-    if(t === 'snapshot'){
-      if(typeof loadDashboard === 'function') loadDashboard();
-      setTimeout(() => {
-        if(typeof dashboardCharts === 'object' && dashboardCharts){
-          Object.values(dashboardCharts).forEach(chart => {
-            if(chart && typeof chart.resize === 'function') chart.resize();
-          });
-        }
-      }, 150);
-    }
-
+    if(t === 'dashboard' && typeof loadDashboard === 'function') loadDashboard();
+    if(t === 'snapshot' && typeof loadDashboard === 'function') loadDashboard();
     if(t === 'campaigns'){
       if(typeof loadCampaigns === 'function') loadCampaigns();
       if(typeof loadTemplates === 'function') loadTemplates();
@@ -5935,11 +5922,7 @@ function showTab(t){
       if(typeof loadTags === 'function') loadTags();
       if(typeof renderRecipientBuilder === 'function') renderRecipientBuilder();
     }
-
-    if(t === 'emailDesigner'){
-      if(typeof initEmailDesignerIfNeeded === 'function') initEmailDesignerIfNeeded();
-    }
-
+    if(t === 'emailDesigner' && typeof initEmailDesignerIfNeeded === 'function') initEmailDesignerIfNeeded();
     if(t === 'textCampaigns'){
       if(typeof loadContacts === 'function') loadContacts();
       if(typeof loadSegments === 'function') loadSegments();
@@ -5947,29 +5930,16 @@ function showTab(t){
       if(typeof renderTextCampaignBuilder === 'function') renderTextCampaignBuilder();
       if(typeof loadTextCampaignActivity === 'function') loadTextCampaignActivity();
     }
-
     if(t === 'contacts'){
       if(typeof loadContacts === 'function') loadContacts();
       if(typeof loadTags === 'function') loadTags();
     }
-
-    if(t === 'pipeline'){
-      if(typeof loadPipeline === 'function') loadPipeline();
-    }
-
-    if(t === 'transactions'){
-      if(typeof txnInit === 'function') txnInit();
-    }
-
-    if(t === 'tasks'){
-      if(typeof loadTasks === 'function') loadTasks();
-    }
-
-    if(t === 'calendar'){
-      if(typeof loadCalendar === 'function') loadCalendar();
-    }
-  } catch(err) {
-    console.error('Tab load error for:', t, err);
+    if(t === 'pipeline' && typeof loadPipeline === 'function') loadPipeline();
+    if(t === 'transactions' && typeof txnInit === 'function') txnInit();
+    if(t === 'tasks' && typeof loadTasks === 'function') loadTasks();
+    if(t === 'calendar' && typeof loadCalendar === 'function') loadCalendar();
+  } catch(error){
+    console.error('Tab load error:', t, error);
   }
 
   return false;
