@@ -5867,95 +5867,112 @@ function addContactType(){
 }
 
 function showTab(t){
-  if(window.settingsMenu) settingsMenu.classList.remove('open');
-  if(window.notificationMenu) notificationMenu.classList.remove('open');
-  dashboardTab.style.display = t==='dashboard'?'block':'none';
-  snapshotTab.style.display = t==='snapshot'?'block':'none';
-  campaignsTab.style.display = t==='campaigns'?'block':'none';
-  emailDesignerTab.style.display = t==='emailDesigner'?'block':'none';
-  textCampaignsTab.style.display = t==='textCampaigns'?'block':'none';
-  contactsTab.style.display = t==='contacts'?'block':'none';
-  pipelineTab.style.display = t==='pipeline'?'block':'none';
-  transactionsTab.style.display = t==='transactions'?'block':'none';
-  tasksTab.style.display = t==='tasks'?'block':'none';
-  calendarTab.style.display = t==='calendar'?'block':'none';
+  const tabs = {
+    dashboard: 'dashboardTab',
+    snapshot: 'snapshotTab',
+    campaigns: 'campaignsTab',
+    emailDesigner: 'emailDesignerTab',
+    textCampaigns: 'textCampaignsTab',
+    contacts: 'contactsTab',
+    pipeline: 'pipelineTab',
+    transactions: 'transactionsTab',
+    tasks: 'tasksTab',
+    calendar: 'calendarTab'
+  };
 
-  if(window.settingsTab){
-    settingsTab.style.display = t==='settings'?'block':'none';
-  }
+  const buttons = {
+    dashboard: 'tabDashboard',
+    snapshot: 'tabSnapshot',
+    campaigns: 'tabCampaigns',
+    emailDesigner: 'tabEmailDesigner',
+    textCampaigns: 'tabTextCampaigns',
+    contacts: 'tabContacts',
+    pipeline: 'tabPipeline',
+    transactions: 'tabTransactions',
+    tasks: 'tabTasks',
+    calendar: 'tabCalendar'
+  };
 
-  [tabDashboard, tabSnapshot, tabCampaigns, tabEmailDesigner, tabTextCampaigns, tabContacts, tabPipeline, tabTransactions, tabTasks, tabCalendar].forEach(tab=>tab.classList.remove('active'));
+  Object.values(tabs).forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
 
-  if(window.tabSettings){
-    tabSettings.classList.remove('active');
-  }
+  Object.values(buttons).forEach(id => {
+    const btn = document.getElementById(id);
+    if(btn) btn.classList.remove('active');
+  });
 
-  if(t === 'dashboard'){
-    tabDashboard.classList.add('active');
-    loadDashboard();
-  }
+  const activeTab = document.getElementById(tabs[t]);
+  if(activeTab) activeTab.style.display = 'block';
 
-  if(t === 'snapshot'){
-    tabSnapshot.classList.add('active');
-    loadDashboard();
-    setTimeout(()=>Object.values(dashboardCharts).forEach(chart=>chart.resize()), 150);
-  }
+  const activeButton = document.getElementById(buttons[t]);
+  if(activeButton) activeButton.classList.add('active');
 
-  if(t === 'campaigns'){
-    tabCampaigns.classList.add('active');
-    loadCampaigns();
-    loadTemplates();
-    loadSegments();
-    loadScheduledCampaigns();
-    loadTags();
-    renderRecipientBuilder();
-  }
+  closeToolbarMenus?.();
 
-  if(t === 'emailDesigner'){
-    tabEmailDesigner.classList.add('active');
-    initEmailDesignerIfNeeded();
-  }
-
-  if(t === 'textCampaigns'){
-    tabTextCampaigns.classList.add('active');
-    loadContacts();
-    loadSegments();
-    loadTags();
-    renderTextCampaignBuilder();
-    loadTextCampaignActivity();
-  }
-
-  if(t === 'contacts'){
-    tabContacts.classList.add('active');
-    loadContacts();
-    loadTags();
-  }
-
-  if(t === 'pipeline'){
-    tabPipeline.classList.add('active');
-    loadPipeline();
-  }
-
-  if(t === 'transactions'){
-    tabTransactions.classList.add('active');
-    txnInit();
-  }
-
-  if(t === 'tasks'){
-    tabTasks.classList.add('active');
-    loadTasks();
-  }
-
-  if(t === 'calendar'){
-    tabCalendar.classList.add('active');
-    loadCalendar();
-  }
-
-  if(t === 'settings'){
-    if(window.tabSettings){
-      tabSettings.classList.add('active');
+  try {
+    if(t === 'dashboard'){
+      if(typeof loadDashboard === 'function') loadDashboard();
     }
+
+    if(t === 'snapshot'){
+      if(typeof loadDashboard === 'function') loadDashboard();
+      setTimeout(() => {
+        if(typeof dashboardCharts === 'object' && dashboardCharts){
+          Object.values(dashboardCharts).forEach(chart => {
+            if(chart && typeof chart.resize === 'function') chart.resize();
+          });
+        }
+      }, 150);
+    }
+
+    if(t === 'campaigns'){
+      if(typeof loadCampaigns === 'function') loadCampaigns();
+      if(typeof loadTemplates === 'function') loadTemplates();
+      if(typeof loadSegments === 'function') loadSegments();
+      if(typeof loadScheduledCampaigns === 'function') loadScheduledCampaigns();
+      if(typeof loadTags === 'function') loadTags();
+      if(typeof renderRecipientBuilder === 'function') renderRecipientBuilder();
+    }
+
+    if(t === 'emailDesigner'){
+      if(typeof initEmailDesignerIfNeeded === 'function') initEmailDesignerIfNeeded();
+    }
+
+    if(t === 'textCampaigns'){
+      if(typeof loadContacts === 'function') loadContacts();
+      if(typeof loadSegments === 'function') loadSegments();
+      if(typeof loadTags === 'function') loadTags();
+      if(typeof renderTextCampaignBuilder === 'function') renderTextCampaignBuilder();
+      if(typeof loadTextCampaignActivity === 'function') loadTextCampaignActivity();
+    }
+
+    if(t === 'contacts'){
+      if(typeof loadContacts === 'function') loadContacts();
+      if(typeof loadTags === 'function') loadTags();
+    }
+
+    if(t === 'pipeline'){
+      if(typeof loadPipeline === 'function') loadPipeline();
+    }
+
+    if(t === 'transactions'){
+      if(typeof txnInit === 'function') txnInit();
+    }
+
+    if(t === 'tasks'){
+      if(typeof loadTasks === 'function') loadTasks();
+    }
+
+    if(t === 'calendar'){
+      if(typeof loadCalendar === 'function') loadCalendar();
+    }
+  } catch(err) {
+    console.error('Tab load error for:', t, err);
   }
+
+  return false;
 }
   
 /* DASHBOARD */
