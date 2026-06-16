@@ -5837,14 +5837,20 @@ function saveTypes(){
 }
 
 function renderTypes(){
-  contactType.innerHTML = '';
-  editType.innerHTML = '';
+  const contactTypeEl = document.getElementById('contactType');
+  const editTypeEl = document.getElementById('editType');
+
+  if(contactTypeEl) contactTypeEl.innerHTML = '';
+  if(editTypeEl) editTypeEl.innerHTML = '';
 
   contactTypes.sort().forEach(t=>{
-    contactType.innerHTML += `<option>${t}</option>`;
-    editType.innerHTML += `<option>${t}</option>`;
+    if(contactTypeEl) contactTypeEl.innerHTML += `<option>${t}</option>`;
+    if(editTypeEl) editTypeEl.innerHTML += `<option>${t}</option>`;
   });
-  populateContactFilterControls();
+
+  if(typeof populateContactFilterControls === 'function'){
+    populateContactFilterControls();
+  }
 }
 
 async function loadPipelineStages(){
