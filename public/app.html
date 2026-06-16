@@ -10153,9 +10153,20 @@ function toggleNotificationMenu(){
 
 function toggleSettingsMenu(){
   const menu = document.getElementById('settingsMenu');
-  if(!menu) return;
-  document.getElementById('notificationMenu')?.classList.remove('open');
+  const notificationMenu = document.getElementById('notificationMenu');
+
+  if (!menu) {
+    alert('Settings menu not found.');
+    return;
+  }
+
+  if (notificationMenu) notificationMenu.classList.remove('open');
+
   menu.classList.toggle('open');
+
+  if (typeof loadGmailStatus === 'function') {
+    loadGmailStatus();
+  }
 }
 
 function updateNotificationBadge(taskStats = null){
