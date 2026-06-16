@@ -644,6 +644,91 @@ app.post('/api/gmail/disconnect', (req, res) => {
   saveGmailTokens({});
   res.json({ success: true });
 });
+/* ================= GMAIL 1-TO-1 SEND ================= */
+function createGmailRawMessage({ to, subject, message }) {
+  const emailLines = [
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    '',
+    message
+  ];
+
+  return Buffer.from(emailLines.join('\r\n'))
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+app.post('/api/gmail/send-contact-email', async (req, res) => {
+  try {
+    const contacts = loadContacts();
+    const activity = loadActivity();
+
+    const contactId = req.body.contactId;
+    const to = normalizeEmail(req.body.to || '');
+    const subject = String(req.body.subject || '').trim();
+    const message = String(req.body.message || '').trim();
+
+    if (!to) {
+      return res.status(400).json({ success: false, error: 'Recipient email is required.' });
+    }
+
+    if (!subject) {
+      return res.status(400).json({ success: false, error: 'Subject is required.' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ success: false, error: 'Message is required.' });
+    }
+
+    const gmail = getGmailClient();
+
+    const raw = createGmailRawMessage({
+      to,
+      subject,
+      message
+    });
+
+    const gmailResult = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: {
+        raw
+      }
+    });
+
+    const contact = contacts.find(c => String(c.id) === String(contactId));
+
+    activity.unshift({
+      id: Date.now(),
+      type: 'Direct Email',
+      provider: 'Gmail',
+      contactId: contact ? contact.id : contactId || null,
+      contactName: contact ? `${contact.firstName || ''} ${contact.lastName || ''}`.trim() : '',
+      email: to,
+      subject,
+      message,
+      status: 'sent',
+      sentAt: new Date().toISOString(),
+      gmailMessageId: gmailResult.data.id || null
+    });
+
+    saveActivity(activity);
+
+    res.json({
+      success: true,
+      message: 'Email sent through Gmail.',
+      gmailMessageId: gmailResult.data.id || null
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Gmail send failed.'
+    });
+  }
+});
 /* ================= CONTACT ROUTES ================= */
 app.get('/api/contacts', (req, res) => {
   res.json(loadContacts());
