@@ -11526,26 +11526,43 @@ function connectGmailAccount(){
 }
 
 async function loadGmailStatus(){
-  const statusEl = document.getElementById('gmailConnectionStatus');
-  const buttonEl = document.getElementById('gmailConnectButton');
+  const statusEls = [
+    document.getElementById('gmailConnectionStatus'),
+    document.getElementById('gmailConnectionStatusSettings')
+  ].filter(Boolean);
 
-  if (!statusEl || !buttonEl) return;
+  const buttonEls = [
+    document.getElementById('gmailConnectButton'),
+    document.getElementById('gmailConnectButtonSettings')
+  ].filter(Boolean);
+
+  if (!statusEls.length) return;
 
   try {
     const res = await fetch('/api/gmail/status');
     const data = await res.json();
 
     if (data.connected) {
-      statusEl.innerHTML = `Connected to Gmail as <b>${data.email || 'your Google account'}</b>`;
-      buttonEl.textContent = 'Reconnect Gmail';
-      buttonEl.className = 'btn btn-success';
+      statusEls.forEach(el => {
+        el.innerHTML = `Connected to Gmail as <b>${data.email || 'your Google account'}</b>`;
+      });
+
+      buttonEls.forEach(btn => {
+        btn.textContent = 'Reconnect Gmail';
+      });
     } else {
-      statusEl.textContent = 'Gmail is not connected yet.';
-      buttonEl.textContent = 'Connect Gmail';
-      buttonEl.className = 'btn btn-outline-primary';
+      statusEls.forEach(el => {
+        el.textContent = 'Gmail is not connected yet.';
+      });
+
+      buttonEls.forEach(btn => {
+        btn.textContent = 'Connect Gmail';
+      });
     }
   } catch (error) {
-    statusEl.textContent = 'Could not check Gmail connection status.';
+    statusEls.forEach(el => {
+      el.textContent = 'Could not check Gmail connection status.';
+    });
   }
 }
   
