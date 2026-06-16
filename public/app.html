@@ -8609,47 +8609,54 @@ async function loadContactEmailHistory(){
   if(!currentContact) return;
 
   const el = document.getElementById('contactEmailHistory');
+  const panelCampaignsEl = document.getElementById('panelCampaigns');
+
   if(!el) return;
 
   try {
-    let activityRows = [];
+    const res = await fetch('/api/activity');
+    const activityRows = await res.json();
 
-    try {
-      const res = await fetch('/api/activity');
-      activityRows = await res.json();
-      if(Array.isArray(activityRows)) activityCache = activityRows;
-    } catch(e) {
-      activityRows = Array.isArray(activityCache) ? activityCache : [];
-    }
+    if(Array.isArray(activityRows)) activityCache = activityRows;
 
     const email = String(currentContact.email || '').toLowerCase().trim();
 
-    const rows = (activityRows || []).filter(a => {
+    const rows = (Array.isArray(activityRows) ? activityRows : []).filter(a => {
       return String(a.email || a.to || a.recipientEmail || '').toLowerCase().trim() === email;
     });
 
-    renderContactTimeline(rows);
+    if(typeof renderContactTimeline === 'function'){
+      renderContactTimeline(rows);
+    }
 
     if(!rows.length){
       el.innerHTML = '<div class="text-muted small">No email activity yet.</div>';
-      panelCampaigns.innerHTML = '<div class="text-muted small">No campaign history yet.</div>';
+      if(panelCampaignsEl) panelCampaignsEl.innerHTML = '<div class="text-muted small">No campaign history yet.</div>';
       return;
     }
 
-    el.innerHTML = rows.slice().sort((a,b)=>new Date(b.date || b.sentAt || b.sentDate || 0) - new Date(a.date || a.sentAt || a.sentDate || 0)).map(a=>`
-      <div class="activity-row">
-        <b>${a.campaignName || a.subject || 'Email Campaign'}</b><br>
-        <small>${formatDate(a.date || a.sentAt || a.sentDate)}</small><br>
-        <span class="status-badge">${a.opened ? 'Opened' : 'Sent'}</span>
-        ${Array.isArray(a.clicks) && a.clicks.length ? `<span class="status-badge">${a.clicks.length} click(s)</span>` : ''}
-      </div>
-    `).join('');
+    const html = rows
+      .slice()
+      .sort((a,b)=>new Date(b.date || b.sentAt || b.sentDate || 0) - new Date(a.date || a.sentAt || a.sentDate || 0))
+      .map(a=>`
+        <div class="activity-row">
+          <b>${a.campaignName || a.subject || 'Direct Email'}</b><br>
+          <small>${formatDate(a.date || a.sentAt || a.sentDate)}</small><br>
+          <span class="status-badge">${a.provider || 'Email'}</span>
+          <span class="status-badge">${a.status || (a.opened ? 'Opened' : 'Sent')}</span>
+          ${Array.isArray(a.clicks) && a.clicks.length ? `<span class="status-badge">${a.clicks.length} click(s)</span>` : ''}
+        </div>
+      `).join('');
 
-    panelCampaigns.innerHTML = el.innerHTML;
+    el.innerHTML = html;
+    if(panelCampaignsEl) panelCampaignsEl.innerHTML = html;
+
   } catch(error) {
+    console.error('Email history load error:', error);
     el.innerHTML = '<div class="text-muted small">Email history could not be loaded.</div>';
   }
 }
+  
 async function loadSmsHistory(){
   if(!currentContact) return;
 
