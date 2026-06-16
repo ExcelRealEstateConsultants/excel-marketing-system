@@ -2966,39 +2966,50 @@ body {
       <button type="button" class="icon-button" onclick="return toggleSettingsMenu(event)" title="Settings">⚙</button>
 
       <div id="settingsMenu" class="toolbar-menu">
-        <div class="small-muted mb-2">System Shortcuts</div>
+       <div class="small-muted mb-2">Settings & Integrations</div>
 
-        <div class="quick-add-grid">
-          <div class="quick-add-item" onclick="showTab('contacts')">
-            <b>Contacts</b><br>
-            <small>Manage database and follow-ups</small>
-          </div>
+<div class="quick-add-grid">
 
-          <div class="quick-add-item" onclick="showTab('campaigns')">
-            <b>Email Campaigns</b><br>
-            <small>Create and review email campaigns</small>
-          </div>
+  <div class="quick-add-item">
+    <b>Gmail Connection</b><br>
+    <small id="gmailConnectionStatus">Checking Gmail connection...</small>
 
-          <div class="quick-add-item" onclick="showTab('emailDesigner')">
-            <b>Email Designer</b><br>
-            <small>Build reusable email layouts</small>
-          </div>
+    <div class="mt-2">
+      <button
+        id="gmailConnectButton"
+        type="button"
+        class="btn btn-sm btn-outline-primary"
+        onclick="window.location.href='/auth/google'"
+      >
+        Connect Gmail
+      </button>
+    </div>
+  </div>
 
-          <div class="quick-add-item" onclick="showTab('pipeline')">
-            <b>Pipeline</b><br>
-            <small>Review active opportunities</small>
-          </div>
+  <div class="quick-add-item">
+    <b>Microsoft 365 / Outlook</b><br>
+    <small>Connect Outlook and Microsoft email accounts.</small>
 
-          <div class="quick-add-item" onclick="showTab('transactions')">
-            <b>Transactions</b><br>
-            <small>Manage contracts, documents, deadlines, and closings</small>
-          </div>
+    <div class="mt-2">
+      <button
+        type="button"
+        class="btn btn-sm btn-outline-secondary"
+        disabled
+      >
+        Coming Soon
+      </button>
+    </div>
+  </div>
 
-          <div class="quick-add-item" onclick="showTab('settings')">
-            <b>Settings</b><br>
-            <small>Email accounts, integrations, AI settings, and preferences</small>
-          </div>
-        </div>
+  <div class="quick-add-item">
+    <b>Platform Settings</b><br>
+    <small>
+      Configure email sending, AI preferences, automations,
+      notifications, and future integrations.
+    </small>
+  </div>
+
+</div>
 
         <hr>
 
@@ -3909,7 +3920,7 @@ body {
   <div id="taskList"></div>
 </div>
 
-<!-- SETTINGS -->
+  <!-- SETTINGS -->
 <div id="settingsTab" class="mt-4" style="display:none;">
   <div class="dashboard-header-row mb-3">
     <div>
@@ -3919,16 +3930,21 @@ body {
   </div>
 
   <div class="row g-3">
+
     <div class="col-md-6">
       <div class="modern-card">
         <h5>Email Accounts</h5>
         <hr>
 
         <div class="mb-3">
-          <b>Google Gmail</b><br>
-          <span class="small-muted">Not Connected</span><br>
-          <button id="gmailConnectButton" class="btn btn-outline-primary" onclick="connectGmailAccount()">Connect Gmail</button>
-          <div id="gmailConnectionStatus" class="small-muted mt-2">Checking Gmail connection...</div>
+          <b>Gmail</b><br>
+          <span id="gmailConnectionStatusSettings" class="small-muted">Checking Gmail connection...</span><br>
+          <button
+            id="gmailConnectButtonSettings"
+            type="button"
+            class="btn btn-sm btn-outline-primary mt-2"
+            onclick="window.location.href='/auth/google'"
+          >
             Connect Gmail
           </button>
         </div>
@@ -3936,7 +3952,11 @@ body {
         <div>
           <b>Microsoft 365 / Outlook</b><br>
           <span class="small-muted">Not Connected</span><br>
-          <button class="btn btn-sm btn-outline-primary mt-2" onclick="alert('Microsoft 365 connection will be added in the next phase.')">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary mt-2"
+            onclick="alert('Microsoft 365 connection will be added in the next phase.')"
+          >
             Connect Microsoft 365
           </button>
         </div>
@@ -3948,8 +3968,10 @@ body {
         <h5>SMS Accounts</h5>
         <hr>
 
-        <b>Twilio</b><br>
-        <span class="small-muted">Connected through RapportLink settings.</span>
+        <div>
+          <b>Twilio</b><br>
+          <span class="small-muted">Connected through RapportLink settings.</span>
+        </div>
       </div>
     </div>
 
@@ -3974,6 +3996,7 @@ body {
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
