@@ -7,7 +7,6 @@ const path = require('path');
 require('dotenv').config();
 
 const session = require('express-session');
-const { google } = require('googleapis');
 
 const app = express();
 app.use(session({
