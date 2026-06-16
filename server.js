@@ -35,6 +35,49 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || '';
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.SENDER_EMAIL || '';
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Jeff Peterson';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+/* ================= GMAIL ================= */
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || '';
+
+const GMAIL_TOKEN_FILE = path.join(__dirname, 'gmail-token.json');
+
+const gmailOAuthClient = new google.auth.OAuth2(
+  GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET,
+  GOOGLE_REDIRECT_URI
+);
+
+function loadGmailToken() {
+  try {
+    if (!fs.existsSync(GMAIL_TOKEN_FILE)) return null;
+    return JSON.parse(fs.readFileSync(GMAIL_TOKEN_FILE, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function saveGmailToken(tokens) {
+  fs.writeFileSync(
+    GMAIL_TOKEN_FILE,
+    JSON.stringify(tokens, null, 2)
+  );
+}
+
+function getGmailClient() {
+  const tokens = loadGmailToken();
+
+  if (!tokens) {
+    throw new Error('Gmail is not connected.');
+  }
+
+  gmailOAuthClient.setCredentials(tokens);
+
+  return google.gmail({
+    version: 'v1',
+    auth: gmailOAuthClient
+  });
+}
 
 /* ================= TWILIO SMS ================= */
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
