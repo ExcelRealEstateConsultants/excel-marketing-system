@@ -2952,43 +2952,49 @@ body {
     <div class="toolbar-menu-wrap">
       <button class="icon-button" onclick="toggleSettingsMenu()" title="Settings">⚙</button>
 
-      <div id="settingsMenu" class="toolbar-menu">
-        <div class="small-muted mb-2">System Shortcuts</div>
+     <div id="settingsMenu" class="toolbar-menu">
+  <div class="small-muted mb-2">System Shortcuts</div>
 
-        <div class="quick-add-grid">
-          <div class="quick-add-item" onclick="showTab('contacts')">
-            <b>Contacts</b><br>
-            <small>Manage database and follow-ups</small>
-          </div>
+  <div class="quick-add-grid">
+    <div class="quick-add-item" onclick="showTab('contacts')">
+      <b>Contacts</b><br>
+      <small>Manage database and follow-ups</small>
+    </div>
 
-          <div class="quick-add-item" onclick="showTab('campaigns')">
-            <b>Email Campaigns</b><br>
-            <small>Create and review email campaigns</small>
-          </div>
+    <div class="quick-add-item" onclick="showTab('campaigns')">
+      <b>Email Campaigns</b><br>
+      <small>Create and review email campaigns</small>
+    </div>
 
-          <div class="quick-add-item" onclick="showTab('emailDesigner')">
-            <b>Email Designer</b><br>
-            <small>Build reusable email layouts</small>
-          </div>
+    <div class="quick-add-item" onclick="showTab('emailDesigner')">
+      <b>Email Designer</b><br>
+      <small>Build reusable email layouts</small>
+    </div>
 
-          <div class="quick-add-item" onclick="showTab('pipeline')">
-            <b>Pipeline</b><br>
-            <small>Review active opportunities</small>
-          </div>
+    <div class="quick-add-item" onclick="showTab('pipeline')">
+      <b>Pipeline</b><br>
+      <small>Review active opportunities</small>
+    </div>
 
-          <div class="quick-add-item" onclick="showTab('transactions')">
-            <b>Transactions</b><br>
-            <small>Manage contracts, documents, deadlines, and closings</small>
-          </div>
+    <div class="quick-add-item" onclick="showTab('transactions')">
+      <b>Transactions</b><br>
+      <small>Manage contracts, documents, deadlines, and closings</small>
+    </div>
 
-          <div class="quick-add-item" onclick="showTab('settings')">
-            <b>Settings</b><br>
-            <small>Email accounts, integrations, AI settings, and preferences</small>
-          </div>
-        </div>
-      </div>
+    <div class="quick-add-item" onclick="showTab('settings')">
+      <b>Settings</b><br>
+      <small>Email accounts, integrations, AI settings, and preferences</small>
     </div>
   </div>
+
+  <hr>
+
+  <div class="small-muted mb-2">Email Account</div>
+  <button id="gmailConnectButton" class="btn btn-outline-primary w-100" onclick="connectGmailAccount()">Connect Gmail</button>
+  <div id="gmailConnectionStatus" class="small-muted mt-2">Checking Gmail connection...</div>
+</div>
+</div>
+</div>
 </div>
 
 <!-- DASHBOARD -->
