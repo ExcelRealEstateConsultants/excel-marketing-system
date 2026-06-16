@@ -1,4 +1,5 @@
 const express = require('express');
+const { google } = require('googleapis');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -40,8 +41,8 @@ const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID || '';
 const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN || '';
 const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '';
 
-/* ================= GOOGLE / GMAIL OAUTH ================= */
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+/* =================  / GMAIL OAUTH ================= */
+const _CLIENT_ID = process.env._CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || `${BASE_URL}/auth/google/callback`;
 
