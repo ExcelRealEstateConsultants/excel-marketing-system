@@ -290,7 +290,25 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 }
+function loadEmailProvider() {
+  return readJsonFile(EMAIL_PROVIDER_FILE, {
+    activeProvider: '',
+    gmail: null,
+    microsoft: null
+  });
+}
 
+function saveEmailProvider(data) {
+  writeJsonFile(EMAIL_PROVIDER_FILE, data);
+}
+
+function getActiveEmailProvider(providerData) {
+  if (providerData.activeProvider === 'microsoft' && providerData.microsoft) return 'microsoft';
+  if (providerData.activeProvider === 'gmail' && providerData.gmail) return 'gmail';
+  if (providerData.gmail) return 'gmail';
+  if (providerData.microsoft) return 'microsoft';
+  return '';
+}
 
 function parseTags(value) {
   if (Array.isArray(value)) return value.map(tag => String(tag || '').trim()).filter(Boolean);
