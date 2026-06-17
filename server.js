@@ -163,6 +163,12 @@ const GOOGLE_SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile'
 ];
 
+const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
+const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
+const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
+
+const EMAIL_PROVIDER_FILE = path.join(__dirname, 'email-provider.json');
+
 const googleOAuthClient = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
