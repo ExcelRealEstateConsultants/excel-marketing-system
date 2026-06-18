@@ -1,0 +1,18 @@
+/* =====================================================
+   RapportLink Main Stylesheet
+   Version 2
+   ===================================================== */
+:root {
+  --primary: #042c49;
+  --accent: #00a143;
+  --bg: #f4f6f8;
+  --card: #ffffff;
+  --border: #e6eaea;
+  --text: #1f2937;
+  --muted: #6b7280;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
