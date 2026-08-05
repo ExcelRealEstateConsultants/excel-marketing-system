@@ -5,6 +5,162 @@
 
 console.log("DealPilot Loaded");
 
+/* =====================================================
+   DealPilot Document Processing Status
+   ===================================================== */
+
+window.dealPilotDocumentStatus = null;
+
+function dealPilotSetDocumentStatus(status = null) {
+  if (!status || typeof status !== "object") {
+    window.dealPilotDocumentStatus = null;
+    return;
+  }
+
+  window.dealPilotDocumentStatus = {
+    transactionId: status.transactionId || null,
+    documentName: String(status.documentName || "the uploaded document"),
+    stage: String(status.stage || "reading"),
+    message: String(status.message || ""),
+    detail: String(status.detail || ""),
+    progress: Math.max(0, Math.min(100, Number(status.progress || 0))),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function dealPilotClearDocumentStatus(transactionId = null) {
+  const current = window.dealPilotDocumentStatus;
+
+  if (
+    transactionId &&
+    current?.transactionId &&
+    String(current.transactionId) !== String(transactionId)
+  ) {
+    return;
+  }
+
+  window.dealPilotDocumentStatus = null;
+}
+
+function dealPilotBuildDocumentStatusCard(txn = {}) {
+  const status = window.dealPilotDocumentStatus;
+
+  if (!status) {
+    return "";
+  }
+
+  if (status.transactionId && String(status.transactionId) !== String(txn.id)) {
+    return "";
+  }
+
+  const stageLabels = {
+    received: "Document Received",
+    reading: "Reading Document",
+    analyzing: "Analyzing Document",
+    updating: "Updating Transaction Brain",
+    complete: "Review Complete",
+    failed: "Review Could Not Be Completed",
+  };
+
+  const stageLabel = stageLabels[status.stage] || "Reviewing Document";
+
+  const progress = Math.max(0, Math.min(100, Number(status.progress || 0)));
+
+  return `
+    <div style="
+      background:#F8FFFB;
+      border:2px solid #00A143;
+      border-radius:18px;
+      padding:24px;
+      margin-bottom:26px;
+      box-shadow:0 8px 24px rgba(4,44,73,.08);
+    ">
+      <div style="
+        color:#00A143;
+        font-weight:900;
+        font-size:13px;
+        letter-spacing:.08em;
+        text-transform:uppercase;
+      ">
+        ${txnSafe(dealPilotName())} • AI Transaction Coordinator
+      </div>
+
+      <div style="
+        font-size:27px;
+        font-weight:900;
+        color:#042C49;
+        margin-top:7px;
+      ">
+        ${txnSafe(stageLabel)}
+      </div>
+
+      <div style="
+        margin-top:14px;
+        font-size:17px;
+        line-height:1.7;
+        color:#334155;
+      ">
+        ${txnSafe(status.message || "I’m reviewing the uploaded document now.")}
+      </div>
+
+      ${
+        status.detail
+          ? `
+            <div style="
+              margin-top:10px;
+              color:#64748B;
+              line-height:1.6;
+            ">
+              ${txnSafe(status.detail)}
+            </div>
+          `
+          : ""
+      }
+
+      <div style="
+        margin-top:20px;
+        height:12px;
+        background:#E2E8F0;
+        border-radius:999px;
+        overflow:hidden;
+      ">
+        <div style="
+          width:${progress}%;
+          height:100%;
+          background:#00A143;
+          border-radius:999px;
+          transition:width .35s ease;
+        "></div>
+      </div>
+
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        margin-top:8px;
+        font-size:13px;
+        font-weight:800;
+        color:#64748B;
+      ">
+        <span>${txnSafe(status.documentName)}</span>
+        <span>${progress}%</span>
+      </div>
+
+      <div style="
+        display:grid;
+        gap:8px;
+        margin-top:20px;
+        color:#475569;
+        font-size:14px;
+      ">
+        <div>${progress >= 10 ? "✓" : "○"} File received</div>
+        <div>${progress >= 35 ? "✓" : status.stage === "reading" ? "●" : "○"} Text and pages reviewed</div>
+        <div>${progress >= 70 ? "✓" : status.stage === "analyzing" ? "●" : "○"} Signatures, dates, terms, and evidence analyzed</div>
+        <div>${progress >= 95 ? "✓" : status.stage === "updating" ? "●" : "○"} Transaction Brain updated</div>
+      </div>
+    </div>
+  `;
+}
+
 function dealPilotName() {
   try {
     return localStorage.getItem("rapportlinkDealPilotName") || "DealPilot";
@@ -26,6 +182,15 @@ function dealPilotGreetingName() {
 }
 
 function dealPilotBuildBriefing(txn, ai = {}) {
+  const documentStatusCard =
+    typeof dealPilotBuildDocumentStatusCard === "function"
+      ? dealPilotBuildDocumentStatusCard(txn)
+      : "";
+
+  if (documentStatusCard) {
+    return documentStatusCard;
+  }
+
   const lines = [];
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "morning" : hour < 17 ? "afternoon" : "evening";

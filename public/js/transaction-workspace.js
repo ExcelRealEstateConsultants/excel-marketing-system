@@ -95,10 +95,9 @@ function renderTransactionWorkspaceHeader(txn) {
       : {};
 
   const transactionState =
-    brain?.transactionState ||
-    txn?.aiCoordinator?.transactionState ||
-    txn?.aiTransactionIntelligence?.transactionState ||
-    "Unknown";
+    typeof aiTransactionState === "function"
+      ? aiTransactionState(txn)
+      : "Unknown";
 
   const isClosed = String(transactionState).toLowerCase() === "closed";
 
@@ -560,18 +559,64 @@ function renderTransactionWorkspacePeople(txn) {
 }
 
 function renderTransactionWorkspaceDatesAndTasks(txn) {
+  const canonicalFacts =
+    txn?.transactionBrain?.canonicalFacts &&
+    typeof txn.transactionBrain.canonicalFacts === "object"
+      ? txn.transactionBrain.canonicalFacts
+      : {};
+
+  const authoritativeDates = {
+    contract: canonicalFacts.effectiveDate || txn.contractDate || "",
+
+    emd:
+      canonicalFacts.earnestMoneyDeadline ||
+      canonicalFacts.emdDeadline ||
+      txn.emdDue ||
+      "",
+
+    inspection:
+      canonicalFacts.inspectionDeadline ||
+      canonicalFacts.inspectionDate ||
+      txn.inspectionDate ||
+      "",
+
+    appraisal:
+      canonicalFacts.appraisalDeadline ||
+      canonicalFacts.appraisalDate ||
+      txn.appraisalDate ||
+      "",
+
+    loan:
+      canonicalFacts.financingDeadline ||
+      canonicalFacts.loanDeadline ||
+      txn.loanDate ||
+      "",
+
+    walkthrough:
+      canonicalFacts.walkthroughDate ||
+      canonicalFacts.finalWalkthroughDate ||
+      txn.walkthroughDate ||
+      "",
+
+    closing:
+      canonicalFacts.actualClosingDate ||
+      canonicalFacts.closingDate ||
+      txn.closeDate ||
+      "",
+  };
+
   return `
     <div class="section">
       <h5>Critical Dates</h5>
 
       <div class="transaction-meta-grid">
-        <div class="transaction-meta-box"><div class="small-muted">Contract</div><b>${txnDate(txn.contractDate) || "—"}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">EMD</div><b>${txnDate(txn.emdDue) || "—"}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">Inspection</div><b>${txnDate(txn.inspectionDate) || "—"}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">Appraisal</div><b>${txnDate(txn.appraisalDate) || "—"}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">Loan</div><b>${txnDate(txn.loanDate) || "—"}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">Walkthrough</div><b>${txnDate(txn.walkthroughDate) || "—"}</b></div>
-        <div class="transaction-meta-box"><div class="small-muted">Closing</div><b>${txnDate(txn.closeDate) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Contract</div><b>${txnDate(authoritativeDates.contract) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">EMD</div><b>${txnDate(authoritativeDates.emd) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Inspection</div><b>${txnDate(authoritativeDates.inspection) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Appraisal</div><b>${txnDate(authoritativeDates.appraisal) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Loan</div><b>${txnDate(authoritativeDates.loan) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Walkthrough</div><b>${txnDate(authoritativeDates.walkthrough) || "—"}</b></div>
+        <div class="transaction-meta-box"><div class="small-muted">Closing</div><b>${txnDate(authoritativeDates.closing) || "—"}</b></div>
       </div>
     </div>
 

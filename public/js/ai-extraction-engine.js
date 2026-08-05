@@ -74,12 +74,13 @@ async function aiExtractPdfText(file) {
     method: "pdf-text",
     pages: 0,
     warnings: [],
+    pageImages: [],
     extractedAt: new Date().toISOString(),
   };
 
   if (!window.pdfjsLib) {
     result.warnings.push(
-      "PDF.js is not loaded. PDF text could not be extracted.",
+      "PDF.js is not loaded. PDF text and page images could not be extracted.",
     );
 
     return result;
@@ -98,8 +99,31 @@ async function aiExtractPdfText(file) {
   const pageTexts = [];
   let pagesNeedingOcr = 0;
 
+  /*
+  -------------------------------------------------------
+  Render controls
+
+  Page images allow the Universal Document Engine to inspect
+  signatures, initials, checkboxes, handwriting, stamps,
+  strikeouts, and other visual evidence that PDF text
+  extraction cannot reliably detect.
+
+  JPEG is used instead of PNG to reduce request size.
+  -------------------------------------------------------
+  */
+
+  const renderScale = 1.5;
+  const jpegQuality = 0.78;
+
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
+
+    /*
+    -------------------------------------------------------
+    Extract machine-readable text
+    -------------------------------------------------------
+    */
+
     const textContent = await page.getTextContent();
 
     const pageText = textContent.items
@@ -117,17 +141,108 @@ async function aiExtractPdfText(file) {
 
       pageTexts.push(`--- PAGE ${pageNumber} ---\n${ocrText}`);
     }
+
+    /*
+    -------------------------------------------------------
+    Render the actual PDF page for visual analysis
+    -------------------------------------------------------
+    */
+
+    try {
+      const viewport = page.getViewport({
+        scale: renderScale,
+      });
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", {
+        alpha: false,
+      });
+
+      if (!context) {
+        throw new Error(
+          `Canvas context could not be created for PDF page ${pageNumber}.`,
+        );
+      }
+
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+
+      /*
+       * Use a white background so transparent PDF areas do
+       * not become black when converted to JPEG.
+       */
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      await page.render({
+        canvasContext: context,
+        viewport,
+      }).promise;
+
+      const imageDataUrl = canvas.toDataURL("image/jpeg", jpegQuality);
+
+      if (
+        typeof imageDataUrl === "string" &&
+        imageDataUrl.startsWith("data:image/")
+      ) {
+        result.pageImages.push({
+          pageNumber,
+          mimeType: "image/jpeg",
+          dataUrl: imageDataUrl,
+        });
+      } else {
+        result.warnings.push(
+          `PDF page ${pageNumber} could not be converted into a page image.`,
+        );
+      }
+
+      /*
+       * Release the temporary canvas memory after its data URL
+       * has been created.
+       */
+      canvas.width = 1;
+      canvas.height = 1;
+    } catch (renderError) {
+      console.warn(
+        `Visual rendering failed for PDF page ${pageNumber}:`,
+        renderError,
+      );
+
+      result.warnings.push(
+        `Visual rendering failed for PDF page ${pageNumber}: ${
+          renderError?.message || "Unknown rendering error."
+        }`,
+      );
+    }
+
+    if (typeof page.cleanup === "function") {
+      page.cleanup();
+    }
   }
 
   result.text = pageTexts.join("\n\n").trim();
 
   if (pagesNeedingOcr > 0) {
     result.method =
-      pagesNeedingOcr === pdf.numPages ? "pdf-ocr" : "pdf-text-and-ocr";
+      pagesNeedingOcr === pdf.numPages
+        ? "pdf-ocr-and-vision"
+        : "pdf-text-ocr-and-vision";
+  } else {
+    result.method = "pdf-text-and-vision";
   }
 
   if (!result.text) {
     result.warnings.push("No readable text was found in the PDF.");
+  }
+
+  if (!result.pageImages.length) {
+    result.warnings.push(
+      "No PDF page images were generated for visual document review.",
+    );
+  }
+
+  if (typeof pdf.cleanup === "function") {
+    pdf.cleanup();
   }
 
   return result;

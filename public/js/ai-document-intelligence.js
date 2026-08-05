@@ -197,6 +197,43 @@ function aiRefreshTransaction(txn = {}) {
 
   console.groupEnd();
 
+  /*
+--------------------------------------------------------
+Legacy transaction normalization
+
+Normalize historical transaction fields into the
+canonical names expected by the Transaction Brain.
+
+Do NOT overwrite existing canonical values.
+--------------------------------------------------------
+*/
+
+  if (
+    (txn.purchasePrice == null || txn.purchasePrice === "") &&
+    Number.isFinite(Number(txn.price))
+  ) {
+    txn.purchasePrice = Number(txn.price);
+  }
+
+  if (
+    (!txn.closingDate || String(txn.closingDate).trim() === "") &&
+    txn.closeDate
+  ) {
+    txn.closingDate = txn.closeDate;
+  }
+
+  if (
+    (!txn.contractPrice || String(txn.contractPrice).trim() === "") &&
+    txn.purchasePrice
+  ) {
+    txn.contractPrice = txn.purchasePrice;
+  }
+
+  console.log("AFTER NORMALIZATION");
+  console.log("purchasePrice:", txn.purchasePrice);
+  console.log("closingDate:", txn.closingDate);
+  console.log("contractPrice:", txn.contractPrice);
+
   const brain =
     typeof aiBuildTransactionBrain === "function"
       ? aiBuildTransactionBrain(txn)
@@ -400,7 +437,32 @@ function aiRefreshTransaction(txn = {}) {
    ========================================================= */
 
 function aiAnalyzeTransaction(txn = {}) {
-  if (!txn || typeof txn !== "object") {
+  /*
+  --------------------------------------------------------
+  PURPOSE
+
+  This function is a document-analysis normalization layer.
+
+  It must not independently:
+
+  - interpret document meaning
+  - infer document execution
+  - infer contract status
+  - infer listing status
+  - infer settlement
+  - infer recording
+  - infer title transfer
+  - infer termination
+  - create semantic effects
+  - create transaction events
+  - determine transaction state
+
+  The Universal Document Engine creates document intelligence.
+  The Transaction Brain determines transaction conclusions.
+  --------------------------------------------------------
+  */
+
+  if (!txn || typeof txn !== "object" || Array.isArray(txn)) {
     return txn;
   }
 
@@ -411,525 +473,277 @@ function aiAnalyzeTransaction(txn = {}) {
   const isObject = (value) =>
     value !== null && typeof value === "object" && !Array.isArray(value);
 
-  const normalizeText = (value) =>
-    String(value || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[_-]+/g, " ")
-      .replace(/\s+/g, " ");
+  /*
+  --------------------------------------------------------
+  Analysis Candidate Validation
 
-  const normalizeConfidence = (value) => {
-    const number = Number(value || 0);
+  A valid analysis must contain at least one recognized
+  Universal Document Intelligence output structure.
 
-    if (!Number.isFinite(number)) {
-      return 0;
-    }
+  Classification alone is not sufficient because it does not
+  prove that the analysis contains usable evidence.
+  --------------------------------------------------------
+  */
 
-    if (number > 0 && number <= 1) {
-      return Math.round(number * 100);
-    }
-
-    return Math.max(0, Math.min(100, Math.round(number)));
-  };
-
-  const falseEffect = () => ({
-    occurred: false,
-    date: "",
-    confidence: 0,
-    supportingText: "",
-  });
-
-  const resolveDocumentAnalysis = (doc) => {
-    const candidates = [
-      doc?.aiAnalysis,
-      doc?.aiAnalysis?.analysis,
-      doc?.ai,
-      doc?.ai?.analysis,
-      doc?.universalAnalysis,
-      doc?.universalAnalysis?.analysis,
-      doc?.analysis,
-      doc?.analysis?.analysis,
-      doc?.documentAnalysis,
-      doc?.documentAnalysis?.analysis,
-    ];
-
-    const intelligenceCandidate = candidates.find(
-      (candidate) =>
-        isObject(candidate) &&
-        (Array.isArray(candidate.evidence) ||
-          Array.isArray(candidate.transactionEvents) ||
-          isObject(candidate.facts) ||
-          isObject(candidate.semanticEffects)),
-    );
-
-    return (
-      intelligenceCandidate ||
-      candidates.find((candidate) => isObject(candidate)) ||
-      null
-    );
-  };
-
-  const getEvidenceRecords = (analysis) =>
-    Array.isArray(analysis?.evidence)
-      ? analysis.evidence.filter((record) => isObject(record))
-      : [];
-
-  const getFactContainers = (analysis) => {
-    const containers = [];
-
-    if (isObject(analysis?.facts)) {
-      containers.push(analysis.facts);
-
-      Object.values(analysis.facts).forEach((value) => {
-        if (isObject(value)) {
-          containers.push(value);
-        }
-      });
-    }
-
-    getEvidenceRecords(analysis).forEach((record) => {
-      if (isObject(record.facts)) {
-        containers.push(record.facts);
-      }
-    });
-
-    return containers;
-  };
-
-  const findFact = (analysis, factNames = []) => {
-    const normalizedNames = factNames.map(normalizeText);
-    const containers = getFactContainers(analysis);
-
-    for (const container of containers) {
-      for (const [key, value] of Object.entries(container)) {
-        if (normalizedNames.includes(normalizeText(key))) {
-          return {
-            found: true,
-            value,
-            container,
-            key,
-          };
-        }
-      }
-    }
-
-    return {
-      found: false,
-      value: undefined,
-      container: null,
-      key: "",
-    };
-  };
-
-  const findEvidenceByType = (analysis, typeNames = []) => {
-    const normalizedTypes = typeNames.map(normalizeText);
-
-    return (
-      getEvidenceRecords(analysis).find((record) => {
-        const recordType = normalizeText(
-          record.type || record.documentType || record.category || "",
-        );
-
-        return normalizedTypes.some(
-          (type) =>
-            recordType === type ||
-            recordType.includes(type) ||
-            type.includes(recordType),
-        );
-      }) || null
-    );
-  };
-
-  const getTransactionEvents = (analysis) =>
-    Array.isArray(analysis?.transactionEvents)
-      ? analysis.transactionEvents
-      : [];
-
-  const eventIsCompleted = (event) => {
-    if (!isObject(event)) {
+  const hasAnalysisContent = (analysis) => {
+    if (!isObject(analysis)) {
       return false;
     }
 
-    if (event.completed === true || event.occurred === true) {
-      return true;
-    }
+    const directEvidence =
+      Array.isArray(analysis.evidence) ||
+      Array.isArray(analysis.evidence?.items);
 
-    const status = normalizeText(
-      event.status || event.eventStatus || event.completionStatus || "",
+    const directEvents = Array.isArray(analysis.transactionEvents);
+
+    const directSemanticEffects =
+      isObject(analysis.semanticEffects) ||
+      Array.isArray(analysis.semanticEffects);
+
+    const directFacts =
+      isObject(analysis.facts) || Array.isArray(analysis.facts);
+
+    const nestedUniversal = isObject(analysis.universalAnalysis);
+
+    const nestedEvidence =
+      Array.isArray(analysis.universalAnalysis?.evidence) ||
+      Array.isArray(analysis.universalAnalysis?.evidence?.items);
+
+    const nestedEvents = Array.isArray(
+      analysis.universalAnalysis?.transactionEvents,
     );
 
-    return [
-      "completed",
-      "complete",
-      "executed",
-      "effective",
-      "occurred",
-      "confirmed",
-      "signed",
-      "cancelled",
-      "canceled",
-      "terminated",
-    ].includes(status);
+    const nestedSemanticEffects =
+      isObject(analysis.universalAnalysis?.semanticEffects) ||
+      Array.isArray(analysis.universalAnalysis?.semanticEffects);
+
+    const nestedFacts =
+      isObject(analysis.universalAnalysis?.facts) ||
+      Array.isArray(analysis.universalAnalysis?.facts);
+
+    return Boolean(
+      directEvidence ||
+      directEvents ||
+      directSemanticEffects ||
+      directFacts ||
+      nestedUniversal ||
+      nestedEvidence ||
+      nestedEvents ||
+      nestedSemanticEffects ||
+      nestedFacts,
+    );
   };
 
-  const getEventText = (event) =>
-    normalizeText(
-      [
-        event?.eventType,
-        event?.type,
-        event?.name,
-        event?.title,
-        event?.label,
-        event?.description,
-        event?.supportingText,
-      ]
-        .filter(Boolean)
-        .join(" "),
-    );
+  /*
+  --------------------------------------------------------
+  Candidate Scoring
 
-  const findCompletedEvent = (analysis, eventNames = []) => {
-    const normalizedNames = eventNames.map(normalizeText);
+  Prefer the analysis object containing the richest current
+  Universal Document Intelligence result.
+
+  This supports historical storage locations without
+  interpreting or altering the analysis.
+  --------------------------------------------------------
+  */
+
+  const scoreAnalysisCandidate = (analysis) => {
+    if (!isObject(analysis)) {
+      return -1;
+    }
+
+    let score = 0;
+
+    if (
+      isObject(analysis.semanticEffects) ||
+      Array.isArray(analysis.semanticEffects)
+    ) {
+      score += 100;
+    }
+
+    if (Array.isArray(analysis.transactionEvents)) {
+      score += 80;
+    }
+
+    if (Array.isArray(analysis.evidence)) {
+      score += 70;
+    }
+
+    if (Array.isArray(analysis.evidence?.items)) {
+      score += 70;
+    }
+
+    if (isObject(analysis.facts) || Array.isArray(analysis.facts)) {
+      score += 50;
+    }
+
+    if (isObject(analysis.classification)) {
+      score += 20;
+    }
+
+    if (isObject(analysis.universalAnalysis)) {
+      score += 10;
+    }
+
+    if (
+      isObject(analysis.universalAnalysis?.semanticEffects) ||
+      Array.isArray(analysis.universalAnalysis?.semanticEffects)
+    ) {
+      score += 100;
+    }
+
+    if (Array.isArray(analysis.universalAnalysis?.transactionEvents)) {
+      score += 80;
+    }
+
+    if (
+      Array.isArray(analysis.universalAnalysis?.evidence) ||
+      Array.isArray(analysis.universalAnalysis?.evidence?.items)
+    ) {
+      score += 70;
+    }
+
+    if (
+      isObject(analysis.universalAnalysis?.facts) ||
+      Array.isArray(analysis.universalAnalysis?.facts)
+    ) {
+      score += 50;
+    }
+
+    return score;
+  };
+
+  /*
+  --------------------------------------------------------
+  Resolve Stored Document Analysis
+
+  RapportLink has historically stored document analysis in
+  several properties.
+
+  Locate the strongest existing result without rebuilding it.
+  --------------------------------------------------------
+  */
+
+  const resolveDocumentAnalysis = (doc) => {
+    if (!isObject(doc)) {
+      return null;
+    }
+
+    const candidates = [
+      doc.aiAnalysis,
+      doc.aiAnalysis?.analysis,
+
+      doc.universalAnalysis,
+      doc.universalAnalysis?.analysis,
+
+      doc.ai,
+      doc.ai?.analysis,
+
+      doc.analysis,
+      doc.analysis?.analysis,
+
+      doc.documentAnalysis,
+      doc.documentAnalysis?.analysis,
+    ].filter(isObject);
+
+    if (!candidates.length) {
+      return null;
+    }
+
+    const validCandidates = candidates.filter(hasAnalysisContent);
+
+    const candidatePool = validCandidates.length ? validCandidates : candidates;
 
     return (
-      getTransactionEvents(analysis).find((event) => {
-        if (!eventIsCompleted(event)) {
-          return false;
-        }
+      candidatePool
+        .map((candidate, index) => ({
+          candidate,
+          index,
+          score: scoreAnalysisCandidate(candidate),
+        }))
+        .sort((left, right) => {
+          if (right.score !== left.score) {
+            return right.score - left.score;
+          }
 
-        const eventText = getEventText(event);
-
-        return normalizedNames.some(
-          (name) =>
-            eventText === name ||
-            eventText.includes(name) ||
-            name.includes(eventText),
-        );
-      }) || null
+          return left.index - right.index;
+        })[0]?.candidate || null
     );
   };
 
-  const getEventDate = (event) =>
-    String(
-      event?.eventDate ||
-        event?.date ||
-        event?.effectiveDate ||
-        event?.completedDate ||
-        event?.signedDate ||
-        "",
-    );
+  /*
+  --------------------------------------------------------
+  Normalize Every Current Document
 
-  const buildEffectFromEvent = (event) => {
-    if (!event) {
-      return null;
-    }
+  Store the exact same analysis object in the compatibility
+  locations currently consumed by RapportLink.
 
-    return {
-      occurred: true,
-      date: getEventDate(event),
-      confidence: normalizeConfidence(
-        event.confidence ?? event.confidenceScore ?? event.probability ?? 0,
-      ),
-      supportingText: String(
-        event.supportingText ||
-          event.description ||
-          `${event.eventType || event.type || "Transaction event"} was completed.`,
-      ),
-    };
-  };
-
-  const buildEffectFromFact = ({
-    analysis,
-    factNames,
-    evidenceTypes = [],
-    dateFactNames = [],
-    supportingText,
-  }) => {
-    const factResult = findFact(analysis, factNames);
-
-    if (!factResult.found || factResult.value !== true) {
-      return null;
-    }
-
-    const matchingEvidence = findEvidenceByType(analysis, evidenceTypes);
-
-    const dateResult = findFact(analysis, dateFactNames);
-
-    return {
-      occurred: true,
-      date:
-        dateResult.found && dateResult.value ? String(dateResult.value) : "",
-      confidence: normalizeConfidence(
-        matchingEvidence?.confidence ?? analysis?.confidence ?? 0,
-      ),
-      supportingText: String(
-        matchingEvidence?.supportingText ||
-          supportingText ||
-          `${factResult.key} was confirmed by document evidence.`,
-      ),
-    };
-  };
-
-  const chooseEffect = (eventEffect, factEffect, existingEffect) => {
-    if (eventEffect?.occurred === true) {
-      return eventEffect;
-    }
-
-    if (factEffect?.occurred === true) {
-      return factEffect;
-    }
-
-    if (isObject(existingEffect) && existingEffect.occurred === true) {
-      return existingEffect;
-    }
-
-    return falseEffect();
-  };
+  Do not clone, modify, supplement, reinterpret, or replace
+  semanticEffects, transactionEvents, facts, or evidence.
+  --------------------------------------------------------
+  */
 
   txn.documents.forEach((doc) => {
-    if (!doc || typeof doc !== "object") {
+    if (!isObject(doc)) {
       return;
     }
 
-    const analysis = resolveDocumentAnalysis(doc);
+    const authoritativeAnalysis = resolveDocumentAnalysis(doc);
 
-    if (!analysis) {
+    if (!authoritativeAnalysis) {
+      /*
+       * Do not retain stale compatibility aliases when no
+       * supported analysis exists for the current document.
+       */
+      delete doc.aiAnalysis;
+      delete doc.ai;
+
       return;
     }
 
-    /*
-     * Normalize all supported historical storage locations to
-     * one authoritative document-analysis property.
-     */
-    doc.aiAnalysis = analysis;
-
-    const existingSemanticEffects = isObject(analysis.semanticEffects)
-      ? analysis.semanticEffects
-      : {};
-
-    const contractExecutedEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "contract executed",
-        "purchase agreement executed",
-        "executed purchase agreement",
-        "agreement executed",
-        "contract signed",
-        "purchase agreement signed",
-      ]),
-    );
-
-    const contractExecutedFact = buildEffectFromFact({
-      analysis,
-      factNames: [
-        "contractExecuted",
-        "purchaseAgreementExecuted",
-        "agreementExecuted",
-      ],
-      evidenceTypes: ["PurchaseAgreement", "Purchase Agreement", "Contract"],
-      dateFactNames: ["effectiveDate", "contractDate", "executionDate"],
-      supportingText:
-        "The document evidence confirms an executed purchase agreement.",
-    });
-
-    const listingAgreementExecutedEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "listing agreement executed",
-        "executed listing agreement",
-        "listing agreement signed",
-        "listing contract executed",
-        "listing contract signed",
-      ]),
-    );
-
-    const listingAgreementExecutedFact = buildEffectFromFact({
-      analysis,
-      factNames: [
-        "listingAgreementExecuted",
-        "listingContractExecuted",
-        "listingAgreementSigned",
-      ],
-      evidenceTypes: [
-        "ListingAgreement",
-        "Listing Agreement",
-        "Listing Contract",
-      ],
-      dateFactNames: [
-        "listingAgreementDate",
-        "listingDate",
-        "executionDate",
-        "effectiveDate",
-      ],
-      supportingText:
-        "The document evidence confirms an executed listing agreement.",
-    });
-
-    const settlementCompletedEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "settlement completed",
-        "settlement",
-        "closing completed",
-        "closing complete",
-        "transaction closed",
-      ]),
-    );
-
-    const settlementCompletedFact = buildEffectFromFact({
-      analysis,
-      factNames: ["settlementCompleted", "closingCompleted"],
-      evidenceTypes: ["Settlement", "Closing", "ClosingDisclosure"],
-      dateFactNames: ["actualClosingDate", "closingDate", "settlementDate"],
-      supportingText:
-        "The document evidence confirms settlement or closing was completed.",
-    });
-
-    const fundsDisbursedEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "funds disbursed",
-        "disbursement completed",
-        "disbursement",
-        "escrow disbursement",
-        "seller proceeds allocation",
-        "seller proceeds allocated",
-        "loan funding accounted",
-      ]),
-    );
-
-    const fundsDisbursedFact = buildEffectFromFact({
-      analysis,
-      factNames: ["fundsDisbursed", "disbursementCompleted"],
-      evidenceTypes: ["Disbursement", "Settlement", "Closing"],
-      dateFactNames: ["disbursementDate", "fundingDate", "actualClosingDate"],
-      supportingText: "The document evidence confirms funds were disbursed.",
-    });
-
-    const recordingCompletedEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "recording completed",
-        "recording",
-        "deed recorded",
-        "recorded deed",
-      ]),
-    );
-
-    const recordingCompletedFact = buildEffectFromFact({
-      analysis,
-      factNames: ["recordingCompleted", "deedRecorded"],
-      evidenceTypes: ["Recording", "Deed", "Closing"],
-      dateFactNames: ["recordingDate", "deedRecordedDate"],
-      supportingText: "The document evidence confirms recording was completed.",
-    });
-
-    const titleTransferredEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "title transferred",
-        "title transfer",
-        "deed conveyed",
-        "ownership transferred",
-      ]),
-    );
-
-    const titleTransferredFact = buildEffectFromFact({
-      analysis,
-      factNames: ["titleTransferred", "ownershipTransferred", "deedConveyed"],
-      evidenceTypes: ["Title", "Deed", "Closing"],
-      dateFactNames: ["titleTransferDate", "deedDate", "actualClosingDate"],
-      supportingText: "The document evidence confirms title was transferred.",
-    });
-
-    const terminationEffectiveEvent = buildEffectFromEvent(
-      findCompletedEvent(analysis, [
-        "termination effective",
-        "contract terminated",
-        "termination completed",
-        "buyer termination",
-        "buyer terminated contract",
-        "notice of buyer termination",
-        "notice of buyer's termination",
-        "agreement terminated",
-        "agreement cancelled",
-        "agreement canceled",
-        "contract cancelled",
-        "contract canceled",
-        "cancellation effective",
-        "cancelled",
-        "canceled",
-        "terminated",
-      ]),
-    );
-
-    const terminationEffectiveFact = buildEffectFromFact({
-      analysis,
-      factNames: [
-        "terminationEffective",
-        "contractTerminated",
-        "agreementTerminated",
-        "cancellationEffective",
-      ],
-      evidenceTypes: ["Termination", "Termination of Contract", "Cancellation"],
-      dateFactNames: ["terminationDate", "cancellationDate", "effectiveDate"],
-      supportingText:
-        "The document evidence confirms the termination is effective.",
-    });
-
-    analysis.semanticEffects = {
-      ...existingSemanticEffects,
-
-      contractExecuted: chooseEffect(
-        contractExecutedEvent,
-        contractExecutedFact,
-        existingSemanticEffects.contractExecuted,
-      ),
-
-      listingAgreementExecuted: chooseEffect(
-        listingAgreementExecutedEvent,
-        listingAgreementExecutedFact,
-        existingSemanticEffects.listingAgreementExecuted,
-      ),
-
-      settlementCompleted: chooseEffect(
-        settlementCompletedEvent,
-        settlementCompletedFact,
-        existingSemanticEffects.settlementCompleted,
-      ),
-
-      fundsDisbursed: chooseEffect(
-        fundsDisbursedEvent,
-        fundsDisbursedFact,
-        existingSemanticEffects.fundsDisbursed,
-      ),
-
-      recordingCompleted: chooseEffect(
-        recordingCompletedEvent,
-        recordingCompletedFact,
-        existingSemanticEffects.recordingCompleted,
-      ),
-
-      titleTransferred: chooseEffect(
-        titleTransferredEvent,
-        titleTransferredFact,
-        existingSemanticEffects.titleTransferred,
-      ),
-
-      terminationEffective: chooseEffect(
-        terminationEffectiveEvent,
-        terminationEffectiveFact,
-        existingSemanticEffects.terminationEffective,
-      ),
-    };
-
-    /*
-     * Keep both historical analysis properties synchronized.
-     */
-    doc.ai = analysis;
+    doc.aiAnalysis = authoritativeAnalysis;
+    doc.ai = authoritativeAnalysis;
   });
 
   /*
-   * Rebuild every downstream layer from the normalized
-   * document intelligence.
-   */
+  --------------------------------------------------------
+  Remove Stale Transaction Conclusions
+
+  The next Brain build must be based only on the transaction's
+  current documents and their current saved analyses.
+  --------------------------------------------------------
+  */
+
+  delete txn.transactionBrain;
+  delete txn.aiCoordinator;
+
+  delete txn.derivedStatus;
+  delete txn.aiTransactionState;
+  delete txn.health;
+  delete txn.closingConfidence;
+
+  /*
+  --------------------------------------------------------
+  Rebuild the Authoritative Downstream Layers
+
+  aiRefreshTransaction:
+    - builds the Transaction Brain
+    - stores the Brain
+    - builds the Coordinator
+
+  If it is unavailable, build and store the Brain directly.
+  --------------------------------------------------------
+  */
+
   if (typeof aiRefreshTransaction === "function") {
-    aiRefreshTransaction(txn);
-  } else if (typeof aiBuildTransactionBrain === "function") {
-    txn.transactionBrain = aiBuildTransactionBrain(txn);
+    return aiRefreshTransaction(txn);
+  }
+
+  if (typeof aiBuildTransactionBrain === "function") {
+    const brain = aiBuildTransactionBrain(txn);
+
+    if (brain && typeof brain === "object" && !Array.isArray(brain)) {
+      txn.transactionBrain = brain;
+    }
   }
 
   return txn;

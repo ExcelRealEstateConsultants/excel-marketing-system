@@ -783,120 +783,190 @@ function txnLoad() {
 }
 
 function txnSaveAll() {
-  try {
-    localStorage.setItem(TXN_STORAGE_KEY, JSON.stringify(txnCache));
-
-    return true;
-  } catch (err) {
-    console.error("Transaction storage limit reached:", err);
-  }
-
   /*
   -------------------------------------------------------
-  Browser-storage fallback
+  Save only durable transaction data.
 
-  Save a smaller COPY to localStorage, but do not replace
-  the live txnCache objects while documents are processing.
+  Generated AI conclusions are rebuilt whenever transactions
+  load. They must not be written into browser storage.
+
+  This prevents circular references, oversized snapshots,
+  stale Brain conclusions, and inconsistent document saves.
   -------------------------------------------------------
   */
 
-  const storageSafeTransactions = txnCache.map((txn) => ({
-    ...txn,
-
-    documents: Array.isArray(txn.documents)
-      ? txn.documents.map((doc) => ({
-          id: doc.id,
-
-          name: doc.name,
-
-          type: doc.type || "file",
-
-          size: doc.size || 0,
-
-          uploadedAt: doc.uploadedAt || "",
-
-          storage: "AI analysis retained - original file not stored in browser",
-
-          /*
-          -------------------------------------------------
-          Large file content is not stored in localStorage.
-          -------------------------------------------------
-          */
-
-          data: "",
-          text: "",
-          extractedText: "",
-
-          /*
-          -------------------------------------------------
-          Preserve extraction metadata.
-          -------------------------------------------------
-          */
-
-          extraction: doc.extraction
-            ? {
-                method: doc.extraction.method || "unknown",
-
-                pages: Number(doc.extraction.pages || 0),
-
-                warnings: Array.isArray(doc.extraction.warnings)
-                  ? [...doc.extraction.warnings]
-                  : [],
-
-                extractedAt: doc.extraction.extractedAt || "",
-              }
-            : {
-                method: "unknown",
-                pages: 0,
-                warnings: [],
-                extractedAt: "",
-              },
-
-          /*
-          -------------------------------------------------
-          Preserve AI analysis and evidence.
-          -------------------------------------------------
-          */
-
-          aiAnalysis:
-            doc.aiAnalysis && typeof doc.aiAnalysis === "object"
-              ? doc.aiAnalysis
-              : null,
-
-          engineVersion: Number(doc.engineVersion || 0),
-
-          lastAnalyzed: doc.lastAnalyzed || "",
-
-          analysisStatus: doc.analysisStatus || "",
-        }))
-      : [],
-  }));
-
   try {
+    const isObject = (value) =>
+      value !== null && typeof value === "object" && !Array.isArray(value);
+
+    const resolveSavedAnalysis = (doc = {}) => {
+      const candidates = [
+        doc.aiAnalysis,
+        doc.aiAnalysis?.analysis,
+
+        doc.universalAnalysis,
+        doc.universalAnalysis?.analysis,
+
+        doc.ai,
+        doc.ai?.analysis,
+
+        doc.analysis,
+        doc.analysis?.analysis,
+
+        doc.documentAnalysis,
+        doc.documentAnalysis?.analysis,
+      ];
+
+      return candidates.find(isObject) || null;
+    };
+
+    const storageSafeTransactions = txnCache.map((sourceTxn) => {
+      const txn = sourceTxn && typeof sourceTxn === "object" ? sourceTxn : {};
+
+      /*
+       * Remove generated and transient AI objects before saving.
+       *
+       * These objects may contain Maps, class instances, ledgers,
+       * circular references, or stale conclusions.
+       */
+      const {
+        transactionBrain,
+        aiCoordinator,
+        aiTransactionIntelligence,
+        aiTransactionState,
+        derivedStatus,
+
+        health,
+        transactionHealth,
+        healthScore,
+
+        confidence,
+        closingConfidence,
+        closingProbability,
+
+        completion,
+        progress,
+
+        alerts,
+        priorities,
+        recommendations,
+        missingItems,
+        missingDocuments,
+        missingFields,
+        reasoning,
+
+        ...durableTransaction
+      } = txn;
+
+      const safeDocuments = Array.isArray(txn.documents)
+        ? txn.documents
+            .filter(
+              (doc) => doc && typeof doc === "object" && !Array.isArray(doc),
+            )
+            .map((doc) => {
+              const authoritativeAnalysis = resolveSavedAnalysis(doc);
+
+              return {
+                id: doc.id || null,
+
+                name: doc.name || "Uploaded Document",
+
+                type: doc.type || "file",
+
+                mimeType: doc.mimeType || doc.fileType || "",
+
+                size: Number(doc.size || 0),
+
+                uploadedAt: doc.uploadedAt || "",
+
+                storage:
+                  "AI analysis retained - original file not stored in browser",
+
+                /*
+                 * Large source-file content is deliberately not
+                 * stored in localStorage.
+                 */
+                data: "",
+                text: "",
+                extractedText: "",
+                ocrText: "",
+
+                /*
+                 * Preserve extraction metadata needed for auditing
+                 * and document display.
+                 */
+                extraction:
+                  doc.extraction && typeof doc.extraction === "object"
+                    ? {
+                        method: doc.extraction.method || "unknown",
+
+                        pages: Number(doc.extraction.pages || 0),
+
+                        warnings: Array.isArray(doc.extraction.warnings)
+                          ? [...doc.extraction.warnings]
+                          : [],
+
+                        extractedAt: doc.extraction.extractedAt || "",
+                      }
+                    : {
+                        method: "unknown",
+                        pages: 0,
+                        warnings: [],
+                        extractedAt: "",
+                      },
+
+                /*
+                 * Save one authoritative document-analysis object.
+                 *
+                 * aiAnalyzeTransaction() will restore compatibility
+                 * aliases when the transaction loads.
+                 */
+                aiAnalysis: authoritativeAnalysis,
+
+                engineVersion: Number(doc.engineVersion || 0),
+
+                schemaVersion: doc.schemaVersion ?? null,
+
+                lastAnalyzed: doc.lastAnalyzed || "",
+
+                analysisStatus: doc.analysisStatus || "",
+
+                analysisError: doc.analysisError || null,
+              };
+            })
+        : [];
+
+      return {
+        ...durableTransaction,
+
+        documents: safeDocuments,
+
+        /*
+         * Document reviews may be retained for display and audit,
+         * but must remain plain JSON data.
+         */
+        aiDocumentReviews: Array.isArray(txn.aiDocumentReviews)
+          ? txn.aiDocumentReviews
+          : [],
+
+        /*
+         * Generated checklist percentage will be recalculated.
+         */
+        checklistCompleted: undefined,
+      };
+    });
+
     localStorage.setItem(
       TXN_STORAGE_KEY,
       JSON.stringify(storageSafeTransactions),
     );
 
-    /*
-    IMPORTANT:
-
-    Do not assign storageSafeTransactions back to txnCache.
-
-    The live objects must remain intact while document
-    extraction and AI analysis are still running.
-    */
-
-    console.warn(
-      "RapportLink saved a reduced browser-storage copy while preserving the live transaction data in memory.",
-    );
-
     return true;
-  } catch (fallbackError) {
-    console.error("Transaction fallback storage also failed:", fallbackError);
+  } catch (error) {
+    console.error("Unable to save transactions:", error);
 
     alert(
-      "RapportLink could not save the transaction because browser storage is full.",
+      "RapportLink could not save the transactions. Browser storage may be full.",
     );
 
     return false;
@@ -962,12 +1032,54 @@ function txnBuildAutomationTasks(txn = {}) {
   });
   const tasks = [];
 
+  const canonicalFacts =
+    txn?.transactionBrain?.canonicalFacts &&
+    typeof txn.transactionBrain.canonicalFacts === "object"
+      ? txn.transactionBrain.canonicalFacts
+      : {};
+
+  const authoritativeDates = {
+    contractDate: canonicalFacts.effectiveDate || "",
+    emdDue:
+      canonicalFacts.earnestMoneyDeadline || canonicalFacts.emdDeadline || "",
+    inspectionDate:
+      canonicalFacts.inspectionDeadline || canonicalFacts.inspectionDate || "",
+    appraisalDate:
+      canonicalFacts.appraisalDeadline || canonicalFacts.appraisalDate || "",
+    loanDate:
+      canonicalFacts.financingDeadline || canonicalFacts.loanDeadline || "",
+    walkthroughDate:
+      canonicalFacts.walkthroughDate ||
+      canonicalFacts.finalWalkthroughDate ||
+      "",
+    closeDate:
+      canonicalFacts.actualClosingDate || canonicalFacts.closingDate || "",
+  };
+
   TXN_AUTOMATION_RULES.forEach((rule) => {
-    if (rule.checklist && checklist[rule.checklist]) return;
-    if (txn.autoCreateDates === false) return;
-    const due = txnAddDays(txn[rule.field], rule.offset || 0);
-    if (!due) return;
+    if (rule.checklist && checklist[rule.checklist]) {
+      return;
+    }
+
+    if (txn.autoCreateDates === false) {
+      return;
+    }
+
+    /*
+     * Automation dates must come from the authoritative
+     * Transaction Brain, not legacy transaction fields.
+     */
+
+    const sourceDate = authoritativeDates[rule.field] || txn[rule.field] || "";
+
+    const due = txnAddDays(sourceDate, rule.offset || 0);
+
+    if (!due) {
+      return;
+    }
+
     const id = txnAutomationId(txn.id || "new", rule.title, due);
+
     tasks.push({
       id,
       title: rule.title,
@@ -989,9 +1101,19 @@ function txnBuildAutomationTasks(txn = {}) {
     (transactionState === "Active" || transactionState === "Pending")
   ) {
     TXN_REQUIRED_DOC_RULES.forEach((rule) => {
-      if (txnDocKeywordFound(txn, rule.keyword)) return;
+      if (txnDocKeywordFound(txn, rule.keyword)) {
+        return;
+      }
 
-      const due = txn.contractDate || txn.closeDate || todayKey();
+      /*
+       * Use authoritative Brain dates when available.
+       * Do not invent due dates if the Brain has not
+       * established one yet.
+       */
+
+      const due =
+        authoritativeDates.contractDate || authoritativeDates.closeDate || "";
+
       const id = txnAutomationId(txn.id || "new", rule.title, due);
 
       tasks.push({
@@ -2178,7 +2300,10 @@ function txnCardHtml(txn) {
       ? txn.aiTransactionIntelligence
       : {};
 
-  const effectiveStatus = brain?.transactionState || "Unknown";
+  const effectiveStatus =
+    typeof aiTransactionState === "function"
+      ? aiTransactionState(txn)
+      : "Unknown";
 
   const status = String(effectiveStatus).trim().toLowerCase();
 
@@ -2261,27 +2386,12 @@ function txnCardHtml(txn) {
         : null;
 
   const authoritativeClosingDate =
-    canonicalFacts.actualClosingDate ||
-    brain?.actualClosingDate ||
-    txn?.actualClosingDate ||
-    canonicalFacts.closingDate ||
-    brain?.closingDate ||
-    txn?.closeDate ||
-    txn?.closingDate ||
-    "";
+    canonicalFacts.actualClosingDate || canonicalFacts.closingDate || "";
 
   const authoritativePurchasePrice = firstPositiveNumber(
     canonicalFacts.purchasePrice,
     canonicalFacts.listPrice,
     canonicalFacts.listingPrice,
-    brain?.purchasePrice,
-    brain?.listPrice,
-    brain?.listingPrice,
-    txn?.purchasePrice,
-    txn?.price,
-    txn?.listPrice,
-    txn?.listingPrice,
-    txn?.askingPrice,
   );
 
   const hasPurchasePrice =
@@ -2298,22 +2408,18 @@ function txnCardHtml(txn) {
     coordinator?.gci,
     intelligence?.finalGci,
     intelligence?.expectedGci,
-    txn?.finalGci,
-    txn?.expectedGci,
-    txn?.expectedGCI,
-    txn?.gci,
-    txn?.commission,
-    txn?.expectedCommission,
   );
 
-  if (authoritativeGci === null && typeof txnGci === "function") {
+  if (
+    authoritativeGci === null &&
+    authoritativePurchasePrice &&
+    typeof txnGci === "function"
+  ) {
     authoritativeGci = firstPositiveNumber(
       txnGci({
         ...txn,
-        price:
-          authoritativePurchasePrice ||
-          firstPositiveNumber(txn?.price, txn?.purchasePrice, txn?.listPrice) ||
-          0,
+        price: authoritativePurchasePrice,
+        purchasePrice: authoritativePurchasePrice,
       }),
     );
   }
@@ -2896,20 +3002,23 @@ async function txnHandleDocumentUpload(event) {
   try {
     for (const file of files) {
       const doc = {
-        id: Date.now() + Math.floor(Math.random() * 100000),
+        id: String(Date.now() + Math.floor(Math.random() * 100000)),
         name: file.name,
         type: file.type || "file",
+        mimeType: file.type || "",
         size: file.size || 0,
         provider: "Local File",
-        storage: "Browser Storage",
+        storage: "RapportLink Document Repository",
         uploadedAt: new Date().toISOString(),
         data: "",
         text: "",
         extractedText: "",
+        pageImages: [],
         extraction: {
           method: "pending",
           pages: 0,
           warnings: [],
+          extractedAt: "",
         },
         ai: {},
         aiAnalysis: null,
@@ -2919,7 +3028,49 @@ async function txnHandleDocumentUpload(event) {
       txnWorkingDocs.push(doc);
       txnRenderDocumentList();
 
+      const txn =
+        typeof txnReadTransactionForm === "function"
+          ? txnReadTransactionForm(false)
+          : {};
+
       try {
+        /*
+        ---------------------------------------------------------
+        Save the original uploaded file immediately.
+
+        This preserves the PDF, JPG, PNG, DOCX, TXT, or other
+        supported source file even if extraction or AI analysis
+        later fails.
+        ---------------------------------------------------------
+        */
+
+        if (typeof window.repoSaveOriginalDocument !== "function") {
+          throw new Error("RapportLink Document Repository is not available.");
+        }
+
+        await window.repoSaveOriginalDocument(doc.id, {
+          blob: file,
+          fileName: file.name,
+          mimeType: file.type || "",
+          size: file.size || 0,
+          uploadedAt: doc.uploadedAt,
+        });
+
+        await window.repoUpdateMetadata(doc.id, {
+          transactionId: txn?.id || "",
+          fileName: file.name,
+          mimeType: file.type || "",
+          size: file.size || 0,
+          uploadedAt: doc.uploadedAt,
+          provider: "Local File",
+        });
+
+        /*
+        ---------------------------------------------------------
+        Extract text and page images.
+        ---------------------------------------------------------
+        */
+
         doc.data = "";
 
         if (typeof window.aiExtractDocumentText !== "function") {
@@ -2931,6 +3082,10 @@ async function txnHandleDocumentUpload(event) {
         doc.text = String(extraction?.text || "");
         doc.extractedText = doc.text;
 
+        doc.pageImages = Array.isArray(extraction?.pageImages)
+          ? extraction.pageImages
+          : [];
+
         doc.extraction = {
           method: extraction?.method || "none",
           pages: Number(extraction?.pages || 0),
@@ -2939,6 +3094,34 @@ async function txnHandleDocumentUpload(event) {
             : [],
           extractedAt: extraction?.extractedAt || new Date().toISOString(),
         };
+
+        /*
+        ---------------------------------------------------------
+        Save reusable extraction assets.
+
+        This stores:
+        - extracted text
+        - OCR method
+        - page count
+        - warnings
+        - rendered PDF page images
+        ---------------------------------------------------------
+        */
+
+        await window.repoSaveOCR(doc.id, {
+          extractedText: doc.extractedText,
+          method: doc.extraction.method,
+          pages: doc.extraction.pages,
+          warnings: doc.extraction.warnings,
+          extractedAt: doc.extraction.extractedAt,
+        });
+
+        await window.repoSavePageImages(doc.id, doc.pageImages, {
+          pageCount: doc.extraction.pages || doc.pageImages.length,
+          renderScale: 1.5,
+          imageFormat: doc.pageImages[0]?.mimeType || "image/jpeg",
+          generatedAt: doc.extraction.extractedAt,
+        });
 
         if (!doc.text.trim()) {
           throw new Error(
@@ -2949,14 +3132,15 @@ async function txnHandleDocumentUpload(event) {
         doc.analysisStatus = "Document read";
         txnRenderDocumentList();
 
+        /*
+        ---------------------------------------------------------
+        Run Universal Document Intelligence.
+        ---------------------------------------------------------
+        */
+
         if (typeof txnAnalyzeDocumentWithUniversalAI !== "function") {
           throw new Error("Universal Document Intelligence is not available.");
         }
-
-        const txn =
-          typeof txnReadTransactionForm === "function"
-            ? txnReadTransactionForm(false)
-            : {};
 
         doc.analysisStatus = "AI reviewing document";
         txnRenderDocumentList();
@@ -2972,9 +3156,36 @@ async function txnHandleDocumentUpload(event) {
         doc.aiAnalysis = analysis;
         doc.ai = analysis;
         doc.engineVersion = analysis.engineVersion || null;
-        doc.analysisModel = analysis.model || "";
+        doc.analysisModel = analysis.model || analysis.usage?.model || "";
         doc.lastAnalyzed = analysis.reviewedAt || new Date().toISOString();
         doc.analysisStatus = "AI review complete";
+
+        /*
+        ---------------------------------------------------------
+        Save the completed AI analysis.
+
+        Future transaction loads can reuse this result without
+        rereading the original file or calling OpenAI again.
+        ---------------------------------------------------------
+        */
+
+        await window.repoSaveAnalysis(doc.id, analysis, {
+          model: analysis.model || analysis.usage?.model || "",
+          reviewedAt: doc.lastAnalyzed,
+          engineVersion: analysis.engineVersion || "",
+          schemaVersion: analysis.schemaVersion || "",
+          status: "Complete",
+        });
+
+        console.log("DOCUMENT SAVED TO REPOSITORY", {
+          documentId: doc.id,
+          transactionId: txn?.id || "",
+          name: doc.name,
+          mimeType: doc.mimeType,
+          extractedTextLength: doc.extractedText.length,
+          pageImages: doc.pageImages.length,
+          analysisSaved: true,
+        });
 
         console.log("UNIVERSAL AI ANALYSIS", {
           documentType: analysis.classification?.documentType || "Unknown",
@@ -3008,6 +3219,7 @@ async function txnHandleDocumentUpload(event) {
           method: "failed",
           pages: 0,
           warnings: [],
+          extractedAt: new Date().toISOString(),
         };
 
         doc.extraction.warnings = [
@@ -3036,6 +3248,28 @@ async function txnHandleDocumentUpload(event) {
             "The document was uploaded, but RapportLink could not read or analyze its contents.",
           reviewedAt: new Date().toISOString(),
         };
+
+        /*
+        ---------------------------------------------------------
+        Preserve the failure status in the repository.
+
+        The original source file and any successfully extracted
+        assets remain saved.
+        ---------------------------------------------------------
+        */
+
+        if (typeof window.repoMarkAnalysisFailed === "function") {
+          try {
+            await window.repoMarkAnalysisFailed(doc.id, err, {
+              model: "",
+            });
+          } catch (repositoryError) {
+            console.error(
+              "Unable to save document failure status:",
+              repositoryError,
+            );
+          }
+        }
       }
 
       txnRenderDocumentList();
@@ -3112,41 +3346,201 @@ function txnSaveTransaction() {
 
   const txn = txnReadTransactionForm(true);
   const id = txn.id;
-  const existing = txnCache.find((t) => String(t.id) === String(id));
 
-  txn.createdAt = existing?.createdAt || new Date().toISOString();
-  txn.updatedAt = new Date().toISOString();
-
-  txn.automationTasks = Array.isArray(existing?.automationTasks)
-    ? existing.automationTasks
-    : [];
-
-  txnApplyAutomation(txn);
+  const existing = txnCache.find((item) => String(item.id) === String(id));
 
   if (!txn.address) {
     alert("Please enter a property address.");
     return;
   }
 
-  const idx = txnCache.findIndex((t) => String(t.id) === String(id));
+  /*
+  -------------------------------------------------------
+  Preserve durable transaction history
+  -------------------------------------------------------
+  */
 
-  if (idx >= 0) txnCache[idx] = txn;
-  else txnCache.unshift(txn);
+  txn.createdAt = existing?.createdAt || new Date().toISOString();
 
-  txnSaveAll();
+  txn.updatedAt = new Date().toISOString();
+
+  /*
+  -------------------------------------------------------
+  Human-entered lifecycle provenance
+
+  The status selected in the transaction form came directly
+  from the user.
+
+  This allows the Transaction Brain to distinguish:
+
+  - user-entered transaction status
+  - old AI-generated status
+  - document-derived transaction conclusions
+  -------------------------------------------------------
+  */
+
+  txn.statusSource = "User";
+
+  txn.statusUpdatedAt = new Date().toISOString();
+
+  txn.statusUpdatedBy = "Transaction Form";
+
+  /*
+  -------------------------------------------------------
+  Preserve existing document intelligence unless the form
+  currently contains an explicit document collection.
+
+  This prevents an ordinary transaction edit from silently
+  removing documents or their saved AI analyses.
+  -------------------------------------------------------
+  */
+
+  if (
+    (!Array.isArray(txn.documents) || txn.documents.length === 0) &&
+    Array.isArray(existing?.documents) &&
+    existing.documents.length > 0
+  ) {
+    txn.documents = existing.documents;
+  }
+
+  /*
+  -------------------------------------------------------
+  Preserve existing document reviews and AI audit history.
+
+  These are document records, not authoritative transaction
+  conclusions.
+  -------------------------------------------------------
+  */
+
+  txn.aiDocumentReviews = Array.isArray(existing?.aiDocumentReviews)
+    ? existing.aiDocumentReviews
+    : [];
+
+  txn.aiLatestReview = existing?.aiLatestReview || null;
+
+  txn.lastAIReviewAt = existing?.lastAIReviewAt || "";
+
+  txn.lastAIAdvisorSummary = existing?.lastAIAdvisorSummary || "";
+
+  /*
+  -------------------------------------------------------
+  Preserve manual automation tasks
+  -------------------------------------------------------
+  */
+
+  txn.automationTasks = Array.isArray(existing?.automationTasks)
+    ? existing.automationTasks
+    : [];
+
+  /*
+  -------------------------------------------------------
+  Remove stale generated AI conclusions before rebuilding
+  -------------------------------------------------------
+  */
+
+  delete txn.transactionBrain;
+  delete txn.aiCoordinator;
+  delete txn.aiTransactionIntelligence;
+  delete txn.aiTransactionState;
+  delete txn.derivedStatus;
+
+  delete txn.health;
+  delete txn.transactionHealth;
+  delete txn.healthScore;
+
+  delete txn.confidence;
+  delete txn.closingConfidence;
+  delete txn.closingProbability;
+
+  delete txn.alerts;
+  delete txn.priorities;
+  delete txn.recommendations;
+  delete txn.missingItems;
+  delete txn.missingDocuments;
+  delete txn.missingFields;
+  delete txn.reasoning;
+
+  /*
+  -------------------------------------------------------
+  Build the current authoritative Transaction Brain
+  -------------------------------------------------------
+  */
+
+  if (typeof aiAnalyzeTransaction === "function") {
+    aiAnalyzeTransaction(txn);
+  } else if (typeof aiRefreshTransaction === "function") {
+    aiRefreshTransaction(txn);
+  }
+
+  /*
+  -------------------------------------------------------
+  Rebuild operational automation after the Brain
+  -------------------------------------------------------
+  */
+
+  if (typeof txnApplyAutomation === "function") {
+    txnApplyAutomation(txn);
+  }
+
+  /*
+  -------------------------------------------------------
+  Store the transaction
+  -------------------------------------------------------
+  */
+
+  const index = txnCache.findIndex((item) => String(item.id) === String(id));
+
+  if (index >= 0) {
+    txnCache[index] = txn;
+  } else {
+    txnCache.unshift(txn);
+  }
+
+  console.log("BEFORE TXN SAVE", {
+    id: txn.id,
+    address: txn.address,
+    status: txn.status,
+    statusSource: txn.statusSource,
+    statusUpdatedAt: txn.statusUpdatedAt,
+    statusUpdatedBy: txn.statusUpdatedBy,
+  });
+
+  const saved = txnSaveAll();
+
+  if (saved === false) {
+    alert("The transaction could not be saved.");
+    return;
+  }
+
+  /*
+-------------------------------------------------------
+Maintain contact relationships
+-------------------------------------------------------
+*/
 
   if (typeof txnSyncTransactionRelationships === "function") {
     txnSyncTransactionRelationships(txn);
   }
 
-  document.getElementById("transactionFormCard").style.display = "none";
+  const formCard = document.getElementById("transactionFormCard");
+
+  if (formCard) {
+    formCard.style.display = "none";
+  }
 
   txnRenderAll();
-  renderContactTransactions();
-  loadCalendar();
+
+  if (typeof renderContactTransactions === "function") {
+    renderContactTransactions();
+  }
+
+  if (typeof loadCalendar === "function") {
+    loadCalendar();
+  }
 
   if (window.txnReturnToWorkspace) {
     const returnId = window.txnReturnToWorkspace;
+
     window.txnReturnToWorkspace = null;
 
     setTimeout(() => {
@@ -3367,7 +3761,11 @@ function txnOpenPanel(id) {
 
   if (typeof aiRefreshTransaction === "function") {
     try {
-      aiRefreshTransaction(txn);
+      const refreshedTxn = aiRefreshTransaction(txn);
+
+      if (refreshedTxn && typeof refreshedTxn === "object") {
+        Object.assign(txn, refreshedTxn);
+      }
     } catch (error) {
       console.error("Transaction Brain refresh failed:", error);
     }
@@ -3662,11 +4060,45 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
     doc.text || doc.extractedText || doc.ocrText || "",
   ).trim();
 
-  if (!documentText) {
+  const pageImages = Array.isArray(doc.pageImages)
+    ? doc.pageImages.filter((image) => {
+        if (typeof image === "string") {
+          return image.trim() !== "";
+        }
+
+        return (
+          image &&
+          typeof image === "object" &&
+          !Array.isArray(image) &&
+          String(
+            image.dataUrl ||
+              image.imageUrl ||
+              image.image_url ||
+              image.url ||
+              "",
+          ).trim() !== ""
+        );
+      })
+    : [];
+
+  if (!documentText && pageImages.length === 0) {
     throw new Error(
-      "RapportLink cannot analyze this document because no readable text was extracted.",
+      "RapportLink cannot analyze this document because no readable text or page images were produced.",
     );
   }
+
+  /*
+  ---------------------------------------------------------
+  Send both forms of document evidence:
+
+  - extracted text for clauses, dates, amounts, and terms
+  - rendered page images for signatures, initials, boxes,
+    handwriting, stamps, strikeouts, and visual execution
+
+  The prior version created pageImages but did not include
+  them in this request, so the server never received them.
+  ---------------------------------------------------------
+  */
 
   const response = await fetch("/api/ai/universal-document", {
     method: "POST",
@@ -3678,20 +4110,70 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
     body: JSON.stringify({
       txn: {
         id: txn.id || null,
+
         side: txn.side || "",
+
         address: txn.address || txn.propertyAddress || "",
+
         propertyAddress: txn.propertyAddress || txn.address || "",
+
         country: txn.country || "",
+
         state: txn.state || "",
       },
 
       doc: {
         id: doc.id || null,
+
+        sourceDocumentId: doc.id || null,
+
         name: doc.name || "Uploaded Document",
-        type: doc.type || "",
+
+        originalName: doc.name || "Uploaded Document",
+
+        type: doc.type || doc.mimeType || "",
+
+        mimeType: doc.mimeType || doc.type || "",
+
+        size: Number(doc.size || 0),
+
+        fileSize: Number(doc.size || 0),
+
+        uploadedAt: doc.uploadedAt || "",
+
         text: documentText,
+
         extractedText: documentText,
-        extraction: doc.extraction || {},
+
+        pageImages,
+
+        pageCount:
+          Number(
+            doc.extraction?.pages || doc.pageCount || pageImages.length || 0,
+          ) || null,
+
+        extraction:
+          doc.extraction && typeof doc.extraction === "object"
+            ? {
+                method: doc.extraction.method || "unknown",
+
+                pages: Number(doc.extraction.pages || pageImages.length || 0),
+
+                warnings: Array.isArray(doc.extraction.warnings)
+                  ? [...doc.extraction.warnings]
+                  : [],
+
+                extractedAt: doc.extraction.extractedAt || "",
+              }
+            : {
+                method: "unknown",
+
+                pages: pageImages.length,
+
+                warnings: [],
+
+                extractedAt: "",
+              },
       },
     }),
   });
@@ -3705,20 +4187,29 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
     );
   }
 
-  const universalAnalysis = result.analysis;
+  const universalAnalysis =
+    result.analysis &&
+    typeof result.analysis === "object" &&
+    !Array.isArray(result.analysis)
+      ? result.analysis
+      : {};
 
   /*
   ---------------------------------------------------------
-  Normalize Universal AI output for the Transaction Brain.
+  Compatibility normalization
 
-  The full Universal analysis is preserved, while the
-  compatibility fields allow the existing Brain to consume
-  the evidence during the architecture transition.
+  Preserve the complete authoritative Universal analysis,
+  while also exposing the fields directly at the top level
+  for the Transaction Brain and existing workspace UI.
   ---------------------------------------------------------
   */
 
   const normalizeConfidence = (value) => {
     const number = Number(value || 0);
+
+    if (!Number.isFinite(number)) {
+      return 0;
+    }
 
     if (number > 0 && number <= 1) {
       return Math.round(number * 100);
@@ -3729,11 +4220,15 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
 
   const normalizeFacts = (facts) => {
     if (!Array.isArray(facts)) {
-      return facts && typeof facts === "object" ? facts : {};
+      return facts && typeof facts === "object" && !Array.isArray(facts)
+        ? facts
+        : {};
     }
 
     return facts.reduce((output, item) => {
-      if (!item || !item.name) return output;
+      if (!item || typeof item !== "object" || !item.name) {
+        return output;
+      }
 
       output[item.name] = item.value;
 
@@ -3745,22 +4240,72 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
     ? universalAnalysis.evidence.map((item) => ({
         ...item,
 
-        confidence: normalizeConfidence(item.confidence),
+        confidence: normalizeConfidence(item?.confidence),
 
-        facts: normalizeFacts(item.facts),
+        facts: normalizeFacts(item?.facts),
 
         sourceDocumentId:
-          item.sourceDocumentId ||
+          item?.sourceDocumentId ||
           universalAnalysis.sourceDocumentId ||
           doc.id ||
           null,
 
         sourceDocument:
-          item.sourceDocument ||
+          item?.sourceDocument ||
           universalAnalysis.sourceDocument ||
           doc.name ||
           "Uploaded Document",
       }))
+    : [];
+
+  const execution =
+    universalAnalysis.execution &&
+    typeof universalAnalysis.execution === "object" &&
+    !Array.isArray(universalAnalysis.execution)
+      ? {
+          ...universalAnalysis.execution,
+
+          confidence: normalizeConfidence(
+            universalAnalysis.execution.confidence,
+          ),
+        }
+      : {
+          executed: false,
+
+          fullyExecuted: false,
+
+          signaturesComplete: false,
+
+          initialsComplete: false,
+
+          effective: false,
+
+          executionDate: "",
+
+          effectiveDate: "",
+
+          confidence: 0,
+
+          supportingText: "",
+        };
+
+  const semanticEffects =
+    universalAnalysis.semanticEffects &&
+    typeof universalAnalysis.semanticEffects === "object" &&
+    !Array.isArray(universalAnalysis.semanticEffects)
+      ? universalAnalysis.semanticEffects
+      : {};
+
+  const transactionEvents = Array.isArray(universalAnalysis.transactionEvents)
+    ? universalAnalysis.transactionEvents
+    : [];
+
+  const signatures = Array.isArray(universalAnalysis.signatures)
+    ? universalAnalysis.signatures
+    : [];
+
+  const initials = Array.isArray(universalAnalysis.initials)
+    ? universalAnalysis.initials
     : [];
 
   return {
@@ -3775,20 +4320,39 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
     documentName:
       doc.name || universalAnalysis.sourceDocument || "Uploaded Document",
 
-    documentType: universalAnalysis.classification?.documentType || "Unknown",
+    documentType:
+      universalAnalysis.classification?.documentType ||
+      universalAnalysis.documentType ||
+      "Unknown",
 
     documentTypes: [
-      universalAnalysis.classification?.documentType || "Unknown",
+      universalAnalysis.classification?.documentType ||
+        universalAnalysis.documentType ||
+        "Unknown",
     ],
 
     confidence: normalizeConfidence(
-      universalAnalysis.classification?.confidence,
+      universalAnalysis.classification?.confidence ??
+        universalAnalysis.confidence,
     ),
+
+    execution,
+
+    semanticEffects,
+
+    transactionEvents,
+
+    signatures,
+
+    initials,
 
     evidence,
 
+    facts: normalizeFacts(universalAnalysis.facts),
+
     advisorSummary:
       universalAnalysis.summary ||
+      universalAnalysis.advisorSummary ||
       "RapportLink completed its AI review of this document.",
 
     reviewedAt: universalAnalysis.reviewedAt || new Date().toISOString(),
@@ -3798,12 +4362,101 @@ async function txnAnalyzeDocumentWithUniversalAI(txn = {}, doc = {}) {
 }
 
 async function txnWorkspaceUploadDocuments(txnId, event) {
-  const files = Array.from(event.target.files || []);
+  const files = Array.from(event?.target?.files || []);
 
-  if (!files.length) return;
+  if (!files.length) {
+    return;
+  }
 
   const uploadInput = event.target;
   uploadInput.disabled = true;
+
+  /*
+  -------------------------------------------------------
+  Safe DealPilot progress renderer
+
+  This updates only a temporary DOM card. It does not:
+
+  - reload txnCache
+  - reopen the workspace
+  - rebuild the transaction
+  - render the transaction list
+  - interrupt document processing
+  -------------------------------------------------------
+  */
+
+  const renderDealPilotProgress = (txn, status) => {
+    if (typeof dealPilotSetDocumentStatus === "function") {
+      dealPilotSetDocumentStatus(status);
+    }
+
+    let overlay = document.getElementById("dealPilotDocumentProcessingOverlay");
+
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "dealPilotDocumentProcessingOverlay";
+
+      overlay.style.cssText = `
+        position: fixed;
+        right: 28px;
+        bottom: 28px;
+        width: min(460px, calc(100vw - 40px));
+        max-height: calc(100vh - 56px);
+        overflow-y: auto;
+        z-index: 2147483647;
+      `;
+
+      document.body.appendChild(overlay);
+    }
+
+    if (typeof dealPilotBuildDocumentStatusCard === "function") {
+      overlay.innerHTML = dealPilotBuildDocumentStatusCard(txn);
+    }
+  };
+
+  const removeDealPilotProgress = () => {
+    const overlay = document.getElementById(
+      "dealPilotDocumentProcessingOverlay",
+    );
+
+    if (overlay) {
+      overlay.remove();
+    }
+  };
+
+  /*
+  -------------------------------------------------------
+  Confirm permanent repository availability
+  -------------------------------------------------------
+  */
+
+  const repositoryReady =
+    typeof window.repoSaveOriginalDocument === "function" &&
+    typeof window.repoUpdateMetadata === "function" &&
+    typeof window.repoSaveOCR === "function" &&
+    typeof window.repoSavePageImages === "function" &&
+    typeof window.repoSaveAnalysis === "function" &&
+    typeof window.repoMarkAnalysisFailed === "function";
+
+  if (!repositoryReady) {
+    uploadInput.disabled = false;
+    uploadInput.value = "";
+
+    alert(
+      "RapportLink Document Repository is not available. The document was not uploaded.",
+    );
+
+    return;
+  }
+
+  /*
+  -------------------------------------------------------
+  Load once before processing begins.
+
+  Nothing inside the file-processing loop may reload
+  txnCache.
+  -------------------------------------------------------
+  */
 
   txnLoad();
 
@@ -3812,7 +4465,9 @@ async function txnWorkspaceUploadDocuments(txnId, event) {
   if (!txn) {
     uploadInput.disabled = false;
     uploadInput.value = "";
+
     alert("Transaction could not be found.");
+
     return;
   }
 
@@ -3820,59 +4475,145 @@ async function txnWorkspaceUploadDocuments(txnId, event) {
     txn.documents = [];
   }
 
+  const uploadLabel =
+    files.length === 1 ? files[0].name : `${files.length} documents`;
+
+  renderDealPilotProgress(txn, {
+    transactionId: txnId,
+
+    documentName: uploadLabel,
+
+    stage: "received",
+
+    message:
+      files.length === 1
+        ? `Thanks, Jeff. I received ${files[0].name}. I’m preparing to read it now.`
+        : `Thanks, Jeff. I received ${files.length} documents. I’m preparing to read them now.`,
+
+    detail:
+      "I’ll review the text, page images, signatures, initials, dates, checkboxes, handwriting, and transaction terms.",
+
+    progress: 10,
+  });
+
   try {
-    for (const file of files) {
+    /*
+    -------------------------------------------------------
+    Process every file against this same live transaction.
+
+    Save and render only after every selected file has
+    completed.
+    -------------------------------------------------------
+    */
+
+    for (let fileIndex = 0; fileIndex < files.length; fileIndex++) {
+      const file = files[fileIndex];
+
       const doc = {
-        id: Date.now() + Math.floor(Math.random() * 100000),
+        id: String(Date.now() + fileIndex + Math.floor(Math.random() * 100000)),
+
         name: file.name,
+
         type: file.type || "file",
-        size: file.size || 0,
+
+        mimeType: file.type || "",
+
+        size: Number(file.size || 0),
 
         data: "",
+
         text: "",
+
         extractedText: "",
+
+        pageImages: [],
 
         uploadedAt: new Date().toISOString(),
 
-        storage: TXN_DOC_STORAGE_NOTICE,
+        storage: "RapportLink Document Repository",
 
         extraction: {
           method: "pending",
+
           pages: 0,
+
           warnings: [],
+
+          extractedAt: "",
         },
 
         aiAnalysis: null,
 
         engineVersion: 0,
 
+        lastAnalyzed: "",
+
         analysisStatus: "Reading document",
+
+        analysisError: null,
       };
 
       txn.documents.push(doc);
       txn.updatedAt = new Date().toISOString();
 
-      /*
-      ---------------------------------------------------
-      IMPORTANT
-
-      Do not call txnRenderAll(), txnOpenPanel(), or
-      txnLoad() while extraction is running.
-
-      Those functions reload txnCache and disconnect the
-      live document object being processed.
-      ---------------------------------------------------
-      */
-
       try {
+        /*
+        ---------------------------------------------------
+        Stage 0: Save the original source file
+        ---------------------------------------------------
+        */
+
+        await window.repoSaveOriginalDocument(doc.id, {
+          blob: file,
+          fileName: file.name,
+          mimeType: file.type || "",
+          size: Number(file.size || 0),
+          uploadedAt: doc.uploadedAt,
+        });
+
+        await window.repoUpdateMetadata(doc.id, {
+          transactionId: String(txn.id || txnId || ""),
+          transactionAddress: txn.address || txn.propertyAddress || "",
+          fileName: file.name,
+          mimeType: file.type || "",
+          size: Number(file.size || 0),
+          uploadedAt: doc.uploadedAt,
+          provider: "Local File",
+        });
+
+        /*
+        ---------------------------------------------------
+        Stage 1: Read and visually render the document
+        ---------------------------------------------------
+        */
+
         if (typeof window.aiExtractDocumentText !== "function") {
           throw new Error("AI Extraction Engine is not available.");
         }
+
+        renderDealPilotProgress(txn, {
+          transactionId: txnId,
+
+          documentName: file.name,
+
+          stage: "reading",
+
+          message: `I’m reading ${file.name} now.`,
+
+          detail:
+            "I’m extracting the text and rendering each page so I can review signatures, initials, checkboxes, handwriting, stamps, and other visual evidence.",
+
+          progress: 30,
+        });
 
         const extraction = await window.aiExtractDocumentText(file);
 
         doc.text = String(extraction?.text || "");
         doc.extractedText = doc.text;
+
+        doc.pageImages = Array.isArray(extraction?.pageImages)
+          ? extraction.pageImages
+          : [];
 
         doc.extraction = {
           method: extraction?.method || "none",
@@ -3880,101 +4621,287 @@ async function txnWorkspaceUploadDocuments(txnId, event) {
           pages: Number(extraction?.pages || 0),
 
           warnings: Array.isArray(extraction?.warnings)
-            ? extraction.warnings
+            ? [...extraction.warnings]
             : [],
 
           extractedAt: extraction?.extractedAt || new Date().toISOString(),
         };
 
-        console.log(`Extracted ${doc.text.length} characters from ${doc.name}`);
+        await window.repoSaveOCR(doc.id, {
+          extractedText: doc.extractedText,
+          method: doc.extraction.method,
+          pages: doc.extraction.pages,
+          warnings: doc.extraction.warnings,
+          extractedAt: doc.extraction.extractedAt,
+        });
+
+        await window.repoSavePageImages(doc.id, doc.pageImages, {
+          pageCount: doc.extraction.pages || doc.pageImages.length,
+          renderScale: 1.5,
+          imageFormat:
+            doc.pageImages[0]?.mimeType ||
+            (file.type && file.type.startsWith("image/")
+              ? file.type
+              : "image/jpeg"),
+          generatedAt: doc.extraction.extractedAt,
+        });
+
+        console.log(
+          `Extracted ${doc.text.length} characters and ${doc.pageImages.length} page images from ${doc.name}`,
+        );
 
         doc.analysisStatus = doc.text.trim()
           ? "Document read"
           : "No readable text found";
 
+        /*
+        ---------------------------------------------------
+        Stage 2: Universal Document Intelligence
+        ---------------------------------------------------
+        */
+
         if (typeof txnAnalyzeDocumentWithUniversalAI !== "function") {
           throw new Error("Universal Document Engine is not available.");
         }
 
+        renderDealPilotProgress(txn, {
+          transactionId: txnId,
+
+          documentName: file.name,
+
+          stage: "analyzing",
+
+          message: "I’ve finished reading the document. I’m analyzing it now.",
+
+          detail:
+            "I’m identifying the document type and reviewing the parties, signatures, initials, dates, amounts, handwritten changes, checkboxes, obligations, execution status, and transaction effects.",
+
+          progress: 65,
+        });
+
         const analysis = await txnAnalyzeDocumentWithUniversalAI(txn, doc);
+
+        if (
+          !analysis ||
+          typeof analysis !== "object" ||
+          Array.isArray(analysis)
+        ) {
+          throw new Error(
+            "Universal Document Engine returned an invalid analysis.",
+          );
+        }
 
         doc.aiAnalysis = analysis;
 
         console.log("AI ANALYSIS", {
+          documentId: doc.id,
+
+          documentName: doc.name,
+
           documentType: analysis.documentType,
+
           documentTypes: analysis.documentTypes,
+
+          execution:
+            analysis.execution || analysis.universalAnalysis?.execution || null,
 
           transactionEffect: analysis.classification?.transactionEffect || "",
 
-          semanticEffects: analysis.semanticEffects || null,
+          semanticEffects:
+            analysis.semanticEffects ||
+            analysis.universalAnalysis?.semanticEffects ||
+            null,
 
           transactionEvents: Array.isArray(analysis.transactionEvents)
             ? analysis.transactionEvents
-            : [],
+            : Array.isArray(analysis.universalAnalysis?.transactionEvents)
+              ? analysis.universalAnalysis.transactionEvents
+              : [],
+
+          signatures: Array.isArray(analysis.signatures)
+            ? analysis.signatures
+            : Array.isArray(analysis.universalAnalysis?.signatures)
+              ? analysis.universalAnalysis.signatures
+              : [],
 
           evidenceTypes: Array.isArray(analysis.evidence)
-            ? analysis.evidence.map((item) => item.type)
-            : [],
+            ? analysis.evidence.map((item) => item?.type)
+            : Array.isArray(analysis.evidence?.items)
+              ? analysis.evidence.items.map((item) => item?.type)
+              : Array.isArray(analysis.universalAnalysis?.evidence?.items)
+                ? analysis.universalAnalysis.evidence.items.map(
+                    (item) => item?.type,
+                  )
+                : [],
 
-          evidence: analysis.evidence,
+          evidence:
+            analysis.evidence || analysis.universalAnalysis?.evidence || null,
         });
 
-        doc.engineVersion = analysis.engineVersion || null;
+        doc.engineVersion = Number(
+          analysis.engineVersion ||
+            analysis.version ||
+            analysis.universalAnalysis?.engineVersion ||
+            0,
+        );
 
-        doc.lastAnalyzed = new Date().toISOString();
+        doc.lastAnalyzed = analysis.reviewedAt || new Date().toISOString();
+
+        await window.repoSaveAnalysis(doc.id, analysis, {
+          model:
+            analysis.model ||
+            analysis.usage?.model ||
+            analysis.universalAnalysis?.model ||
+            "",
+          reviewedAt: doc.lastAnalyzed,
+          engineVersion:
+            analysis.engineVersion ||
+            analysis.universalAnalysis?.engineVersion ||
+            "",
+          schemaVersion:
+            analysis.schemaVersion ||
+            analysis.universalAnalysis?.schemaVersion ||
+            "",
+          status: "Complete",
+        });
+
+        /*
+        ---------------------------------------------------
+        Stage 3: Update the Transaction Brain
+
+        This operates on the same live transaction object.
+        It does not reload txnCache or render the UI.
+        ---------------------------------------------------
+        */
+
+        renderDealPilotProgress(txn, {
+          transactionId: txnId,
+
+          documentName: file.name,
+
+          stage: "updating",
+
+          message:
+            "I’ve completed the document review. I’m updating the Transaction Brain now.",
+
+          detail:
+            "I’m adding the new evidence and checking whether it changes the transaction state, health, confidence, priorities, recommendations, or missing items.",
+
+          progress: 88,
+        });
 
         if (typeof aiRefreshTransaction === "function") {
           aiRefreshTransaction(txn);
+        } else if (typeof aiBuildTransactionBrain === "function") {
+          txn.transactionBrain = aiBuildTransactionBrain(txn);
         }
+
+        /*
+        ---------------------------------------------------
+        Advisor compatibility
+
+        This only records the completed document review.
+        It must not save, reload, or reopen the workspace.
+        ---------------------------------------------------
+        */
 
         if (typeof window.aiAdvisorDocumentAnalysis === "function") {
           window.aiAdvisorDocumentAnalysis(txn, doc, doc.aiAnalysis);
         }
 
         doc.analysisStatus = "AI review complete";
-      } catch (err) {
-        console.error(`Document processing failed for ${file.name}:`, err);
+        doc.analysisError = null;
+
+        console.log("DOCUMENT SAVED TO REPOSITORY", {
+          documentId: doc.id,
+          transactionId: String(txn.id || txnId || ""),
+          documentName: doc.name,
+          mimeType: doc.mimeType,
+          extractedTextLength: doc.extractedText.length,
+          pageImageCount: doc.pageImages.length,
+          analysisSaved: true,
+        });
+      } catch (error) {
+        console.error(`Document processing failed for ${file.name}:`, error);
 
         doc.analysisStatus = "Review failed";
 
-        doc.extraction = doc.extraction || {
-          method: "failed",
-          pages: 0,
-          warnings: [],
-        };
+        doc.analysisError =
+          error?.message || "The document could not be processed.";
 
-        doc.extraction.method =
-          doc.extraction.method === "pending"
-            ? "failed"
-            : doc.extraction.method;
+        doc.extraction =
+          doc.extraction && typeof doc.extraction === "object"
+            ? doc.extraction
+            : {
+                method: "failed",
+
+                pages: 0,
+
+                warnings: [],
+
+                extractedAt: "",
+              };
+
+        if (doc.extraction.method === "pending") {
+          doc.extraction.method = "failed";
+        }
 
         doc.extraction.warnings = [
-          ...(doc.extraction.warnings || []),
+          ...(Array.isArray(doc.extraction.warnings)
+            ? doc.extraction.warnings
+            : []),
 
-          err?.message || "The document could not be processed.",
+          doc.analysisError,
         ];
 
         doc.aiAnalysis = {
           engineVersion: null,
 
           documentId: doc.id,
+
           documentName: doc.name,
 
           documentType: "Document Review Failed",
+
           documentTypes: ["Document Review Failed"],
 
           confidence: 0,
 
+          execution: {
+            executed: false,
+
+            fullyExecuted: false,
+
+            signaturesComplete: false,
+
+            initialsComplete: false,
+
+            effective: false,
+
+            executionDate: "",
+
+            effectiveDate: "",
+
+            confidence: 0,
+
+            supportingText: doc.analysisError,
+          },
+
           evidence: [],
+
           facts: {},
+
+          semanticEffects: {},
+
+          transactionEvents: [],
 
           alerts: [
             {
               severity: "high",
+
               title: "Document Could Not Be Read",
-              text:
-                err?.message ||
-                "RapportLink could not read this uploaded document.",
+
+              text: doc.analysisError,
             },
           ],
 
@@ -3983,6 +4910,7 @@ async function txnWorkspaceUploadDocuments(txnId, event) {
           ],
 
           checklistUpdates: [],
+
           timelineUpdates: [],
 
           advisorSummary:
@@ -3991,27 +4919,132 @@ async function txnWorkspaceUploadDocuments(txnId, event) {
           reviewedAt: new Date().toISOString(),
 
           autoApplied: false,
+
           autoAppliedActions: [],
         };
+
+        try {
+          await window.repoMarkAnalysisFailed(doc.id, error, {
+            model: "",
+          });
+        } catch (repositoryError) {
+          console.error(
+            "Unable to save repository failure status:",
+            repositoryError,
+          );
+        }
+
+        renderDealPilotProgress(txn, {
+          transactionId: txnId,
+
+          documentName: file.name,
+
+          stage: "failed",
+
+          message:
+            "I received the document, but I could not complete the review.",
+
+          detail: doc.analysisError,
+
+          progress: 100,
+        });
       }
-
-      /*
-      ---------------------------------------------------
-      Save and render only after extraction and analysis
-      are completely finished.
-      ---------------------------------------------------
-      */
-
-      txn.updatedAt = new Date().toISOString();
-
-      if (typeof txnApplyAutomation === "function") {
-        txnApplyAutomation(txn);
-      }
-
-      txnSaveAll();
-      txnRenderAll();
-      txnOpenPanel(txnId);
     }
+
+    /*
+    -------------------------------------------------------
+    Every selected file has now finished.
+
+    Rebuild once, save once, and render once.
+    -------------------------------------------------------
+    */
+
+    txn.updatedAt = new Date().toISOString();
+
+    if (typeof aiAnalyzeTransaction === "function") {
+      aiAnalyzeTransaction(txn);
+    } else if (typeof aiRefreshTransaction === "function") {
+      aiRefreshTransaction(txn);
+    }
+
+    if (typeof txnApplyAutomation === "function") {
+      txnApplyAutomation(txn);
+    }
+
+    const saved = txnSaveAll();
+
+    if (saved === false) {
+      throw new Error("The uploaded documents could not be saved.");
+    }
+
+    renderDealPilotProgress(txn, {
+      transactionId: txnId,
+
+      documentName: uploadLabel,
+
+      stage: "complete",
+
+      message:
+        files.length === 1
+          ? "Review complete. I’ve saved the source document, retained the document analysis, and updated the Transaction Brain."
+          : `Review complete. I’ve saved all ${files.length} source documents, retained their analyses, and updated the Transaction Brain.`,
+
+      detail:
+        "The original files, extracted text, rendered page images, and completed AI reviews are now stored in the RapportLink Document Repository.",
+
+      progress: 100,
+    });
+
+    /*
+    -------------------------------------------------------
+    Processing is finished, so normal rendering is safe.
+    -------------------------------------------------------
+    */
+
+    if (typeof dealPilotClearDocumentStatus === "function") {
+      dealPilotClearDocumentStatus(txnId);
+    }
+
+    txnRenderAll();
+    txnOpenPanel(txnId);
+
+    /*
+     * Keep the completion message visible briefly without
+     * reopening or reloading the transaction.
+     */
+    window.setTimeout(() => {
+      removeDealPilotProgress();
+    }, 1800);
+  } catch (error) {
+    console.error("Transaction document upload failed:", error);
+
+    renderDealPilotProgress(txn, {
+      transactionId: txnId,
+
+      documentName: uploadLabel,
+
+      stage: "failed",
+
+      message: "I could not finish processing the uploaded document.",
+
+      detail:
+        error?.message || "RapportLink could not complete the document review.",
+
+      progress: 100,
+    });
+
+    alert(
+      error?.message ||
+        "RapportLink could not finish processing the uploaded documents.",
+    );
+
+    window.setTimeout(() => {
+      removeDealPilotProgress();
+
+      if (typeof dealPilotClearDocumentStatus === "function") {
+        dealPilotClearDocumentStatus(txnId);
+      }
+    }, 3500);
   } finally {
     uploadInput.disabled = false;
     uploadInput.value = "";
@@ -4137,9 +5170,9 @@ function txnEffectiveStatus(txn = {}) {
     return txn.transactionBrain.transactionState;
   }
 
-  if (txn.aiCoordinator?.transactionState) {
-    return txn.aiCoordinator.transactionState;
-  }
+  // No fallback AI state.
+  // If the Brain has not produced a decision yet,
+  // report Unknown so the UI never invents one.
 
-  return txn.status || "Active";
+  return "Unknown";
 }

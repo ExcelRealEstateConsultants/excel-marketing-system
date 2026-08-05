@@ -251,56 +251,725 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
     asArray,
   } = helpers;
 
-  docs.forEach((doc) => {
-    if (!doc) {
+  const isObject = (value) =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+
+  const hasValue = (value) =>
+    value !== undefined &&
+    value !== null &&
+    !(typeof value === "string" && value.trim() === "");
+
+  const firstValue = (...values) => values.find((value) => hasValue(value));
+
+  const normalizeKeyName = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "");
+
+  /*
+   * Convert document-specific fact names into the canonical
+   * names consumed by aiExtractCanonicalFacts().
+   */
+  const canonicalFactAliases = {
+    purchasePrice: [
+      "purchasePrice",
+      "purchase_price",
+      "salesPrice",
+      "salePrice",
+      "contractPrice",
+      "price",
+      "totalSalesPrice",
+      "listPrice",
+      "listingPrice",
+      "originalListPrice",
+      "newListPrice",
+      "newListingPrice",
+      "revisedListPrice",
+      "revisedListingPrice",
+      "newPrice",
+    ],
+
+    earnestMoney: [
+      "earnestMoney",
+      "earnest_money",
+      "earnestMoneyDeposit",
+      "depositAmount",
+      "initialDeposit",
+    ],
+
+    effectiveDate: [
+      "effectiveDate",
+      "effective_date",
+      "contractEffectiveDate",
+      "agreementEffectiveDate",
+    ],
+
+    closingDate: [
+      "closingDate",
+      "closing_date",
+      "closeDate",
+      "scheduledClosingDate",
+      "contractClosingDate",
+    ],
+
+    actualClosingDate: [
+      "actualClosingDate",
+      "actual_closing_date",
+      "closedDate",
+      "settlementDate",
+      "recordingDate",
+    ],
+
+    terminationDate: [
+      "terminationDate",
+      "termination_date",
+      "cancellationDate",
+      "cancelledDate",
+      "canceledDate",
+    ],
+
+    sellerCredit: [
+      "sellerCredit",
+      "sellerCredits",
+      "sellerConcession",
+      "sellerConcessions",
+      "creditAmount",
+      "sellerContribution",
+    ],
+
+    inspectionDays: [
+      "inspectionDays",
+      "inspectionPeriodDays",
+      "dueDiligenceDays",
+    ],
+
+    optionDays: ["optionDays", "optionPeriodDays"],
+
+    financingDeadline: [
+      "financingDeadline",
+      "loanDeadline",
+      "financingContingencyDeadline",
+    ],
+
+    appraisalDeadline: ["appraisalDeadline", "appraisalContingencyDeadline"],
+  };
+
+  const aliasLookup = new Map();
+
+  Object.entries(canonicalFactAliases).forEach(([canonicalName, aliases]) => {
+    aliases.forEach((alias) => {
+      aliasLookup.set(normalizeKeyName(alias), canonicalName);
+    });
+  });
+
+  const canonicalizeFactKey = (key) => {
+    const normalized = normalizeKeyName(key);
+
+    return aliasLookup.get(normalized) || String(key || "").trim();
+  };
+
+  const reconcileEvidence = (record, doc, analysis) => {
+    if (!record || typeof record !== "object") {
       return;
     }
 
-    const analysis = doc.aiAnalysis || doc.universalAnalysis || doc.ai || null;
+    const normalized = normalizeEvidence(record, doc, analysis);
+
+    if (!normalized.key || !hasValue(normalized.value)) {
+      return;
+    }
+
+    brain.reconciliationEngine.reconcile(normalized);
+  };
+
+  /*
+   * Turn each fact inside an evidence item's `facts` property
+   * into its own keyed EvidenceRecord.
+   */
+  const addFactCollection = (facts, parentEvidence, doc, analysis) => {
+    if (!facts) {
+      return;
+    }
+
+    const addFact = (rawKey, rawValue, metadata = {}) => {
+      const canonicalKey = canonicalizeFactKey(rawKey);
+
+      if (!canonicalKey || !hasValue(rawValue)) {
+        return;
+      }
+
+      reconcileEvidence(
+        {
+          key: canonicalKey,
+          value: rawValue,
+
+          type: firstValue(metadata.type, parentEvidence?.type, "fact"),
+
+          confidence: firstValue(
+            metadata.confidence,
+            parentEvidence?.confidence,
+            50,
+          ),
+
+          page: firstValue(metadata.page, parentEvidence?.page, null),
+
+          supportingText: firstValue(
+            metadata.supportingText,
+            parentEvidence?.supportingText,
+            parentEvidence?.value,
+            "",
+          ),
+
+          documentId: firstValue(
+            metadata.documentId,
+            metadata.sourceDocumentId,
+            parentEvidence?.documentId,
+            parentEvidence?.sourceDocumentId,
+            analysis?.documentId,
+            doc?.id,
+            null,
+          ),
+
+          documentName: firstValue(
+            metadata.documentName,
+            metadata.sourceDocument,
+            parentEvidence?.documentName,
+            parentEvidence?.sourceDocument,
+            analysis?.documentName,
+            doc?.name,
+            "Uploaded Document",
+          ),
+
+          documentType: firstValue(
+            metadata.documentType,
+            parentEvidence?.documentType,
+            analysis?.documentType,
+            analysis?.classification?.documentType,
+            null,
+          ),
+
+          extractedBy: firstValue(
+            metadata.extractedBy,
+            parentEvidence?.extractedBy,
+            "gpt",
+          ),
+
+          reasoning: asArray(
+            firstValue(metadata.reasoning, parentEvidence?.reasoning, []),
+          ),
+
+          metadata: {
+            ...(isObject(parentEvidence?.metadata)
+              ? parentEvidence.metadata
+              : {}),
+
+            ...(isObject(metadata.metadata) ? metadata.metadata : {}),
+
+            originalFactKey: rawKey,
+            parentEvidenceType: parentEvidence?.type || "",
+          },
+        },
+        doc,
+        analysis,
+      );
+    };
+
+    if (Array.isArray(facts)) {
+      facts.forEach((fact) => {
+        if (!fact || typeof fact !== "object") {
+          return;
+        }
+
+        const key = firstValue(
+          fact.key,
+          fact.factType,
+          fact.name,
+          fact.field,
+          fact.path,
+          "",
+        );
+
+        const value = firstValue(
+          fact.value,
+          fact.normalizedValue,
+          fact.extractedValue,
+          fact.content,
+          fact.text,
+        );
+
+        addFact(key, value, fact);
+      });
+
+      return;
+    }
+
+    if (!isObject(facts)) {
+      return;
+    }
+
+    Object.entries(facts).forEach(([key, entry]) => {
+      if (isObject(entry)) {
+        const value = firstValue(
+          entry.value,
+          entry.normalizedValue,
+          entry.extractedValue,
+          entry.content,
+          entry.text,
+        );
+
+        addFact(key, value, entry);
+        return;
+      }
+
+      addFact(key, entry);
+    });
+  };
+
+  const inferEvidenceFact = (item, doc, analysis) => {
+    const evidenceType = normalizeKeyName(item?.type);
+    const evidenceValue = item?.value;
+
+    /*
+     * Some important values are stored as the evidence value,
+     * rather than inside the nested facts collection.
+     */
+    if (
+      evidenceType.includes("closingterm") ||
+      evidenceType.includes("closingdate")
+    ) {
+      reconcileEvidence(
+        {
+          ...item,
+          key: "closingDate",
+          value: evidenceValue,
+          type: "date",
+        },
+        doc,
+        analysis,
+      );
+    }
+
+    if (
+      evidenceType.includes("effectivedate") ||
+      evidenceType.includes("contractdate")
+    ) {
+      reconcileEvidence(
+        {
+          ...item,
+          key: "effectiveDate",
+          value: evidenceValue,
+          type: "date",
+        },
+        doc,
+        analysis,
+      );
+    }
+
+    if (
+      evidenceType.includes("terminationdate") ||
+      evidenceType.includes("cancellationdate")
+    ) {
+      reconcileEvidence(
+        {
+          ...item,
+          key: "terminationDate",
+          value: evidenceValue,
+          type: "date",
+        },
+        doc,
+        analysis,
+      );
+    }
+  };
+
+  const addEvidenceCollection = (evidence, doc, analysis) => {
+    let items = [];
+
+    if (Array.isArray(evidence)) {
+      items = evidence;
+    } else if (isObject(evidence)) {
+      items = [
+        ...asArray(evidence.items),
+        ...asArray(evidence.records),
+        ...asArray(evidence.evidence),
+      ];
+    }
+
+    items.forEach((item) => {
+      if (!item || typeof item !== "object") {
+        return;
+      }
+
+      /*
+       * Preserve explicitly keyed evidence records.
+       */
+      const explicitKey = firstValue(
+        item.key,
+        item.name,
+        item.field,
+        item.path,
+        "",
+      );
+
+      if (explicitKey && hasValue(item.value)) {
+        reconcileEvidence(
+          {
+            ...item,
+            key: canonicalizeFactKey(explicitKey),
+          },
+          doc,
+          analysis,
+        );
+      }
+
+      /*
+       * Expand nested facts into independent evidence records.
+       */
+      addFactCollection(item.facts, item, doc, analysis);
+
+      inferEvidenceFact(item, doc, analysis);
+    });
+  };
+
+  const addExecutionEffect = (effectType, analysis, doc, confidence = 90) => {
+    brain.semanticEffects.push({
+      type: effectType,
+      occurred: true,
+      date: firstValue(
+        analysis?.effectiveDate,
+        analysis?.executionDate,
+        analysis?.signedDate,
+        "",
+      ),
+      confidence,
+      supportingText: firstValue(
+        analysis?.executionSummary,
+        analysis?.summary,
+        `${effectType} supported by the document analysis.`,
+      ),
+      sourceDocumentId: firstValue(analysis?.documentId, doc?.id, null),
+      sourceDocument: firstValue(
+        analysis?.documentName,
+        doc?.name,
+        "Uploaded Document",
+      ),
+    });
+  };
+
+  /*
+   * Conservative execution inference for older saved analyses
+   * that contain classification/execution information but no
+   * semanticEffects collection.
+   */
+  const inferExecutionEffects = (analysis, doc) => {
+    if (!analysis || typeof analysis !== "object") {
+      return;
+    }
+
+    const nestedAnalysis =
+      analysis.universalAnalysis &&
+      typeof analysis.universalAnalysis === "object"
+        ? analysis.universalAnalysis
+        : {};
+
+    const documentType = String(
+      firstValue(
+        analysis.documentType,
+        analysis.classification?.documentType,
+        nestedAnalysis.documentType,
+        nestedAnalysis.classification?.documentType,
+        analysis.type,
+        "",
+      ),
+    )
+      .trim()
+      .toLowerCase();
+
+    const execution =
+      analysis.execution && typeof analysis.execution === "object"
+        ? analysis.execution
+        : nestedAnalysis.execution &&
+            typeof nestedAnalysis.execution === "object"
+          ? nestedAnalysis.execution
+          : {};
+
+    const executionStatus = String(
+      firstValue(
+        analysis.executionStatus,
+        analysis.documentExecutionStatus,
+        analysis.signatureStatus,
+        analysis.classification?.executionStatus,
+        nestedAnalysis.executionStatus,
+        nestedAnalysis.documentExecutionStatus,
+        nestedAnalysis.signatureStatus,
+        nestedAnalysis.classification?.executionStatus,
+        execution.status,
+        "",
+      ),
+    )
+      .trim()
+      .toLowerCase();
+
+    const signatures = [
+      ...asArray(analysis.signatures),
+      ...asArray(nestedAnalysis.signatures),
+    ].filter(
+      (signature, index, collection) =>
+        signature &&
+        typeof signature === "object" &&
+        collection.findIndex(
+          (candidate) =>
+            candidate?.signerName === signature.signerName &&
+            candidate?.signerRole === signature.signerRole &&
+            candidate?.signatureLocation === signature.signatureLocation,
+        ) === index,
+    );
+
+    const signedSignatures = signatures.filter(
+      (signature) => signature.signed === true,
+    );
+
+    const normalizeRole = (value) =>
+      String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[’']/g, "");
+
+    const hasSignedRole = (...roleTerms) =>
+      signedSignatures.some((signature) => {
+        const role = normalizeRole(signature.signerRole);
+
+        return roleTerms.some((term) => role.includes(normalizeRole(term)));
+      });
+
+    const hasSignedSeller = hasSignedRole("seller", "owner", "property owner");
+
+    const hasSignedBuyer = hasSignedRole("buyer", "purchaser");
+
+    const hasSignedListingRepresentative = hasSignedRole(
+      "listing agent",
+      "listing broker",
+      "seller licensee",
+      "sellers licensee",
+      "broker",
+      "licensee",
+    );
+
+    const hasSignedPurchaseRepresentative = hasSignedRole(
+      "buyer agent",
+      "buyers agent",
+      "selling agent",
+      "broker",
+      "licensee",
+    );
+
+    const explicitlyExecuted =
+      analysis.fullyExecuted === true ||
+      analysis.executed === true ||
+      analysis.signed === true ||
+      analysis.allRequiredSignaturesPresent === true ||
+      nestedAnalysis.fullyExecuted === true ||
+      nestedAnalysis.executed === true ||
+      nestedAnalysis.signed === true ||
+      nestedAnalysis.allRequiredSignaturesPresent === true ||
+      execution.executed === true ||
+      execution.fullyExecuted === true ||
+      execution.signaturesComplete === true ||
+      execution.effective === true ||
+      executionStatus === "executed" ||
+      executionStatus === "fully executed" ||
+      executionStatus === "fully_executed";
+
+    const isListingAgreement =
+      documentType.includes("listing agreement") ||
+      documentType.includes("listing contract") ||
+      documentType.includes("exclusive right to sell") ||
+      documentType.includes("exclusive agency");
+
+    const isPurchaseAgreement =
+      documentType.includes("purchase agreement") ||
+      documentType.includes("sales contract") ||
+      documentType.includes("residential contract") ||
+      documentType.includes("purchase contract");
+
+    const listingExecutionSupported =
+      isListingAgreement &&
+      (explicitlyExecuted ||
+        (hasSignedSeller && hasSignedListingRepresentative));
+
+    const purchaseExecutionSupported =
+      isPurchaseAgreement &&
+      (explicitlyExecuted ||
+        (hasSignedSeller &&
+          (hasSignedBuyer || hasSignedPurchaseRepresentative)));
+
+    if (listingExecutionSupported) {
+      const supportingSignatures = signedSignatures.filter((signature) => {
+        const role = normalizeRole(signature.signerRole);
+
+        return (
+          role.includes("seller") ||
+          role.includes("owner") ||
+          role.includes("listing") ||
+          role.includes("licensee") ||
+          role.includes("broker")
+        );
+      });
+
+      brain.semanticEffects.push({
+        type: "listingAgreementExecuted",
+        occurred: true,
+
+        date: firstValue(
+          execution.effectiveDate,
+          execution.executionDate,
+          analysis.effectiveDate,
+          analysis.executionDate,
+          supportingSignatures.find((signature) => signature.signedDate)
+            ?.signedDate,
+          "",
+        ),
+
+        confidence: explicitlyExecuted ? 95 : 86,
+
+        supportingText: explicitlyExecuted
+          ? "The document analysis explicitly identifies the listing agreement as executed."
+          : "The document is classified as a listing agreement and contains signed seller and listing-representative signature evidence.",
+
+        sourceDocumentId: firstValue(
+          analysis.documentId,
+          nestedAnalysis.documentId,
+          doc?.id,
+          null,
+        ),
+
+        sourceDocument: firstValue(
+          analysis.documentName,
+          nestedAnalysis.documentName,
+          doc?.name,
+          "Uploaded Document",
+        ),
+      });
+
+      return;
+    }
+
+    if (purchaseExecutionSupported) {
+      brain.semanticEffects.push({
+        type: "contractExecuted",
+        occurred: true,
+
+        date: firstValue(
+          execution.effectiveDate,
+          execution.executionDate,
+          analysis.effectiveDate,
+          analysis.executionDate,
+          signedSignatures.find((signature) => signature.signedDate)
+            ?.signedDate,
+          "",
+        ),
+
+        confidence: explicitlyExecuted ? 95 : 86,
+
+        supportingText: explicitlyExecuted
+          ? "The document analysis explicitly identifies the purchase agreement as executed."
+          : "The document is classified as a purchase agreement and contains signed party evidence supporting execution.",
+
+        sourceDocumentId: firstValue(
+          analysis.documentId,
+          nestedAnalysis.documentId,
+          doc?.id,
+          null,
+        ),
+
+        sourceDocument: firstValue(
+          analysis.documentName,
+          nestedAnalysis.documentName,
+          doc?.name,
+          "Uploaded Document",
+        ),
+      });
+    }
+  };
+
+  asArray(docs).forEach((doc) => {
+    if (!doc || typeof doc !== "object") {
+      return;
+    }
+
+    const analysis =
+      doc.aiAnalysis ||
+      doc.universalAnalysis ||
+      doc.ai ||
+      doc.analysis ||
+      doc.documentAnalysis ||
+      null;
 
     if (!analysis || typeof analysis !== "object") {
       return;
     }
 
+    const nestedAnalysis = isObject(analysis.universalAnalysis)
+      ? analysis.universalAnalysis
+      : null;
+
+    /*
+     * Semantic effects
+     */
     addSemanticEffectsFromObject(analysis.semanticEffects, doc, analysis);
 
     addSemanticEffectsFromArray(analysis.semanticEffects, doc, analysis);
 
-    addSemanticEffectsFromObject(
-      analysis.universalAnalysis?.semanticEffects,
-      doc,
-      analysis,
-    );
+    if (nestedAnalysis) {
+      addSemanticEffectsFromObject(
+        nestedAnalysis.semanticEffects,
+        doc,
+        analysis,
+      );
 
-    addSemanticEffectsFromArray(
-      analysis.universalAnalysis?.semanticEffects,
-      doc,
-      analysis,
-    );
+      addSemanticEffectsFromArray(
+        nestedAnalysis.semanticEffects,
+        doc,
+        analysis,
+      );
+    }
 
+    /*
+     * Transaction events
+     */
     asArray(analysis.transactionEvents).forEach((event) => {
       brain.transactionEvents.push(
         normalizeTransactionEvent(event, doc, analysis),
       );
     });
 
-    asArray(analysis.universalAnalysis?.transactionEvents).forEach((event) => {
-      brain.transactionEvents.push(
-        normalizeTransactionEvent(event, doc, analysis),
-      );
-    });
+    if (nestedAnalysis) {
+      asArray(nestedAnalysis.transactionEvents).forEach((event) => {
+        brain.transactionEvents.push(
+          normalizeTransactionEvent(event, doc, analysis),
+        );
+      });
+    }
 
-    asArray(analysis.evidence).forEach((item) => {
-      brain.reconciliationEngine.reconcile(
-        normalizeEvidence(item, doc, analysis),
-      );
-    });
+    /*
+     * Evidence and nested facts
+     */
+    addEvidenceCollection(analysis.evidence, doc, analysis);
 
-    asArray(analysis.universalAnalysis?.evidence?.items).forEach((item) => {
-      brain.reconciliationEngine.reconcile(
-        normalizeEvidence(item, doc, analysis),
-      );
-    });
+    addFactCollection(analysis.facts, null, doc, analysis);
+
+    if (nestedAnalysis) {
+      addEvidenceCollection(nestedAnalysis.evidence, doc, analysis);
+
+      addFactCollection(nestedAnalysis.facts, null, doc, analysis);
+    }
+
+    inferExecutionEffects(analysis, doc);
+
+    if (nestedAnalysis) {
+      inferExecutionEffects(nestedAnalysis, doc);
+    }
   });
 }
 
@@ -324,13 +993,20 @@ function aiBuildTransactionSignals(
 
     switch (effect.type) {
       case "contractExecuted":
-        markSignal("contractExecuted", "Executed contract evidence detected.");
+        markSignal(
+          "contractExecuted",
+          "Executed contract evidence detected.",
+          effect.confidence,
+          [effect],
+        );
         break;
 
       case "listingAgreementExecuted":
         markSignal(
           "listingAgreementExecuted",
           "Executed listing agreement evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
@@ -338,6 +1014,8 @@ function aiBuildTransactionSignals(
         markSignal(
           "settlementCompleted",
           "Settlement completion evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
@@ -345,6 +1023,8 @@ function aiBuildTransactionSignals(
         markSignal(
           "fundsDisbursed",
           "Funding or disbursement evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
@@ -352,17 +1032,26 @@ function aiBuildTransactionSignals(
         markSignal(
           "recordingCompleted",
           "Recording completion evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
       case "titleTransferred":
-        markSignal("titleTransferred", "Title transfer evidence detected.");
+        markSignal(
+          "titleTransferred",
+          "Title transfer evidence detected.",
+          effect.confidence,
+          [effect],
+        );
         break;
 
       case "terminationEffective":
         markSignal(
           "terminationEffective",
           "Effective termination evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
@@ -370,6 +1059,8 @@ function aiBuildTransactionSignals(
         markSignal(
           "inspectionCompleted",
           "Inspection completion evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
@@ -377,6 +1068,8 @@ function aiBuildTransactionSignals(
         markSignal(
           "appraisalCompleted",
           "Appraisal completion evidence detected.",
+          effect.confidence,
+          [effect],
         );
         break;
 
@@ -384,6 +1077,112 @@ function aiBuildTransactionSignals(
         markSignal(
           "amendmentEffective",
           "Effective amendment evidence detected.",
+          effect.confidence,
+          [effect],
+        );
+        break;
+    }
+  });
+
+  /*
+   * Normalized transaction events are also verified document
+   * intelligence. They must be allowed to establish lifecycle
+   * signals when a semantic-effects object is absent or incomplete.
+   */
+
+  brain.transactionEvents.forEach((event) => {
+    if (!event || event.occurred !== true) {
+      return;
+    }
+
+    switch (event.type) {
+      case "contractExecuted":
+        markSignal(
+          "contractExecuted",
+          "Executed contract transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "listingAgreementExecuted":
+        markSignal(
+          "listingAgreementExecuted",
+          "Executed listing agreement transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "settlementCompleted":
+        markSignal(
+          "settlementCompleted",
+          "Settlement completion transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "fundsDisbursed":
+        markSignal(
+          "fundsDisbursed",
+          "Funding or disbursement transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "recordingCompleted":
+        markSignal(
+          "recordingCompleted",
+          "Recording completion transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "titleTransferred":
+        markSignal(
+          "titleTransferred",
+          "Title transfer transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "terminationEffective":
+        markSignal(
+          "terminationEffective",
+          "Effective termination transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "inspectionCompleted":
+        markSignal(
+          "inspectionCompleted",
+          "Inspection completion transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "appraisalCompleted":
+        markSignal(
+          "appraisalCompleted",
+          "Appraisal completion transaction event detected.",
+          event.confidence,
+          [event],
+        );
+        break;
+
+      case "amendmentEffective":
+        markSignal(
+          "amendmentEffective",
+          "Effective amendment transaction event detected.",
+          event.confidence,
+          [event],
         );
         break;
     }
@@ -423,108 +1222,183 @@ function aiBuildTransactionSignals(
 }
 
 function aiDetermineTransactionState(brain, addReasoning) {
-  const workflow = brain.transactionContext.workflow;
+  const workflow = String(brain.transactionContext?.workflow || "").trim();
+
+  const context = brain.transactionContextEvidence || {};
+
+  const storedStatus = String(context.status || "")
+    .trim()
+    .toLowerCase();
+
+  const statusSource = String(context.statusSource || "")
+    .trim()
+    .toLowerCase();
 
   /*
-   * Transaction lifecycle state is determined exclusively
-   * from verified semantic document evidence.
+   * Evidence priority:
    *
-   * Stored transaction status, stored dates, checklist values,
-   * transaction summaries, names, and workflow labels cannot
-   * manufacture Closed, Cancelled, Pending, or Active state.
+   * 1. Verified current document evidence
+   * 2. Explicit user-entered lifecycle status
+   * 3. Workflow-based starting state
+   *
+   * A trusted user status may establish lifecycle state,
+   * but it must never establish document facts such as price,
+   * closing date, earnest money, or commission.
    */
 
+  const hasVerifiedClosing =
+    brain.signals.settlementCompleted === true ||
+    (brain.signals.recordingCompleted === true &&
+      brain.signals.titleTransferred === true) ||
+    (brain.signals.fundsDisbursed === true &&
+      brain.signals.titleTransferred === true);
+
+  const hasVerifiedTermination = brain.signals.terminationEffective === true;
+
+  const hasVerifiedContract = brain.signals.contractExecuted === true;
+
+  const hasVerifiedListingAgreement =
+    brain.signals.listingAgreementExecuted === true;
+
+  const hasTrustedUserStatus =
+    statusSource === "user" ||
+    statusSource === "manual" ||
+    statusSource === "user entered" ||
+    statusSource === "user-entered";
+
+  const userSaysClosed =
+    hasTrustedUserStatus &&
+    ["closed", "complete", "completed"].includes(storedStatus);
+
+  const userSaysCancelled =
+    hasTrustedUserStatus &&
+    ["cancelled", "canceled", "terminated"].includes(storedStatus);
+
+  const userSaysPending =
+    hasTrustedUserStatus &&
+    ["pending", "under contract", "under-contract"].includes(storedStatus);
+
+  const userSaysActive =
+    hasTrustedUserStatus &&
+    ["active", "listed", "listing", "active listing"].includes(storedStatus);
+
   /*
-   * Closed requires verified completion evidence.
+   * Conflicting verified document outcomes require review.
    */
-  if (
-    brain.signals.settlementCompleted ||
-    (brain.signals.recordingCompleted && brain.signals.titleTransferred) ||
-    (brain.signals.fundsDisbursed && brain.signals.titleTransferred)
-  ) {
+
+  if (hasVerifiedClosing && hasVerifiedTermination) {
+    brain.decision.state = "Needs Review";
+
+    addReasoning(
+      "Verified closing and termination evidence conflict. Human review is required before assigning a final lifecycle state.",
+    );
+  } else if (hasVerifiedClosing) {
     brain.decision.state = "Closed";
 
     addReasoning(
-      "Transaction closed based exclusively on verified settlement, recording, funding, or title-transfer evidence.",
+      "Transaction closed based on verified settlement, recording, funding, or title-transfer evidence.",
     );
-
-    /*
-     * Cancelled requires verified effective termination evidence.
-     */
-  } else if (
-    brain.signals.terminationEffective &&
-    !brain.signals.closingEvidencePresent
-  ) {
+  } else if (hasVerifiedTermination) {
     brain.decision.state = "Cancelled";
 
     addReasoning(
-      "Transaction cancelled based exclusively on verified effective termination evidence without verified closing evidence.",
+      "Transaction cancelled based on verified effective termination evidence.",
     );
-
-    /*
-     * An executed buyer contract is Pending unless verified
-     * closing or termination evidence establishes another state.
-     */
-  } else if (brain.signals.contractExecuted) {
-    if (workflow === "Buyer") {
+  } else if (hasVerifiedContract) {
+    if (workflow === "Listing") {
       brain.decision.state = "Pending";
 
       addReasoning(
-        "Executed buyer contract detected without verified closing or termination evidence.",
+        "Listing transaction moved to Pending because an executed purchase agreement was verified.",
       );
     } else {
       brain.decision.state = "Active";
 
       addReasoning(
-        "Executed contract detected without verified closing or termination evidence.",
+        "Transaction moved to Active because an executed purchase agreement was verified.",
       );
     }
-
-    /*
-     * Workflow provides a non-lifecycle starting classification.
-     * It cannot prove execution, closing, or cancellation.
-     */
-  } else if (workflow === "Listing") {
-    brain.decision.state = "Listed";
+  } else if (workflow === "Listing" && hasVerifiedListingAgreement) {
+    brain.decision.state = "Active";
 
     addReasoning(
-      "Transaction identified as a listing workflow without verified executed-contract evidence.",
+      "Listing transaction is Active because an executed listing agreement was verified.",
+    );
+  } else if (userSaysClosed) {
+    brain.decision.state = "Closed";
+
+    addReasoning(
+      "Transaction marked Closed based on the trusted user-entered transaction status.",
+    );
+  } else if (userSaysCancelled) {
+    brain.decision.state = "Cancelled";
+
+    addReasoning(
+      "Transaction marked Cancelled based on the trusted user-entered transaction status.",
+    );
+  } else if (userSaysPending) {
+    brain.decision.state = "Pending";
+
+    addReasoning(
+      "Transaction marked Pending based on the trusted user-entered transaction status.",
+    );
+  } else if (userSaysActive) {
+    brain.decision.state = "Active";
+
+    addReasoning(
+      "Transaction marked Active based on the trusted user-entered transaction status.",
+    );
+  } else if (workflow === "Listing") {
+    brain.decision.state = "Pre-Listing";
+
+    addReasoning(
+      "Listing workflow exists without verified execution evidence or a trusted user-entered active status.",
     );
   } else if (workflow === "Buyer") {
     brain.decision.state = "Pre-Contract";
 
     addReasoning(
-      "Buyer workflow exists without verified executed-contract evidence.",
+      "Buyer workflow exists without verified execution evidence or a trusted user-entered lifecycle status.",
     );
   } else {
     brain.decision.state = "Unknown";
 
     addReasoning(
-      "Transaction state cannot be determined from verified evidence and workflow context.",
+      "Transaction state cannot be determined from current evidence or trusted user-entered lifecycle status.",
     );
   }
 
   brain.transactionState = brain.decision.state;
 
-  brain.decision.supportingEvidence = [...brain.reconciledEvidence];
+  brain.decision.supportingEvidence = [
+    ...(Array.isArray(brain.reconciledEvidence)
+      ? brain.reconciledEvidence
+      : []),
+  ];
+
+  if (!Array.isArray(brain.decision.audit)) {
+    brain.decision.audit = [];
+  }
 
   brain.decision.audit.push({
     timestamp: new Date().toISOString(),
     state: brain.decision.state,
     workflow,
+    storedStatus,
+    statusSource,
+    hasTrustedUserStatus,
     signals: {
       ...brain.signals,
     },
-    storedTransactionContext: {
-      status: brain.transactionContextEvidence?.status || "",
-      contractDate: brain.transactionContextEvidence?.contractDate || "",
-      closeDate: brain.transactionContextEvidence?.closeDate || "",
-      closedDate: brain.transactionContextEvidence?.closedDate || "",
-      actualClosingDate:
-        brain.transactionContextEvidence?.actualClosingDate || "",
-      terminationDate: brain.transactionContextEvidence?.terminationDate || "",
-    },
-    authoritativeSource: "verified_semantic_document_evidence",
+    authoritativeSource:
+      hasVerifiedClosing ||
+      hasVerifiedTermination ||
+      hasVerifiedContract ||
+      hasVerifiedListingAgreement
+        ? "verified_document_evidence"
+        : hasTrustedUserStatus
+          ? "trusted_user_status"
+          : "workflow_default",
     reason: brain.reasoning[brain.reasoning.length - 1] || "",
   });
 
@@ -740,58 +1614,262 @@ function aiCalculateHealthAndConfidence(brain) {
 }
 
 function aiExtractCanonicalFacts(brain, txn, firstDefined) {
-  const canonical = brain.canonicalEvidence || {};
+  const canonical =
+    brain?.canonicalEvidence &&
+    typeof brain.canonicalEvidence === "object" &&
+    !Array.isArray(brain.canonicalEvidence)
+      ? brain.canonicalEvidence
+      : {};
 
   /*
-   * Canonical facts must come from current document evidence.
+   * Canonical facts must come from current trusted evidence.
    *
-   * User-entered transaction fields are baseline context only.
-   * They must not become authoritative Brain facts unless
-   * supported by current evidence.
+   * The canonical evidence map may contain either:
+   *
+   * 1. A primitive value:
+   *      purchasePrice: 1060000
+   *
+   * 2. A canonical evidence record:
+   *      purchasePrice: {
+   *        value: 1060000,
+   *        confidence: 98,
+   *        documentId: "...",
+   *      }
+   *
+   * This function converts either representation into the
+   * primitive business value required by brain.canonicalFacts.
+   *
+   * Stored transaction fields such as txn.price, txn.closeDate,
+   * and txn.status are deliberately not used as authoritative
+   * document facts. Removing documents must therefore remove
+   * document-derived canonical facts.
    */
 
-  brain.canonicalFacts.purchasePrice = firstDefined(
-    canonical.purchasePrice,
-    canonical.price,
-    "",
+  const hasValue = (value) =>
+    value !== undefined &&
+    value !== null &&
+    !(typeof value === "string" && value.trim() === "");
+
+  const unwrapCanonicalValue = (entry) => {
+    if (!hasValue(entry)) {
+      return undefined;
+    }
+
+    if (typeof entry !== "object" || Array.isArray(entry)) {
+      return entry;
+    }
+
+    return firstDefined(
+      entry.value,
+      entry.normalizedValue,
+      entry.factValue,
+      entry.canonicalValue,
+      entry.extractedValue,
+      entry.data?.value,
+      entry.facts?.value,
+      undefined,
+    );
+  };
+
+  const findCanonicalEntry = (...aliases) => {
+    for (const alias of aliases) {
+      if (Object.prototype.hasOwnProperty.call(canonical, alias)) {
+        const value = unwrapCanonicalValue(canonical[alias]);
+
+        if (hasValue(value)) {
+          return value;
+        }
+      }
+    }
+
+    const normalizeKey = (value) =>
+      String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "");
+
+    const normalizedAliases = new Set(aliases.map(normalizeKey));
+
+    for (const [key, entry] of Object.entries(canonical)) {
+      if (!normalizedAliases.has(normalizeKey(key))) {
+        continue;
+      }
+
+      const value = unwrapCanonicalValue(entry);
+
+      if (hasValue(value)) {
+        return value;
+      }
+    }
+
+    return undefined;
+  };
+
+  const normalizeMoney = (value) => {
+    if (!hasValue(value)) {
+      return "";
+    }
+
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : "";
+    }
+
+    const cleaned = String(value)
+      .trim()
+      .replace(/[$,\s]/g, "");
+
+    if (!cleaned) {
+      return "";
+    }
+
+    const number = Number(cleaned);
+
+    return Number.isFinite(number) ? number : value;
+  };
+
+  const normalizeInteger = (value) => {
+    if (!hasValue(value)) {
+      return null;
+    }
+
+    const number = Number(
+      typeof value === "string" ? value.replace(/[^\d.-]/g, "") : value,
+    );
+
+    return Number.isFinite(number) ? Math.round(number) : null;
+  };
+
+  const normalizeDate = (value) => {
+    if (!hasValue(value)) {
+      return "";
+    }
+
+    return String(value).trim();
+  };
+
+  brain.canonicalFacts.purchasePrice = normalizeMoney(
+    findCanonicalEntry(
+      "purchasePrice",
+      "purchase_price",
+      "contractPrice",
+      "contract_price",
+      "salePrice",
+      "sale_price",
+      "price",
+    ),
   );
 
-  brain.canonicalFacts.effectiveDate = firstDefined(
-    canonical.effectiveDate,
-    "",
+  brain.canonicalFacts.effectiveDate = normalizeDate(
+    findCanonicalEntry(
+      "effectiveDate",
+      "effective_date",
+      "contractEffectiveDate",
+      "contract_effective_date",
+      "agreementEffectiveDate",
+      "agreement_effective_date",
+    ),
   );
 
-  brain.canonicalFacts.closingDate = firstDefined(canonical.closingDate, "");
-
-  brain.canonicalFacts.actualClosingDate = firstDefined(
-    canonical.actualClosingDate,
-    "",
+  brain.canonicalFacts.closingDate = normalizeDate(
+    findCanonicalEntry(
+      "closingDate",
+      "closing_date",
+      "scheduledClosingDate",
+      "scheduled_closing_date",
+      "closeDate",
+      "close_date",
+    ),
   );
 
-  brain.canonicalFacts.terminationDate = firstDefined(
-    canonical.terminationDate,
-    "",
+  brain.canonicalFacts.actualClosingDate = normalizeDate(
+    findCanonicalEntry(
+      "actualClosingDate",
+      "actual_closing_date",
+      "closedDate",
+      "closed_date",
+      "settlementDate",
+      "settlement_date",
+      "recordingDate",
+      "recording_date",
+    ),
   );
 
-  brain.canonicalFacts.earnestMoney = firstDefined(canonical.earnestMoney, "");
-
-  brain.canonicalFacts.sellerCredit = firstDefined(canonical.sellerCredit, "");
-
-  brain.canonicalFacts.inspectionDays = firstDefined(
-    canonical.inspectionDays,
-    null,
+  brain.canonicalFacts.terminationDate = normalizeDate(
+    findCanonicalEntry(
+      "terminationDate",
+      "termination_date",
+      "cancellationDate",
+      "cancellation_date",
+      "cancelledDate",
+      "cancelled_date",
+      "canceledDate",
+      "canceled_date",
+    ),
   );
 
-  brain.canonicalFacts.optionDays = firstDefined(canonical.optionDays, null);
-
-  brain.canonicalFacts.financingDeadline = firstDefined(
-    canonical.financingDeadline,
-    "",
+  brain.canonicalFacts.earnestMoney = normalizeMoney(
+    findCanonicalEntry(
+      "earnestMoney",
+      "earnest_money",
+      "earnestMoneyDeposit",
+      "earnest_money_deposit",
+      "deposit",
+      "depositAmount",
+      "deposit_amount",
+    ),
   );
 
-  brain.canonicalFacts.appraisalDeadline = firstDefined(
-    canonical.appraisalDeadline,
-    "",
+  brain.canonicalFacts.sellerCredit = normalizeMoney(
+    findCanonicalEntry(
+      "sellerCredit",
+      "seller_credit",
+      "sellerCredits",
+      "seller_credits",
+      "sellerConcession",
+      "seller_concession",
+      "sellerConcessions",
+      "seller_concessions",
+    ),
+  );
+
+  brain.canonicalFacts.inspectionDays = normalizeInteger(
+    findCanonicalEntry(
+      "inspectionDays",
+      "inspection_days",
+      "inspectionPeriodDays",
+      "inspection_period_days",
+      "dueDiligenceDays",
+      "due_diligence_days",
+    ),
+  );
+
+  brain.canonicalFacts.optionDays = normalizeInteger(
+    findCanonicalEntry(
+      "optionDays",
+      "option_days",
+      "optionPeriodDays",
+      "option_period_days",
+    ),
+  );
+
+  brain.canonicalFacts.financingDeadline = normalizeDate(
+    findCanonicalEntry(
+      "financingDeadline",
+      "financing_deadline",
+      "loanDeadline",
+      "loan_deadline",
+      "financingContingencyDeadline",
+      "financing_contingency_deadline",
+    ),
+  );
+
+  brain.canonicalFacts.appraisalDeadline = normalizeDate(
+    findCanonicalEntry(
+      "appraisalDeadline",
+      "appraisal_deadline",
+      "appraisalContingencyDeadline",
+      "appraisal_contingency_deadline",
+    ),
   );
 
   return brain.canonicalFacts;
@@ -857,7 +1935,10 @@ function aiBuildSituationRecommendations(brain) {
    * Buyer workflow
    */
 
-  if (workflow === "Buyer") {
+  if (
+    workflow === "Buyer" &&
+    !["Closed", "Cancelled", "Needs Review"].includes(brain.decision?.state)
+  ) {
     if (!brain.signals?.contractExecuted) {
       addMissing("Executed Purchase Agreement");
 
@@ -1077,6 +2158,15 @@ function aiBuildTransactionBrain(txn = {}) {
       "agreementExecuted",
       "fullyExecutedContract",
       "fullyExecutedPurchaseAgreement",
+    ],
+
+    listingAgreementExecuted: [
+      "listingAgreementExecuted",
+      "listingAgreementSigned",
+      "executedListingAgreement",
+      "fullyExecutedListingAgreement",
+      "exclusiveListingAgreementExecuted",
+      "exclusiveAgencyAgreementExecuted",
     ],
 
     settlementCompleted: [
@@ -1304,6 +2394,21 @@ function aiBuildTransactionBrain(txn = {}) {
   const normalizeEvidence = (item, doc, analysis) => {
     const source = asObject(item);
 
+    const sourceFacts =
+      source.facts && typeof source.facts === "object"
+        ? Array.isArray(source.facts)
+          ? source.facts.reduce((output, fact) => {
+              const name = text(fact?.name);
+
+              if (name) {
+                output[name] = fact?.value;
+              }
+
+              return output;
+            }, {})
+          : { ...source.facts }
+        : {};
+
     return {
       key: text(
         firstDefined(source.key, source.name, source.field, source.path, ""),
@@ -1319,13 +2424,38 @@ function aiBuildTransactionBrain(txn = {}) {
 
       type: text(firstDefined(source.type, source.category, "fact")),
 
+      category: text(source.category),
+
       confidence: normalizeConfidence(
         firstDefined(source.confidence, source.score),
         50,
       ),
 
+      supportingText: text(
+        firstDefined(
+          source.supportingText,
+          source.support,
+          source.description,
+          source.explanation,
+          "",
+        ),
+      ),
+
+      eventDate: text(
+        firstDefined(
+          source.eventDate,
+          source.date,
+          source.effectiveDate,
+          source.completedDate,
+          "",
+        ),
+      ),
+
+      facts: sourceFacts,
+
       documentId: firstDefined(
         source.documentId,
+        source.sourceDocumentId,
         analysis.documentId,
         doc.id,
         null,
@@ -1333,6 +2463,7 @@ function aiBuildTransactionBrain(txn = {}) {
 
       documentName: firstDefined(
         source.documentName,
+        source.sourceDocument,
         analysis.documentName,
         doc.name,
         "Uploaded Document",
@@ -1341,6 +2472,7 @@ function aiBuildTransactionBrain(txn = {}) {
       documentType: firstDefined(
         source.documentType,
         analysis.documentType,
+        analysis.classification?.documentType,
         null,
       ),
 
@@ -1376,6 +2508,9 @@ function aiBuildTransactionBrain(txn = {}) {
     source: "transaction_record",
 
     status: normalizedStatus,
+
+    statusSource: txn.statusSource || "",
+    statusUpdatedAt: txn.statusUpdatedAt || "",
 
     closed:
       normalizedStatus === "closed" ||
@@ -1629,8 +2764,6 @@ function aiBuildTransactionBrain(txn = {}) {
    They do not define transaction state.
 ----------------------------------------------------- */
 
-  aiBuildSituationRecommendations(brain);
-
   /* -----------------------------------------------------
    State Decision Engine
 
@@ -1642,21 +2775,7 @@ function aiBuildTransactionBrain(txn = {}) {
 
   aiDetermineTransactionState(brain, addReasoning);
 
-  if (
-    String(txn.address || "")
-      .toLowerCase()
-      .includes("8005 caladium")
-  ) {
-    console.log("CALADIUM BRAIN AUDIT", {
-      storedStatus: txn.status,
-      normalizedStatus,
-      transactionContextEvidence,
-      semanticEffects: brain.semanticEffects,
-      signals: brain.signals,
-      finalState: brain.transactionState,
-      reasoning: brain.reasoning,
-    });
-  }
+  aiBuildSituationRecommendations(brain);
 
   aiCalculateHealthAndConfidence(brain);
 
@@ -1797,14 +2916,6 @@ function aiBuildTransactionBrain(txn = {}) {
   brain.lastUpdated = new Date().toISOString();
 
   brain.version = AI_TRANSACTION_BRAIN_VERSION;
-
-  /*
-   * Temporary Brain Diagnostic
-   *
-   * Remove after debugging.
-   */
-
-  console.log("Building Brain:", txn);
 
   /*
    * Return the complete Transaction Brain.

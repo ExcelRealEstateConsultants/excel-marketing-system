@@ -2161,8 +2161,201 @@ function calculateTrustedEvidenceScore(record = {}) {
 }
 
 function compareTrustedEvidence(firstRecord, secondRecord) {
-  const firstScore = calculateTrustedEvidenceScore(firstRecord);
+  /*
+   * Evidence precedence:
+   *
+   * 1. User-confirmed evidence
+   * 2. Later executed amendments or change documents
+   * 3. Executed original agreements
+   * 4. Other trusted document evidence
+   * 5. Extraction confidence and corroboration
+   *
+   * This logic relies on document meaning and legal effect,
+   * not state-specific form titles or filenames.
+   */
 
+  const metadataFor = (record) =>
+    record?.metadata &&
+    typeof record.metadata === "object" &&
+    !Array.isArray(record.metadata)
+      ? record.metadata
+      : {};
+
+  const semanticTextFor = (record) => {
+    const metadata = metadataFor(record);
+
+    return normalizeString(
+      [
+        record?.documentType,
+        record?.type,
+        record?.key,
+        metadata.documentFamily,
+        metadata.documentPurpose,
+        metadata.documentEffect,
+        metadata.parentEvidenceType,
+        metadata.originalFactKey,
+        metadata.legalEffect,
+        metadata.documentRole,
+      ].join(" "),
+    );
+  };
+
+  const isUserConfirmed = (record) => {
+    const metadata = metadataFor(record);
+
+    return (
+      metadata.userConfirmed === true ||
+      record?.extractedBy === CONFIDENCE_SOURCE.HUMAN
+    );
+  };
+
+  const isAmendmentEvidence = (record) => {
+    const semanticText = semanticTextFor(record);
+
+    const amendmentTerms = [
+      "amendment",
+      "amended",
+      "modifies",
+      "modified",
+      "modification",
+      "changes",
+      "changed",
+      "change form",
+      "status change",
+      "price change",
+      "updates",
+      "updated",
+      "revision",
+      "revised",
+      "corrects",
+      "corrected",
+      "extends",
+      "extended",
+      "replaces",
+      "replacement",
+      "supersedes",
+    ];
+
+    return amendmentTerms.some((term) =>
+      semanticText.includes(normalizeString(term)),
+    );
+  };
+
+  const isNewValueEvidence = (record) => {
+    const metadata = metadataFor(record);
+
+    const originalFactKey = normalizeString(
+      metadata.originalFactKey || "",
+    ).replace(/[^a-z0-9]/g, "");
+
+    return (
+      originalFactKey.startsWith("new") ||
+      originalFactKey.startsWith("revised") ||
+      originalFactKey.startsWith("updated") ||
+      originalFactKey.startsWith("amended") ||
+      originalFactKey.startsWith("changed")
+    );
+  };
+
+  const hasExecutionSupport = (record) => {
+    const metadata = metadataFor(record);
+
+    return (
+      metadata.fullyExecuted === true ||
+      metadata.executed === true ||
+      metadata.signed === true ||
+      metadata.signaturesComplete === true ||
+      metadata.allRequiredSignaturesPresent === true ||
+      metadata.effective === true ||
+      Number(record?.confidence || 0) >= 70
+    );
+  };
+
+  const amendmentPriority = (record) => {
+    if (!isAmendmentEvidence(record)) {
+      return 0;
+    }
+
+    let score = 100;
+
+    if (isNewValueEvidence(record)) {
+      score += 25;
+    }
+
+    if (hasExecutionSupport(record)) {
+      score += 20;
+    }
+
+    return score;
+  };
+
+  const evidenceDate = (record) => {
+    const metadata = metadataFor(record);
+
+    const candidates = [
+      metadata.effectiveDate,
+      metadata.executionDate,
+      metadata.signedDate,
+      metadata.documentDate,
+      metadata.eventDate,
+      record?.eventDate,
+      record?.updatedAt,
+      record?.createdAt,
+    ];
+
+    for (const candidate of candidates) {
+      const parsedDate = parseDateValue(candidate);
+
+      if (parsedDate) {
+        return parsedDate.getTime();
+      }
+    }
+
+    return 0;
+  };
+
+  /*
+   * Explicit human confirmation always wins.
+   */
+
+  const firstUserConfirmed = isUserConfirmed(firstRecord);
+  const secondUserConfirmed = isUserConfirmed(secondRecord);
+
+  if (firstUserConfirmed !== secondUserConfirmed) {
+    return firstUserConfirmed ? -1 : 1;
+  }
+
+  /*
+   * A supported amendment or change document supersedes an
+   * earlier agreement value for the same canonical fact.
+   */
+
+  const firstAmendmentPriority = amendmentPriority(firstRecord);
+  const secondAmendmentPriority = amendmentPriority(secondRecord);
+
+  if (firstAmendmentPriority !== secondAmendmentPriority) {
+    return firstAmendmentPriority > secondAmendmentPriority ? -1 : 1;
+  }
+
+  /*
+   * When both records are amendments, the later effective
+   * amendment controls.
+   */
+
+  if (firstAmendmentPriority > 0 && secondAmendmentPriority > 0) {
+    const firstDate = evidenceDate(firstRecord);
+    const secondDate = evidenceDate(secondRecord);
+
+    if (firstDate !== secondDate) {
+      return firstDate > secondDate ? -1 : 1;
+    }
+  }
+
+  /*
+   * Fall back to the existing trusted-evidence calculation.
+   */
+
+  const firstScore = calculateTrustedEvidenceScore(firstRecord);
   const secondScore = calculateTrustedEvidenceScore(secondRecord);
 
   if (firstScore > secondScore) {
@@ -2171,6 +2364,18 @@ function compareTrustedEvidence(firstRecord, secondRecord) {
 
   if (firstScore < secondScore) {
     return 1;
+  }
+
+  /*
+   * For equally trusted evidence, prefer the later supported
+   * document fact.
+   */
+
+  const firstDate = evidenceDate(firstRecord);
+  const secondDate = evidenceDate(secondRecord);
+
+  if (firstDate !== secondDate) {
+    return firstDate > secondDate ? -1 : 1;
   }
 
   return compareEvidenceStrength(firstRecord, secondRecord);
