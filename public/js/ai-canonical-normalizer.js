@@ -369,6 +369,11 @@ function normalizeUniversalAnalysisToCanonicalEvidence(
       "commissionpercentage",
       "brokercommissionpercent",
       "listingcommissionpercent",
+      "brokercompensationpercent",
+      "brokercompensationpercentage",
+      "listingbrokercompensation",
+      "listingbrokercompensationpercent",
+      "listingbrokercompensationpercentage",
     ],
 
     commissionAmount: [
@@ -509,6 +514,24 @@ function normalizeUniversalAnalysisToCanonicalEvidence(
       }
 
       processFact(key, entry, details);
+    });
+  };
+
+  const processAmountsCollection = (amounts, collectionName) => {
+    asArray(amounts).forEach((item) => {
+      if (!isObject(item)) {
+        return;
+      }
+
+      processFact(
+        firstValue(item.amountType, item.type, item.name, item.label, ""),
+        item.value,
+        {
+          confidence: item.confidence || 70,
+          supportingText: item.supportingText || "",
+          sourceCollection: collectionName,
+        },
+      );
     });
   };
 

@@ -742,6 +742,741 @@ function buildAIContactInsights(
     );
 }
 
+/* =====================================================
+   RapportLink Premium Dashboard
+   Presentation layer only.
+
+   Reads existing RapportLink data.
+   Does NOT create or alter transaction conclusions.
+   ===================================================== */
+
+function renderPremiumDashboard({
+  bestOpportunity = null,
+  quietContacts = [],
+  hotLeads = [],
+  dueToday = 0,
+  overdue = 0,
+} = {}) {
+  const transactions =
+    typeof txnCache !== "undefined" && Array.isArray(txnCache) ? txnCache : [];
+
+  const now = new Date();
+  const hour = now.getHours();
+
+  /*
+---------------------------------------------------------
+Dashboard user name
+
+Authentication will ultimately populate the signed-in
+user object. Until then this also supports a locally
+stored RapportLink user profile.
+---------------------------------------------------------
+*/
+
+  function rlDashboardFirstName() {
+    const candidateUsers = [
+      window.rapportLinkUser,
+      window.currentUser,
+      window.authUser,
+      window.loggedInUser,
+    ];
+
+    for (const user of candidateUsers) {
+      if (!user || typeof user !== "object") continue;
+
+      const firstName = String(
+        user.firstName || user.givenName || user.given_name || "",
+      ).trim();
+
+      if (firstName) return firstName;
+
+      const fullName = String(
+        user.name || user.displayName || user.fullName || "",
+      ).trim();
+
+      if (fullName) {
+        return fullName.split(/\s+/)[0];
+      }
+    }
+
+    const possibleStorageKeys = [
+      "rapportLinkCurrentUser",
+      "rapportlinkCurrentUser",
+      "rapportLinkUser",
+      "rapportlinkUser",
+    ];
+
+    for (const key of possibleStorageKeys) {
+      try {
+        const stored = localStorage.getItem(key);
+
+        if (!stored) continue;
+
+        const user = JSON.parse(stored);
+
+        const firstName = String(
+          user?.firstName || user?.givenName || user?.given_name || "",
+        ).trim();
+
+        if (firstName) return firstName;
+
+        const fullName = String(
+          user?.name || user?.displayName || user?.fullName || "",
+        ).trim();
+
+        if (fullName) {
+          return fullName.split(/\s+/)[0];
+        }
+      } catch (error) {
+        // Ignore invalid or unrelated localStorage values.
+      }
+    }
+
+    return "";
+  }
+
+  const firstName = rlDashboardFirstName();
+
+  const dayPart =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const greeting = firstName ? `${dayPart}, ${firstName}.` : `${dayPart}.`;
+
+  const greetingEl = getEl("rlDashboardGreeting");
+
+  if (greetingEl) {
+    greetingEl.textContent = greeting;
+  }
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  function getEl(id) {
+    return document.getElementById(id);
+  }
+
+  function escape(value) {
+    return typeof aiSafe === "function" ? aiSafe(value) : String(value ?? "");
+  }
+
+  function money(value) {
+    const num = Number(value || 0);
+
+    if (typeof txnMoney === "function") {
+      return txnMoney(num);
+    }
+
+    const hasCents = Math.abs(num % 1) > 0.000001;
+
+    return num.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: hasCents ? 2 : 0,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  function parseDate(value) {
+    if (!value) return null;
+
+    const text = String(value).trim();
+    if (!text) return null;
+
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(text)
+      ? new Date(`${text}T12:00:00`)
+      : new Date(text);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  function transactionState(txn = {}) {
+    return String(
+      txn?.transactionBrain?.decision?.state ||
+        txn?.transactionBrain?.transactionState ||
+        "Unknown",
+    ).trim();
+  }
+
+  function transactionFacts(txn = {}) {
+    return txn?.transactionBrain?.canonicalFacts &&
+      typeof txn.transactionBrain.canonicalFacts === "object"
+      ? txn.transactionBrain.canonicalFacts
+      : {};
+  }
+
+  function transactionClosingDate(txn = {}) {
+    const facts = transactionFacts(txn);
+
+    return (
+      facts.actualClosingDate ||
+      facts.closingDate ||
+      txn.actualClosingDate ||
+      txn.closingDate ||
+      txn.closeDate ||
+      ""
+    );
+  }
+
+  function transactionExpectedGci(txn = {}) {
+    const userCommission = Number(
+      txn?.transactionBrain?.commission?.userGrossCommission,
+    );
+
+    if (Number.isFinite(userCommission) && userCommission >= 0) {
+      return userCommission;
+    }
+
+    if (typeof txnGci === "function") {
+      return Number(txnGci(txn) || 0);
+    }
+
+    return Number(txn.gci || 0);
+  }
+
+  function openTransaction(transactionId) {
+    if (!transactionId) return;
+
+    if (typeof showTab === "function") {
+      showTab("transactions");
+    }
+
+    if (typeof txnOpenPanel === "function") {
+      txnOpenPanel(transactionId);
+    }
+  }
+
+  /*
+   * Expose one safe Dashboard-specific transaction opener
+   * for the inline click handlers below.
+   */
+  window.rlOpenDashboardTransaction = openTransaction;
+
+  /* -----------------------------------------------------
+     Current transaction priorities
+
+     Read only current Transaction Brain conclusions.
+     ----------------------------------------------------- */
+
+  const transactionPriorities = [];
+
+  transactions.forEach((txn) => {
+    const state = transactionState(txn);
+
+    if (["Closed", "Cancelled", "Canceled", "Terminated"].includes(state)) {
+      return;
+    }
+
+    let alerts = [];
+
+    if (typeof txnCriticalAlerts === "function") {
+      try {
+        alerts = txnCriticalAlerts(txn);
+      } catch (error) {
+        console.warn(
+          "Premium Dashboard could not read transaction alerts:",
+          error,
+        );
+      }
+    }
+
+    if (!Array.isArray(alerts)) {
+      alerts = [];
+    }
+
+    alerts.forEach((alert) => {
+      if (!alert) return;
+
+      transactionPriorities.push({
+        transactionId: txn.id,
+        address: txn.address || txn.propertyAddress || "Transaction",
+        severity: String(alert.severity || "medium")
+          .trim()
+          .toLowerCase(),
+        title: String(
+          alert.title ||
+            alert.text ||
+            alert.message ||
+            "Transaction needs attention",
+        ).trim(),
+      });
+    });
+  });
+
+  const severityRank = {
+    critical: 5,
+    urgent: 5,
+    high: 4,
+    medium: 3,
+    watch: 2,
+    normal: 1,
+  };
+
+  transactionPriorities.sort(
+    (a, b) => (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0),
+  );
+
+  /* -----------------------------------------------------
+     Hero status
+     ----------------------------------------------------- */
+
+  const statusEl = getEl("rlDashboardStatus");
+  const statusDot = getEl("rlDashboardStatusDot");
+  const metaEl = getEl("rlDashboardMeta");
+
+  if (statusEl && statusDot) {
+    statusDot.className = "rl-dashboard-status-dot";
+
+    if (
+      transactionPriorities.some(
+        (item) =>
+          item.severity === "high" ||
+          item.severity === "critical" ||
+          item.severity === "urgent",
+      )
+    ) {
+      statusDot.classList.add("urgent");
+      statusEl.textContent = "You have a transaction that needs attention.";
+    } else if (transactionPriorities.length > 0 || overdue > 0) {
+      statusDot.classList.add("attention");
+      statusEl.textContent = "A few things are worth your attention today.";
+    } else {
+      statusEl.textContent = "Everything looks good.";
+    }
+  }
+
+  if (metaEl) {
+    const activeCount = transactions.filter((txn) => {
+      const state = transactionState(txn);
+
+      return !["Closed", "Cancelled", "Canceled", "Terminated"].includes(state);
+    }).length;
+
+    const metaParts = [];
+
+    if (activeCount > 0) {
+      metaParts.push(
+        `${activeCount} active transaction${activeCount === 1 ? "" : "s"}`,
+      );
+    }
+
+    if (dueToday > 0) {
+      metaParts.push(`${dueToday} task${dueToday === 1 ? "" : "s"} due today`);
+    }
+
+    metaEl.textContent =
+      metaParts.join("  •  ") || "DealPilot is watching your business.";
+  }
+
+  /* -----------------------------------------------------
+   Today's Focus
+   ----------------------------------------------------- */
+
+  const focusEl = getEl("rlDashboardFocus");
+
+  if (focusEl) {
+    const topTransactionPriority = transactionPriorities[0];
+
+    if (topTransactionPriority) {
+      focusEl.innerHTML = `
+      <div
+        class="rl-focus-empty"
+        style="cursor:pointer;"
+        onclick="rlOpenDashboardTransaction('${escape(
+          topTransactionPriority.transactionId,
+        )}')"
+      >
+        <div class="rl-focus-icon">!</div>
+
+        <div>
+          <div class="rl-focus-title">
+            ${escape(topTransactionPriority.title)}
+          </div>
+
+          <div class="rl-focus-note">
+            ${escape(topTransactionPriority.address)}
+            &nbsp;·&nbsp; Open transaction →
+          </div>
+        </div>
+      </div>
+    `;
+    } else if (overdue > 0) {
+      focusEl.innerHTML = `
+      <div
+        class="rl-focus-empty"
+        style="cursor:pointer;"
+        onclick="showTab('tasks')"
+      >
+        <div class="rl-focus-icon">!</div>
+
+        <div>
+          <div class="rl-focus-title">
+            Clear ${overdue} overdue ${overdue === 1 ? "task" : "tasks"}.
+          </div>
+
+          <div class="rl-focus-note">
+            Finish what is already due before adding more to today.
+            &nbsp;·&nbsp; View tasks →
+          </div>
+        </div>
+      </div>
+    `;
+    } else {
+      const growthSuggestion =
+        window.rlDealPilotGrowth &&
+        typeof window.rlDealPilotGrowth.getTodaySuggestion === "function"
+          ? window.rlDealPilotGrowth.getTodaySuggestion()
+          : null;
+
+      if (growthSuggestion) {
+        focusEl.innerHTML = `
+      <div class="rl-focus-empty rl-growth-focus">
+        <div class="rl-focus-icon">✦</div>
+
+        <div>
+          <div class="rl-focus-eyebrow">
+            Growth Mode · ${escape(growthSuggestion.category)}
+          </div>
+
+          <div class="rl-focus-title">
+            ${escape(growthSuggestion.title)}
+          </div>
+
+          <div class="rl-focus-note">
+            ${escape(growthSuggestion.text)}
+          </div>
+
+        </div>
+      </div>
+    `;
+      } else {
+        focusEl.innerHTML = `
+      <div class="rl-focus-empty">
+        <div class="rl-focus-icon">✓</div>
+
+        <div>
+          <div class="rl-focus-title">
+            Everything looks good.
+          </div>
+
+          <div class="rl-focus-note">
+            No urgent transaction issues require your attention right now.
+          </div>
+        </div>
+      </div>
+    `;
+      }
+    }
+  }
+
+  /* -----------------------------------------------------
+     Upcoming Closings
+     ----------------------------------------------------- */
+
+  const upcomingClosings = transactions
+    .map((txn) => {
+      const state = transactionState(txn);
+      const closingValue = transactionClosingDate(txn);
+      const closingDate = parseDate(closingValue);
+
+      return {
+        txn,
+        state,
+        closingDate,
+      };
+    })
+    .filter(
+      (row) =>
+        row.closingDate &&
+        row.closingDate >= todayStart &&
+        !["Closed", "Cancelled", "Canceled", "Terminated"].includes(row.state),
+    )
+    .sort((a, b) => a.closingDate.getTime() - b.closingDate.getTime())
+    .slice(0, 4);
+
+  const closingsEl = getEl("rlUpcomingClosings");
+
+  if (closingsEl) {
+    if (!upcomingClosings.length) {
+      closingsEl.innerHTML = `
+        <div class="rl-dashboard-empty">
+          No upcoming closing dates are currently established.
+        </div>
+      `;
+    } else {
+      closingsEl.innerHTML = upcomingClosings
+        .map(({ txn, state, closingDate }) => {
+          const month = closingDate
+            .toLocaleDateString("en-US", {
+              month: "short",
+            })
+            .toUpperCase();
+
+          const day = closingDate.getDate();
+
+          return `
+            <div
+              class="rl-closing-row"
+              onclick="rlOpenDashboardTransaction('${escape(txn.id)}')"
+            >
+              <div class="rl-date-chip">
+                <strong>${day}</strong>
+                <span>${month}</span>
+              </div>
+
+              <div>
+                <div class="rl-row-title">
+                  ${escape(txn.address || txn.propertyAddress || "Transaction")}
+                </div>
+
+                <div class="rl-row-meta">
+                  ${escape(txn.side || "")}
+                  ${state ? ` · ${escape(state)}` : ""}
+                </div>
+              </div>
+
+              <div class="rl-row-value">
+                ${money(transactionExpectedGci(txn))}
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  /* -----------------------------------------------------
+     Business Snapshot
+     ----------------------------------------------------- */
+
+  const pendingTransactions = transactions.filter(
+    (txn) => transactionState(txn) === "Pending",
+  );
+
+  const pendingGci = pendingTransactions.reduce(
+    (sum, txn) => sum + transactionExpectedGci(txn),
+    0,
+  );
+
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  const closedThisMonth = transactions.filter((txn) => {
+    if (transactionState(txn) !== "Closed") {
+      return false;
+    }
+
+    const closingDate = parseDate(transactionClosingDate(txn));
+
+    if (!closingDate) return false;
+
+    return (
+      closingDate.getMonth() === currentMonth &&
+      closingDate.getFullYear() === currentYear
+    );
+  }).length;
+
+  const pendingGciEl = getEl("rlPendingGci");
+  const pendingClosingsEl = getEl("rlPendingClosings");
+  const closedCountEl = getEl("rlClosedCount");
+
+  if (pendingGciEl) {
+    pendingGciEl.textContent = money(pendingGci);
+  }
+
+  if (pendingClosingsEl) {
+    pendingClosingsEl.textContent = String(pendingTransactions.length);
+  }
+
+  if (closedCountEl) {
+    closedCountEl.textContent = String(closedThisMonth);
+  }
+
+  /* -----------------------------------------------------
+     Coming Up
+
+     Only high-value transaction dates.
+     ----------------------------------------------------- */
+
+  const dateDefinitions = [
+    {
+      key: "earnestMoneyDeadline",
+      label: "Earnest money due",
+    },
+    {
+      key: "inspectionDeadline",
+      label: "Inspection deadline",
+    },
+    {
+      key: "appraisalDeadline",
+      label: "Appraisal deadline",
+    },
+    {
+      key: "financingDeadline",
+      label: "Financing deadline",
+    },
+    {
+      key: "closingDate",
+      label: "Closing",
+    },
+  ];
+
+  const upcomingItems = [];
+
+  transactions.forEach((txn) => {
+    const state = transactionState(txn);
+
+    if (["Closed", "Cancelled", "Canceled", "Terminated"].includes(state)) {
+      return;
+    }
+
+    const canonicalFacts = txn?.transactionBrain?.canonicalFacts || {};
+
+    dateDefinitions.forEach(({ key, label }) => {
+      const date = parseDate(canonicalFacts[key]);
+
+      if (!date || date < todayStart) return;
+
+      upcomingItems.push({
+        transactionId: txn.id,
+        address: txn.address || txn.propertyAddress || "Transaction",
+        date,
+        label,
+      });
+    });
+  });
+
+  upcomingItems.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const comingUpEl = getEl("rlComingUp");
+
+  if (comingUpEl) {
+    const rows = upcomingItems.slice(0, 4);
+
+    if (!rows.length) {
+      comingUpEl.innerHTML = `
+        <div class="rl-dashboard-empty">
+          Nothing urgent is currently scheduled.
+        </div>
+      `;
+    } else {
+      comingUpEl.innerHTML = rows
+        .map((item) => {
+          const dateLabel = item.date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+          });
+
+          return `
+            <div
+              class="rl-upcoming-row"
+              style="cursor:pointer;"
+              onclick="rlOpenDashboardTransaction('${escape(
+                item.transactionId,
+              )}')"
+            >
+              <div class="rl-row-value">
+                ${escape(dateLabel)}
+              </div>
+
+              <div>
+                <div class="rl-row-title">
+                  ${escape(item.label)}
+                </div>
+
+                <div class="rl-row-meta">
+                  ${escape(item.address)}
+                </div>
+              </div>
+
+              <div class="rl-row-value">
+                →
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  /* -----------------------------------------------------
+     Today's Edge
+
+     Quiet day = growth mode.
+     Busy day = still offer one concise growth opportunity.
+     ----------------------------------------------------- */
+
+  const edgeEl = getEl("rlTodaysEdge");
+
+  if (edgeEl) {
+    let edgeTitle = "Create one new conversation today.";
+
+    let edgeText =
+      "Reach out personally to someone in your sphere or past-client database.";
+
+    let edgeAction = "";
+
+    if (quietContacts.length > 0) {
+      const contact = quietContacts[0];
+
+      const name =
+        typeof aiContactName === "function"
+          ? aiContactName(contact.contact)
+          : "a past contact";
+
+      edgeTitle = `Reconnect with ${name}.`;
+
+      edgeText =
+        contact.staleDays < 999
+          ? `It has been ${contact.staleDays} days since meaningful activity. A personal check-in is more valuable than another mass message.`
+          : "A personal check-in could create a new conversation.";
+
+      if (contact.contact?.id) {
+        edgeAction = `
+          <button
+            type="button"
+            class="rl-card-link"
+            style="margin-top:8px;"
+            onclick="openContact(${Number(contact.contact.id)})"
+          >
+            Open contact →
+          </button>
+        `;
+      }
+    } else if (hotLeads.length > 0) {
+      const lead = hotLeads[0];
+
+      const name =
+        typeof aiContactName === "function"
+          ? aiContactName(lead.contact)
+          : "your hottest lead";
+
+      edgeTitle = `Stay close to ${name}.`;
+      edgeText =
+        "Strong engagement is already present. A personal conversation is the highest-value move.";
+    } else if (pendingTransactions.length > 0) {
+      edgeTitle =
+        "Your transactions are quiet. Use the space to create the next one.";
+
+      edgeText =
+        "Reach out to one past client or homeowner with something useful instead of waiting for new business to arrive.";
+    }
+
+    edgeEl.innerHTML = `
+      <div class="rl-edge-mark">✦</div>
+
+      <div>
+        <div class="rl-edge-title">
+          ${escape(edgeTitle)}
+        </div>
+
+        <div class="rl-edge-text">
+          ${escape(edgeText)}
+        </div>
+
+        ${edgeAction}
+      </div>
+    `;
+  }
+}
+
 function renderAIDashboard(
   data = {},
   contacts = [],
@@ -1083,6 +1818,18 @@ function renderAIDashboard(
   aiPulseClickRate.innerText = `${clickRate}%`;
   aiPulseOpenBar.style.width = `${Math.min(openRate, 100)}%`;
   aiPulseClickBar.style.width = `${Math.min(clickRate, 100)}%`;
+
+  /*
+   * Render the premium Dashboard from the intelligence
+   * already calculated above.
+   */
+  renderPremiumDashboard({
+    bestOpportunity,
+    quietContacts,
+    hotLeads,
+    dueToday,
+    overdue,
+  });
 }
 
 function initDashboardDrag() {
@@ -1454,6 +2201,7 @@ async function loadDashboard() {
   renderActivityTrendChart(activityCache);
   renderCampaignPerformanceChart(campaignsCache, activityCache);
   renderEngagementBreakdownChart(data);
+  rlLoadMortgageMarket();
   initDashboardDrag();
   initDashboardDrilldowns();
 }
@@ -1703,3 +2451,541 @@ function buildDashboardDrilldownHtml(type) {
 
   return '<div class="text-muted">No detail available yet.</div>';
 }
+
+let rlMortgageRateData = [];
+let rlSelectedMortgageRate = null;
+
+function rlMortgageTermForRate(item = {}) {
+  const label = String(item.label || item.shortLabel || "").toLowerCase();
+
+  return label.includes("15-year") || label.includes("15 yr") ? 15 : 30;
+}
+
+function rlFormatCurrency(value) {
+  const num = Number(value || 0);
+
+  return num.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
+}
+
+function rlParseMoneyInput(value = "") {
+  const cleaned = String(value)
+    .replace(/[$,\s]/g, "")
+    .trim();
+
+  const num = Number(cleaned);
+
+  return Number.isFinite(num) ? num : 0;
+}
+
+function rlParseDownPayment(value = "", purchasePrice = 0) {
+  const text = String(value || "").trim();
+
+  if (!text || !purchasePrice) {
+    return {
+      dollars: 0,
+      percent: 0,
+    };
+  }
+
+  if (text.includes("%")) {
+    const percent = Number(text.replace(/[^0-9.]/g, "")) || 0;
+
+    return {
+      dollars: purchasePrice * (percent / 100),
+      percent,
+    };
+  }
+
+  const dollars = rlParseMoneyInput(text);
+
+  return {
+    dollars,
+    percent: purchasePrice > 0 ? (dollars / purchasePrice) * 100 : 0,
+  };
+}
+
+function rlFormatCurrencyInput(value = "") {
+  const cleaned = String(value)
+    .replace(/[^0-9.]/g, "")
+    .trim();
+
+  if (!cleaned) return "";
+
+  const number = Number(cleaned);
+
+  if (!Number.isFinite(number)) return "";
+
+  return number.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function rlCalculatePayment(event = null) {
+  const priceEl = document.getElementById("rlPaymentPrice");
+  const percentEl = document.getElementById("rlPaymentDownPercent");
+  const dollarsEl = document.getElementById("rlPaymentDownDollars");
+  const monthlyEl = document.getElementById("rlPaymentMonthly");
+  const detailsEl = document.getElementById("rlPaymentDetails");
+
+  if (!priceEl || !percentEl || !dollarsEl || !monthlyEl || !detailsEl) {
+    return;
+  }
+
+  const purchasePrice = rlParseMoneyInput(priceEl.value);
+
+  if (!purchasePrice || purchasePrice <= 0) {
+    monthlyEl.textContent = "—";
+    detailsEl.textContent = "Enter a purchase price.";
+    return;
+  }
+
+  const sourceId = event?.target?.id || "";
+
+  let downPercent = Number(String(percentEl.value).replace(/[^0-9.]/g, ""));
+
+  let downDollars = rlParseMoneyInput(dollarsEl.value);
+
+  /*
+  ---------------------------------------------------------
+  User changed the percentage field
+  ---------------------------------------------------------
+  */
+
+  if (sourceId === "rlPaymentDownPercent") {
+    downPercent = Number.isFinite(downPercent) ? downPercent : 0;
+
+    downDollars = purchasePrice * (downPercent / 100);
+
+    dollarsEl.value = downDollars.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  } else if (sourceId === "rlPaymentDownDollars") {
+    /*
+  ---------------------------------------------------------
+  User changed the dollar field
+  ---------------------------------------------------------
+  */
+    downDollars = Number.isFinite(downDollars) ? downDollars : 0;
+
+    downPercent = purchasePrice > 0 ? (downDollars / purchasePrice) * 100 : 0;
+
+    percentEl.value = downPercent > 0 ? downPercent.toFixed(2) : "";
+  } else {
+    /*
+  ---------------------------------------------------------
+  Purchase price or mortgage rate changed.
+
+  Use whichever down-payment value already exists.
+  ---------------------------------------------------------
+  */
+    if (percentEl.value.trim()) {
+      downPercent = Number.isFinite(downPercent) ? downPercent : 0;
+
+      downDollars = purchasePrice * (downPercent / 100);
+
+      dollarsEl.value = downDollars.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    } else if (dollarsEl.value.trim()) {
+      downDollars = Number.isFinite(downDollars) ? downDollars : 0;
+
+      downPercent = purchasePrice > 0 ? (downDollars / purchasePrice) * 100 : 0;
+
+      percentEl.value = downPercent > 0 ? downPercent.toFixed(2) : "";
+    } else {
+      downPercent = 0;
+      downDollars = 0;
+    }
+  }
+
+  if (downPercent < 0 || downPercent >= 100) {
+    monthlyEl.textContent = "—";
+    detailsEl.textContent =
+      "Down payment must be less than 100% of the purchase price.";
+    return;
+  }
+
+  if (downDollars < 0 || downDollars >= purchasePrice) {
+    monthlyEl.textContent = "—";
+    detailsEl.textContent =
+      "Down payment must be less than the purchase price.";
+    return;
+  }
+
+  const selected = rlSelectedMortgageRate;
+
+  if (!selected || !Number(selected.rate)) {
+    monthlyEl.textContent = "—";
+    detailsEl.textContent = "Select one of today's mortgage rates.";
+    return;
+  }
+
+  const loanAmount = purchasePrice - downDollars;
+
+  const annualRate = Number(selected.rate) / 100;
+
+  const monthlyRate = annualRate / 12;
+
+  const years = rlMortgageTermForRate(selected);
+
+  const numberOfPayments = years * 12;
+
+  let monthlyPayment = 0;
+
+  if (monthlyRate > 0) {
+    monthlyPayment =
+      (loanAmount *
+        (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments))) /
+      (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+  } else {
+    monthlyPayment = loanAmount / numberOfPayments;
+  }
+
+  if (!Number.isFinite(monthlyPayment) || monthlyPayment < 0) {
+    monthlyEl.textContent = "—";
+    detailsEl.textContent = "Unable to calculate this payment.";
+    return;
+  }
+
+  monthlyEl.textContent = `${rlFormatCurrency(monthlyPayment)} / mo`;
+
+  detailsEl.innerHTML = `
+    ${rlFormatCurrency(loanAmount)} loan
+    &nbsp;·&nbsp;
+    ${Number(selected.rate).toFixed(3)}%
+    &nbsp;·&nbsp;
+    ${years}-year
+    &nbsp;·&nbsp;
+    ${rlFormatCurrency(downDollars)} down
+    (${downPercent.toFixed(2)}%)
+    <br>
+    <span style="
+      display:inline-block;
+      margin-top:6px;
+      opacity:.78;
+    ">
+      Principal &amp; interest only.
+      Does not include property taxes, homeowners insurance,
+      HOA dues, mortgage insurance, or other housing costs.
+    </span>
+  `;
+}
+
+function rlSelectMortgageRate(rateKey = "") {
+  const selected = rlMortgageRateData.find(
+    (item) => String(item.key) === String(rateKey),
+  );
+
+  if (!selected) return;
+
+  rlSelectedMortgageRate = selected;
+
+  document
+    .querySelectorAll("#rlPaymentRateChoices .rl-payment-rate-choice")
+    .forEach((button) => {
+      button.classList.toggle(
+        "active",
+        button.dataset.rateKey === String(rateKey),
+      );
+    });
+
+  document
+    .querySelectorAll("#rlMortgageRates .rl-mortgage-rate-card")
+    .forEach((card) => {
+      card.classList.toggle(
+        "selected",
+        card.dataset.rateKey === String(rateKey),
+      );
+    });
+
+  rlCalculatePayment();
+}
+
+function rlRenderPaymentRateChoices() {
+  const choicesEl = document.getElementById("rlPaymentRateChoices");
+
+  if (!choicesEl) return;
+
+  if (!rlMortgageRateData.length) {
+    choicesEl.textContent = "Mortgage rates are unavailable.";
+    return;
+  }
+
+  choicesEl.innerHTML = rlMortgageRateData
+    .map((item) => {
+      const active =
+        rlSelectedMortgageRate && rlSelectedMortgageRate.key === item.key
+          ? " active"
+          : "";
+
+      return `
+        <button
+          type="button"
+          class="rl-payment-rate-choice${active}"
+          data-rate-key="${aiSafe(item.key)}"
+          onclick="rlSelectMortgageRate('${aiSafe(item.key)}')"
+        >
+          ${aiSafe(item.shortLabel || item.label)}
+          &nbsp;${Number(item.rate || 0).toFixed(3)}%
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function rlTogglePaymentCalculator() {
+  const calculator = document.getElementById("rlPaymentCalculator");
+
+  const toggle = document.getElementById("rlPaymentToggle");
+
+  if (!calculator || !toggle) return;
+
+  const isOpen = !calculator.hidden;
+
+  calculator.hidden = isOpen;
+
+  toggle.setAttribute("aria-expanded", isOpen ? "false" : "true");
+
+  if (!isOpen) {
+    rlRenderPaymentRateChoices();
+
+    setTimeout(() => {
+      document.getElementById("rlPaymentPrice")?.focus();
+    }, 50);
+  }
+}
+
+async function rlLoadMortgageMarket() {
+  const ratesEl = document.getElementById("rlMortgageRates");
+  const asOfEl = document.getElementById("rlMortgageAsOf");
+  const insightEl = document.getElementById("rlMortgageInsight");
+  const disclaimerEl = document.getElementById("rlMortgageDisclaimer");
+
+  if (!ratesEl) return;
+
+  try {
+    const response = await fetch("/api/mortgage-rates");
+
+    if (!response.ok) {
+      throw new Error(`Mortgage rate request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    const rates = Array.isArray(data.rates) ? data.rates : [];
+
+    if (!rates.length) {
+      throw new Error("No mortgage rates were returned.");
+    }
+
+    rlMortgageRateData = rates;
+
+    if (
+      !rlSelectedMortgageRate ||
+      !rates.some((item) => item.key === rlSelectedMortgageRate.key)
+    ) {
+      rlSelectedMortgageRate =
+        rates.find((item) => item.key === "conventional30") || rates[0];
+    }
+
+    ratesEl.innerHTML = rates
+      .map((item) => {
+        const change = Number(item.change || 0);
+
+        const movement = change < 0 ? "↓" : change > 0 ? "↑" : "—";
+
+        const movementClass = change < 0 ? "down" : change > 0 ? "up" : "flat";
+
+        const changeText =
+          change === 0
+            ? "No change"
+            : `${movement} ${Math.abs(change).toFixed(3)}%`;
+
+        const selectedClass =
+          rlSelectedMortgageRate && rlSelectedMortgageRate.key === item.key
+            ? " selected"
+            : "";
+
+        return `
+          <button
+            type="button"
+            class="rl-mortgage-rate-card${selectedClass}"
+            data-rate-key="${aiSafe(item.key)}"
+            onclick="rlSelectMortgageRate('${aiSafe(item.key)}')"
+            title="Use ${aiSafe(item.shortLabel || item.label)} in Payment QuickCalc"
+          >
+
+            <div class="rl-mortgage-rate-label">
+              ${aiSafe(item.shortLabel || item.label)}
+            </div>
+
+            <div class="rl-mortgage-rate-value">
+              ${Number(item.rate || 0).toFixed(3)}%
+            </div>
+
+            <div
+              class="rl-mortgage-rate-change ${movementClass}"
+            >
+              ${changeText}
+            </div>
+
+          </button>
+        `;
+      })
+      .join("");
+
+    if (asOfEl) {
+      asOfEl.textContent = data.asOf
+        ? `As of ${formatShortDate(data.asOf)}`
+        : "Latest market data";
+    }
+
+    if (insightEl) {
+      const marketRead = data.marketRead || {};
+
+      insightEl.innerHTML = `
+        <div class="rl-mortgage-insight-mark">
+          ✦
+        </div>
+
+        <div>
+          <div class="rl-mortgage-insight-label">
+            DealPilot Market Read
+          </div>
+
+          <div class="rl-mortgage-insight-title">
+            ${aiSafe(marketRead.headline || "Mortgage market update")}
+          </div>
+
+          <div class="rl-mortgage-insight-text">
+            ${aiSafe(
+              marketRead.insight ||
+                "DealPilot is monitoring financing conditions for buyer and seller opportunities.",
+            )}
+          </div>
+        </div>
+      `;
+    }
+
+    if (disclaimerEl && data.disclaimer) {
+      disclaimerEl.textContent = data.disclaimer;
+    }
+
+    rlRenderPaymentRateChoices();
+
+    const priceEl = document.getElementById("rlPaymentPrice");
+    const downPercentEl = document.getElementById("rlPaymentDownPercent");
+    const downDollarsEl = document.getElementById("rlPaymentDownDollars");
+
+    if (priceEl && !priceEl.dataset.rlBound) {
+      priceEl.dataset.rlBound = "1";
+
+      priceEl.addEventListener("input", rlCalculatePayment);
+
+      priceEl.addEventListener("blur", () => {
+        if (!priceEl.value.trim()) return;
+
+        priceEl.value = rlFormatCurrencyInput(priceEl.value);
+
+        rlCalculatePayment();
+      });
+
+      priceEl.addEventListener("focus", () => {
+        const value = rlParseMoneyInput(priceEl.value);
+
+        if (value > 0) {
+          priceEl.value = value.toFixed(2);
+          priceEl.select();
+        }
+      });
+    }
+
+    if (downPercentEl && !downPercentEl.dataset.rlBound) {
+      downPercentEl.dataset.rlBound = "1";
+
+      downPercentEl.addEventListener("input", rlCalculatePayment);
+
+      downPercentEl.addEventListener("blur", () => {
+        const value = Number(
+          String(downPercentEl.value).replace(/[^0-9.]/g, ""),
+        );
+
+        if (!Number.isFinite(value)) {
+          downPercentEl.value = "";
+          return;
+        }
+
+        downPercentEl.value = value.toFixed(2);
+
+        rlCalculatePayment({
+          target: downPercentEl,
+        });
+      });
+    }
+
+    if (downDollarsEl && !downDollarsEl.dataset.rlBound) {
+      downDollarsEl.dataset.rlBound = "1";
+
+      downDollarsEl.addEventListener("input", rlCalculatePayment);
+
+      downDollarsEl.addEventListener("blur", () => {
+        if (!downDollarsEl.value.trim()) return;
+
+        const value = rlParseMoneyInput(downDollarsEl.value);
+
+        downDollarsEl.value = value.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+
+        rlCalculatePayment({
+          target: downDollarsEl,
+        });
+      });
+    }
+  } catch (error) {
+    console.warn("Mortgage market unavailable:", error);
+
+    ratesEl.innerHTML = `
+      <div class="rl-dashboard-empty">
+        Mortgage market data is temporarily unavailable.
+      </div>
+    `;
+
+    if (asOfEl) {
+      asOfEl.textContent = "";
+    }
+
+    if (insightEl) {
+      insightEl.innerHTML = `
+        <div class="rl-mortgage-insight-mark">
+          ✦
+        </div>
+
+        <div>
+          <div class="rl-mortgage-insight-label">
+            DealPilot Market Read
+          </div>
+
+          <div class="rl-mortgage-insight-text">
+            Mortgage market guidance will return when the rate feed becomes available.
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+window.rlLoadMortgageMarket = rlLoadMortgageMarket;
+window.rlTogglePaymentCalculator = rlTogglePaymentCalculator;
+window.rlSelectMortgageRate = rlSelectMortgageRate;
+window.rlCalculatePayment = rlCalculatePayment;

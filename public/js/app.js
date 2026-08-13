@@ -297,6 +297,11 @@ async function startRapportLink() {
 
   await rlSafeAwait("loadPipelineStages", loadPipelineStages);
 
+  await rlSafeAwait(
+    "txnHydrateStoredDocumentAnalyses",
+    txnHydrateStoredDocumentAnalyses,
+  );
+
   rlSafeRun("txnLoad", txnLoad);
 
   if (typeof window.loadTags === "function")

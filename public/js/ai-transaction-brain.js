@@ -162,6 +162,16 @@ function aiCreateEmptyTransactionBrain(txn = {}) {
 
     canonicalFacts: {
       purchasePrice: "",
+      /*
+       * Commission is tracked by represented side.
+       *
+       * commissionPercent remains for downstream compatibility and
+       * represents the total commission RapportLink expects THIS
+       * agent/brokerage to earn from the transaction.
+       */
+      commissionPercent: null,
+      listingBrokerCommissionPercent: null,
+      buyerBrokerCommissionPercent: null,
       earnestMoney: "",
       effectiveDate: "",
       closingDate: "",
@@ -172,7 +182,22 @@ function aiCreateEmptyTransactionBrain(txn = {}) {
       optionDays: null,
       inspectionDays: null,
       financingDeadline: "",
+      financingDays: null,
       appraisalDeadline: "",
+      appraisalDays: null,
+    },
+
+    commission: {
+      salesPrice: 0,
+      listingSidePercent: null,
+      buyerSidePercent: null,
+      listingSideGross: 0,
+      buyerSideGross: 0,
+      representedGrossCommission: 0,
+      allocations: [],
+      totalDeductions: 0,
+      userGrossCommission: 0,
+      needsConfirmation: [],
     },
 
     /*
@@ -290,6 +315,69 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
       "newPrice",
     ],
 
+    /*
+     * Generic commission evidence.
+     *
+     * Generic commission values are preserved, but they are NOT
+     * automatically assumed to belong to either side of the deal.
+     */
+    commissionPercent: [
+      "commissionPercent",
+      "commission_percent",
+      "brokerCommissionPercent",
+      "commissionRate",
+      "commission_rate",
+    ],
+
+    /*
+     * Compensation earned by the listing/seller-side brokerage.
+     */
+    listingBrokerCommissionPercent: [
+      "listingCommissionPercent",
+      "listing_commission_percent",
+      "listingBrokerCommission",
+      "listingBrokerCommissionPercent",
+      "listingBrokerCommissionPercentage",
+      "listingBrokerCompensation",
+      "listingBrokerCompensationPercent",
+      "listingBrokerCompensationPercentage",
+      "sellerBrokerCommission",
+      "sellerBrokerCommissionPercent",
+      "sellerBrokerCompensationPercent",
+      "amendedListingBrokerCommission",
+      "amendedListingBrokerCommissionPercent",
+      "amendedListingBrokerCommissionPercentage",
+      "amendedListingBrokerCompensationPercent",
+    ],
+
+    /*
+     * Compensation earned by the buyer-side / cooperating brokerage.
+     *
+     * This must NEVER replace listing-side compensation merely because
+     * it appears in a later purchase agreement, counter offer, or
+     * compensation amendment.
+     */
+    buyerBrokerCommissionPercent: [
+      "buyerBrokerCommission",
+      "buyerBrokerCommissionPercent",
+      "buyerBrokerCommissionPercentage",
+      "buyerBrokerCompensation",
+      "buyerBrokerCompensationPercent",
+      "buyerBrokerCompensationPercentage",
+      "buyerAgentCommission",
+      "buyerAgentCommissionPercent",
+      "buyerAgentCompensationPercent",
+      "sellingBrokerCommission",
+      "sellingBrokerCommissionPercent",
+      "sellingBrokerCompensationPercent",
+      "cooperatingBrokerCommission",
+      "cooperatingBrokerCommissionPercent",
+      "cooperatingBrokerCompensationPercent",
+      "amendedBuyerBrokerCommission",
+      "amendedBuyerBrokerCommissionPercent",
+      "amendedBuyerBrokerCompensationPercent",
+    ],
+
     earnestMoney: [
       "earnestMoney",
       "earnest_money",
@@ -303,6 +391,7 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
       "effective_date",
       "contractEffectiveDate",
       "agreementEffectiveDate",
+      "finalCounterOfferExecutionAndEffectiveDate",
     ],
 
     closingDate: [
@@ -336,12 +425,19 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
       "sellerConcessions",
       "creditAmount",
       "sellerContribution",
+      "sellerCreditToBuyer",
+      "creditToBuyer",
+      "buyerCredit",
+      "buyerClosingCostCredit",
+      "closingCostCredit",
     ],
 
     inspectionDays: [
       "inspectionDays",
       "inspectionPeriodDays",
       "dueDiligenceDays",
+      "inspectionContingencyDeadline",
+      "inspectionContingencyPeriod",
     ],
 
     optionDays: ["optionDays", "optionPeriodDays"],
@@ -350,9 +446,16 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
       "financingDeadline",
       "loanDeadline",
       "financingContingencyDeadline",
+      "loanContingencyPeriod",
+      "financingContingencyPeriod",
+      "financingDays",
     ],
-
-    appraisalDeadline: ["appraisalDeadline", "appraisalContingencyDeadline"],
+    appraisalDeadline: [
+      "appraisalDeadline",
+      "appraisalContingencyDeadline",
+      "appraisalContingencyPeriod",
+      "appraisalDays",
+    ],
   };
 
   const aliasLookup = new Map();
@@ -523,6 +626,133 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
       }
 
       addFact(key, entry);
+    });
+  };
+
+  const addCanonicalDateCollection = (dates, doc, analysis) => {
+    asArray(dates).forEach((date) => {
+      if (!date || !hasValue(date.value)) {
+        return;
+      }
+
+      const dateType = normalizeKeyName(date.dateType);
+
+      const contractualClosingDateTypes = new Set([
+        "closingdate",
+        "closedate",
+        "proposedclosingdate",
+        "proposedcloseofescrow",
+        "scheduledclosingdate",
+        "scheduledcloseofescrow",
+        "contractclosingdate",
+        "contractcloseofescrow",
+        "closeofescrow",
+      ]);
+
+      if (!contractualClosingDateTypes.has(dateType)) {
+        return;
+      }
+
+      reconcileEvidence(
+        {
+          key: "closingDate",
+          value: date.value,
+          type: "date",
+          confidence: firstValue(date.confidence, 95),
+          page: firstValue(date.page, null),
+          supportingText: firstValue(
+            date.relatedClause,
+            date.supportingText,
+            "",
+          ),
+          documentId: firstValue(analysis?.documentId, doc?.id, null),
+          documentName: firstValue(
+            analysis?.documentName,
+            doc?.name,
+            "Uploaded Document",
+          ),
+          documentType: firstValue(
+            analysis?.documentType,
+            analysis?.classification?.documentType,
+            null,
+          ),
+          extractedBy: "gpt",
+          metadata: {
+            originalFactKey: date.dateType,
+            dateSource: "analysis.dates",
+          },
+        },
+        doc,
+        analysis,
+      );
+    });
+  };
+
+  const addCanonicalAmendmentCollection = (amendments, doc, analysis) => {
+    asArray(amendments).forEach((amendment) => {
+      if (!amendment || typeof amendment !== "object") {
+        return;
+      }
+
+      const changedTerm = firstValue(
+        amendment.changedTerm,
+        amendment.term,
+        amendment.field,
+        amendment.key,
+        "",
+      );
+
+      const newValue = firstValue(
+        amendment.newValue,
+        amendment.value,
+        amendment.revisedValue,
+        amendment.updatedValue,
+      );
+
+      const canonicalKey = canonicalizeFactKey(changedTerm);
+
+      if (!canonicalKey || !hasValue(newValue)) {
+        return;
+      }
+
+      reconcileEvidence(
+        {
+          key: canonicalKey,
+          value: newValue,
+          type: "fact",
+          confidence: firstValue(amendment.confidence, 95),
+
+          documentId: firstValue(analysis?.documentId, doc?.id, null),
+
+          documentName: firstValue(
+            analysis?.documentName,
+            doc?.name,
+            "Uploaded Document",
+          ),
+
+          documentType: firstValue(
+            analysis?.documentType,
+            analysis?.classification?.documentType,
+            null,
+          ),
+
+          extractedBy: "gpt",
+
+          metadata: {
+            originalFactKey: `new ${changedTerm}`,
+            documentEffect: "amendment",
+            effectiveDate: firstValue(
+              amendment.effectiveDate,
+              analysis?.effectiveDate,
+              "",
+            ),
+            priorValue: amendment.priorValue ?? null,
+            executionEvidence: amendment.executionEvidence || "",
+          },
+        },
+        doc,
+        analysis,
+      );
     });
   };
 
@@ -958,6 +1188,10 @@ function aiProcessTransactionDocuments(brain, docs, helpers) {
     addEvidenceCollection(analysis.evidence, doc, analysis);
 
     addFactCollection(analysis.facts, null, doc, analysis);
+
+    addCanonicalAmendmentCollection(analysis.amendments, doc, analysis);
+
+    addCanonicalDateCollection(analysis.dates, doc, analysis);
 
     if (nestedAnalysis) {
       addEvidenceCollection(nestedAnalysis.evidence, doc, analysis);
@@ -1613,6 +1847,253 @@ function aiCalculateHealthAndConfidence(brain) {
   };
 }
 
+function aiBuildCommissionAllocationSummary(brain, txn = {}) {
+  /*
+   * ========================================================
+   * RapportLink Commission Allocation Engine
+   *
+   * AI may discover/propose allocation rules.
+   * This function does NOT guess.
+   *
+   * Only confirmed allocation rules affect user GCI.
+   * All financial math is deterministic.
+   * ========================================================
+   */
+
+  const roundMoney = (value) => {
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+      return 0;
+    }
+
+    return Math.round((number + Number.EPSILON) * 100) / 100;
+  };
+
+  const normalizeNumber = (value) => {
+    if (value === undefined || value === null || value === "") {
+      return null;
+    }
+
+    const number = Number(
+      typeof value === "string" ? value.replace(/[$,%\s,]/g, "") : value,
+    );
+
+    return Number.isFinite(number) ? number : null;
+  };
+
+  const normalizeText = (value) =>
+    String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]+/g, "_");
+
+  const facts =
+    brain?.canonicalFacts && typeof brain.canonicalFacts === "object"
+      ? brain.canonicalFacts
+      : {};
+
+  const salesPrice = normalizeNumber(facts.purchasePrice) || 0;
+
+  const listingPercent = normalizeNumber(facts.listingBrokerCommissionPercent);
+
+  const buyerPercent = normalizeNumber(facts.buyerBrokerCommissionPercent);
+
+  const listingSideGross =
+    salesPrice > 0 && listingPercent !== null
+      ? roundMoney(salesPrice * (listingPercent / 100))
+      : 0;
+
+  const buyerSideGross =
+    salesPrice > 0 && buyerPercent !== null
+      ? roundMoney(salesPrice * (buyerPercent / 100))
+      : 0;
+
+  const transactionSide = normalizeText(
+    txn?.side ||
+      txn?.transactionSide ||
+      txn?.type ||
+      txn?.transactionType ||
+      "",
+  );
+
+  const isDualAgency =
+    transactionSide.includes("dual") ||
+    transactionSide.includes("both") ||
+    txn?.dualAgency === true ||
+    txn?.isDualAgency === true ||
+    (txn?.representsSeller === true && txn?.representsBuyer === true);
+
+  const isListingTransaction =
+    transactionSide.includes("listing") ||
+    transactionSide.includes("seller") ||
+    isDualAgency;
+
+  const isBuyerTransaction = transactionSide.includes("buyer") || isDualAgency;
+
+  let representedGrossCommission = 0;
+
+  if (isDualAgency) {
+    representedGrossCommission = listingSideGross + buyerSideGross;
+  } else if (isListingTransaction) {
+    representedGrossCommission = listingSideGross;
+  } else if (isBuyerTransaction) {
+    representedGrossCommission = buyerSideGross;
+  } else {
+    const fallbackPercent = normalizeNumber(facts.commissionPercent);
+
+    representedGrossCommission =
+      salesPrice > 0 && fallbackPercent !== null
+        ? roundMoney(salesPrice * (fallbackPercent / 100))
+        : 0;
+  }
+
+  const sourceRules = Array.isArray(txn?.commissionAllocations)
+    ? txn.commissionAllocations
+    : [];
+
+  const confirmedRules = sourceRules
+    .filter((rule) => {
+      if (!rule || typeof rule !== "object") {
+        return false;
+      }
+
+      return rule.confirmed !== false;
+    })
+    .map((rule, index) => ({
+      id: rule.id || `commission-allocation-${index + 1}`,
+
+      recipientId: rule.recipientId || rule.contactId || null,
+
+      recipientName: String(rule.recipientName || rule.name || "").trim(),
+
+      recipientType: normalizeText(rule.recipientType || rule.role || "other"),
+
+      side: normalizeText(rule.side || "represented"),
+
+      calculationType: normalizeText(rule.calculationType || rule.type || ""),
+
+      value: normalizeNumber(rule.value),
+
+      treatment: normalizeText(rule.treatment || rule.effect || "deduction"),
+
+      priority: Number.isFinite(Number(rule.priority))
+        ? Number(rule.priority)
+        : index,
+
+      sourceDocumentId: rule.sourceDocumentId || null,
+
+      sourceDocumentName: rule.sourceDocumentName || "",
+
+      source: rule.source || "manual",
+
+      confirmed: rule.confirmed !== false,
+    }))
+    .filter((rule) => rule.calculationType && rule.value !== null)
+    .sort((a, b) => a.priority - b.priority);
+
+  let remainingCommission = representedGrossCommission;
+
+  let totalDeductions = 0;
+
+  const calculatedAllocations = [];
+  const needsConfirmation = [];
+
+  const commissionForSide = (side) => {
+    if (side === "listing" || side === "seller" || side === "listing_side") {
+      return listingSideGross;
+    }
+
+    if (side === "buyer" || side === "buyer_side") {
+      return buyerSideGross;
+    }
+
+    return representedGrossCommission;
+  };
+
+  confirmedRules.forEach((rule) => {
+    let amount = 0;
+
+    switch (rule.calculationType) {
+      case "percent_of_sales_price":
+      case "percentage_of_sales_price":
+        amount = roundMoney(salesPrice * (rule.value / 100));
+        break;
+
+      case "percent_of_side_commission":
+      case "percentage_of_side_commission":
+        amount = roundMoney(commissionForSide(rule.side) * (rule.value / 100));
+        break;
+
+      case "percent_of_gross_commission":
+      case "percentage_of_gross_commission":
+        amount = roundMoney(representedGrossCommission * (rule.value / 100));
+        break;
+
+      case "percent_of_remaining_commission":
+      case "percentage_of_remaining_commission":
+        amount = roundMoney(remainingCommission * (rule.value / 100));
+        break;
+
+      case "flat_fee":
+      case "flat_amount":
+      case "fixed_fee":
+      case "fixed_amount":
+        amount = roundMoney(rule.value);
+        break;
+
+      default:
+        needsConfirmation.push({
+          id: rule.id,
+          recipientName: rule.recipientName,
+          issue: "Unknown commission calculation basis.",
+          calculationType: rule.calculationType,
+          value: rule.value,
+        });
+
+        return;
+    }
+
+    amount = Math.max(0, amount);
+
+    if (rule.treatment === "deduction") {
+      amount = Math.min(amount, remainingCommission);
+
+      remainingCommission = roundMoney(remainingCommission - amount);
+
+      totalDeductions = roundMoney(totalDeductions + amount);
+    }
+
+    calculatedAllocations.push({
+      ...rule,
+      amount,
+      remainingAfter: remainingCommission,
+    });
+  });
+
+  brain.commission = {
+    salesPrice,
+
+    listingSidePercent: listingPercent,
+    buyerSidePercent: buyerPercent,
+
+    listingSideGross,
+    buyerSideGross,
+
+    representedGrossCommission: roundMoney(representedGrossCommission),
+
+    allocations: calculatedAllocations,
+
+    totalDeductions: roundMoney(totalDeductions),
+
+    userGrossCommission: roundMoney(remainingCommission),
+
+    needsConfirmation,
+  };
+
+  return brain.commission;
+}
+
 function aiExtractCanonicalFacts(brain, txn, firstDefined) {
   const canonical =
     brain?.canonicalEvidence &&
@@ -1759,6 +2240,424 @@ function aiExtractCanonicalFacts(brain, txn, firstDefined) {
     ),
   );
 
+  /*
+   * --------------------------------------------------------
+   * SIDE-AWARE COMMISSION RESOLUTION
+   *
+   * Listing-side and buyer-side compensation are different
+   * contractual facts and must never overwrite each other.
+   *
+   * Upload order does not determine which commission wins.
+   * Evidence meaning, role, and trusted evidence precedence do.
+   * --------------------------------------------------------
+   */
+
+  const normalizePercent = (value) => {
+    if (!hasValue(value)) {
+      return null;
+    }
+
+    const number = Number(
+      String(value)
+        .replace("%", "")
+        .replace(/[^\d.-]/g, "")
+        .trim(),
+    );
+
+    return Number.isFinite(number) ? number : null;
+  };
+
+  const commissionEvidence = Array.isArray(brain.reconciledEvidence)
+    ? brain.reconciledEvidence
+    : [];
+
+  const commissionEvidenceText = (record) => {
+    const metadata =
+      record?.metadata &&
+      typeof record.metadata === "object" &&
+      !Array.isArray(record.metadata)
+        ? record.metadata
+        : {};
+
+    return [
+      record?.key,
+      metadata.originalFactKey,
+      metadata.documentFamily,
+      metadata.documentPurpose,
+      metadata.documentEffect,
+      metadata.parentEvidenceType,
+      metadata.legalEffect,
+      metadata.documentRole,
+      record?.supportingText,
+      record?.documentType,
+      ...(Array.isArray(record?.reasoning) ? record.reasoning : []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+  };
+
+  const isBuyerCommissionEvidence = (record) => {
+    const value = commissionEvidenceText(record);
+
+    return (
+      value.includes("buyer broker") ||
+      value.includes("buyerbroker") ||
+      value.includes("buyer agent") ||
+      value.includes("buyeragent") ||
+      value.includes("selling broker") ||
+      value.includes("sellingbroker") ||
+      value.includes("cooperating broker") ||
+      value.includes("cooperatingbroker") ||
+      value.includes("buyer-side") ||
+      value.includes("buyer side")
+    );
+  };
+
+  const isListingCommissionEvidence = (record) => {
+    const value = commissionEvidenceText(record);
+
+    /*
+     * Never classify explicitly buyer-side compensation as
+     * listing-side compensation.
+     */
+    if (isBuyerCommissionEvidence(record)) {
+      return false;
+    }
+
+    return (
+      value.includes("listing broker") ||
+      value.includes("listingbroker") ||
+      value.includes("listing commission") ||
+      value.includes("listingcommission") ||
+      value.includes("listing compensation") ||
+      value.includes("listingcompensation") ||
+      value.includes("seller broker") ||
+      value.includes("sellerbroker") ||
+      value.includes("listing-side") ||
+      value.includes("listing side")
+    );
+  };
+
+  const selectBestCommissionEvidence = (records) => {
+    if (!Array.isArray(records) || !records.length) {
+      return null;
+    }
+
+    /*
+     * Use the Evidence Engine's trusted precedence whenever
+     * available so executed amendments supersede earlier terms.
+     */
+    if (typeof compareTrustedEvidence === "function") {
+      return [...records].sort(compareTrustedEvidence)[0] || null;
+    }
+
+    /*
+     * Conservative compatibility fallback.
+     */
+    return [...records].sort(
+      (a, b) => Number(b?.confidence || 0) - Number(a?.confidence || 0),
+    )[0];
+  };
+
+  const listingCommissionRecord = selectBestCommissionEvidence(
+    commissionEvidence.filter(isListingCommissionEvidence),
+  );
+
+  const buyerCommissionRecord = selectBestCommissionEvidence(
+    commissionEvidence.filter(isBuyerCommissionEvidence),
+  );
+
+  /*
+   * First prefer explicitly side-classified canonical evidence.
+   *
+   * This catches properly structured future Document Intelligence
+   * output even if no semantic-text recovery is necessary.
+   */
+  const canonicalListingCommission = findCanonicalEntry(
+    "listingBrokerCommissionPercent",
+    "listingBrokerCommissionPercentage",
+    "listingBrokerCompensationPercent",
+    "listingBrokerCompensationPercentage",
+    "listingCommissionPercent",
+    "listing_commission_percent",
+    "amendedListingBrokerCommission",
+    "amendedListingBrokerCommissionPercent",
+    "amendedListingBrokerCommissionPercentage",
+  );
+
+  const canonicalBuyerCommission = findCanonicalEntry(
+    "buyerBrokerCommissionPercent",
+    "buyerBrokerCommissionPercentage",
+    "buyerBrokerCompensationPercent",
+    "buyerBrokerCompensationPercentage",
+    "buyerAgentCommissionPercent",
+    "buyerAgentCompensationPercent",
+    "sellingBrokerCommissionPercent",
+    "sellingBrokerCompensationPercent",
+    "cooperatingBrokerCommissionPercent",
+    "cooperatingBrokerCompensationPercent",
+    "amendedBuyerBrokerCommissionPercent",
+    "amendedBuyerBrokerCompensationPercent",
+  );
+
+  let listingBrokerCommissionPercent = normalizePercent(
+    canonicalListingCommission,
+  );
+
+  let buyerBrokerCommissionPercent = normalizePercent(canonicalBuyerCommission);
+
+  /*
+   * --------------------------------------------------------
+   * SIDE INHERITANCE FOR COMMISSION AMENDMENTS
+   *
+   * Some older/current document analyses correctly identify that
+   * a commission changed, but store the new value under the
+   * generic key "commissionPercent".
+   *
+   * If that amendment explicitly identifies the prior value, the
+   * Brain can safely determine which commission side was amended
+   * by matching that prior value to the established side-specific
+   * commission.
+   *
+   * Example:
+   *
+   * Original offer:
+   *   buyerBrokerCommissionPercent = 2.5
+   *
+   * Accepted counter:
+   *   previousValue = 2.5
+   *   commissionPercent = 2.0
+   *
+   * Result:
+   *   buyerBrokerCommissionPercent = 2.0
+   *
+   * Upload order does not matter.
+   * --------------------------------------------------------
+   */
+
+  const genericCommissionAmendments = commissionEvidence.filter((record) => {
+    const key = String(record?.key || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+    if (
+      key !== "commissionpercent" &&
+      key !== "commissionrate" &&
+      key !== "brokercommissionpercent"
+    ) {
+      return false;
+    }
+
+    const text = commissionEvidenceText(record);
+
+    return (
+      text.includes("counter offer") ||
+      text.includes("counteroffer") ||
+      text.includes("counter-offer") ||
+      text.includes("amendment") ||
+      text.includes("amended") ||
+      text.includes("changed") ||
+      text.includes("change") ||
+      text.includes("revised") ||
+      text.includes("modified") ||
+      text.includes("supersedes")
+    );
+  });
+
+  const getCommissionPriorValue = (record) => {
+    const metadata =
+      record?.metadata &&
+      typeof record.metadata === "object" &&
+      !Array.isArray(record.metadata)
+        ? record.metadata
+        : {};
+
+    const directPriorValue = normalizePercent(
+      metadata.priorValue ??
+        metadata.previousValue ??
+        metadata.oldValue ??
+        metadata.originalValue,
+    );
+
+    if (directPriorValue !== null) {
+      return directPriorValue;
+    }
+
+    /*
+     * Some analyses emit previousValue as a separate evidence
+     * record from the same document.
+     */
+    const matchingPreviousRecord = commissionEvidence.find((candidate) => {
+      if (!candidate || candidate === record) {
+        return false;
+      }
+
+      if (
+        String(candidate.documentId || "") !== String(record.documentId || "")
+      ) {
+        return false;
+      }
+
+      const candidateKey = String(candidate.key || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+      return (
+        candidateKey === "previousvalue" ||
+        candidateKey === "priorvalue" ||
+        candidateKey === "oldvalue"
+      );
+    });
+
+    return normalizePercent(matchingPreviousRecord?.value);
+  };
+
+  const bestGenericCommissionAmendment = selectBestCommissionEvidence(
+    genericCommissionAmendments,
+  );
+
+  if (bestGenericCommissionAmendment) {
+    const amendedValue = normalizePercent(bestGenericCommissionAmendment.value);
+
+    const priorValue = getCommissionPriorValue(bestGenericCommissionAmendment);
+
+    if (amendedValue !== null && priorValue !== null) {
+      const matchesListing =
+        listingBrokerCommissionPercent !== null &&
+        Math.abs(listingBrokerCommissionPercent - priorValue) < 0.0001;
+
+      const matchesBuyer =
+        buyerBrokerCommissionPercent !== null &&
+        Math.abs(buyerBrokerCommissionPercent - priorValue) < 0.0001;
+
+      /*
+       * Only inherit a side when the prior value uniquely identifies
+       * that side. If both sides happen to have the same percentage,
+       * do not guess.
+       */
+      if (matchesBuyer && !matchesListing) {
+        buyerBrokerCommissionPercent = amendedValue;
+      } else if (matchesListing && !matchesBuyer) {
+        listingBrokerCommissionPercent = amendedValue;
+      }
+    }
+  }
+
+  /*
+   * Recover side meaning from evidence context when older saved
+   * analyses used generic commission keys.
+   */
+  if (listingBrokerCommissionPercent === null && listingCommissionRecord) {
+    listingBrokerCommissionPercent = normalizePercent(
+      listingCommissionRecord.value,
+    );
+  }
+
+  if (buyerBrokerCommissionPercent === null && buyerCommissionRecord) {
+    buyerBrokerCommissionPercent = normalizePercent(
+      buyerCommissionRecord.value,
+    );
+  }
+
+  /*
+   * Existing transaction commission remains a safe compatibility
+   * fallback when document evidence has not established a
+   * side-specific value.
+   *
+   * It does NOT override supported document evidence.
+   */
+  const storedCommissionPercent = normalizePercent(txn?.commissionPercent);
+
+  const transactionSide = String(
+    txn?.side ||
+      txn?.transactionSide ||
+      txn?.type ||
+      txn?.transactionType ||
+      "",
+  )
+    .trim()
+    .toLowerCase();
+
+  const isDualAgency =
+    transactionSide.includes("dual") ||
+    transactionSide.includes("both") ||
+    txn?.dualAgency === true ||
+    txn?.isDualAgency === true ||
+    (txn?.representsSeller === true && txn?.representsBuyer === true);
+
+  const isListingTransaction =
+    transactionSide.includes("listing") ||
+    transactionSide.includes("seller") ||
+    isDualAgency;
+
+  const isBuyerTransaction = transactionSide.includes("buyer") || isDualAgency;
+
+  /*
+   * For legacy Listing transactions, txn.commissionPercent was
+   * historically the agent's listing-side commission.
+   */
+  if (
+    listingBrokerCommissionPercent === null &&
+    isListingTransaction &&
+    storedCommissionPercent !== null
+  ) {
+    listingBrokerCommissionPercent = storedCommissionPercent;
+  }
+
+  /*
+   * For legacy Buyer transactions, txn.commissionPercent was
+   * historically the agent's buyer-side commission.
+   */
+  if (
+    buyerBrokerCommissionPercent === null &&
+    isBuyerTransaction &&
+    !isListingTransaction &&
+    storedCommissionPercent !== null
+  ) {
+    buyerBrokerCommissionPercent = storedCommissionPercent;
+  }
+
+  brain.canonicalFacts.listingBrokerCommissionPercent =
+    listingBrokerCommissionPercent;
+
+  brain.canonicalFacts.buyerBrokerCommissionPercent =
+    buyerBrokerCommissionPercent;
+
+  /*
+   * commissionPercent remains the backward-compatible number
+   * representing what THIS agent/brokerage expects to earn.
+   */
+  if (isDualAgency) {
+    const listingPercent = Number(listingBrokerCommissionPercent || 0);
+    const buyerPercent = Number(buyerBrokerCommissionPercent || 0);
+
+    brain.canonicalFacts.commissionPercent =
+      listingPercent > 0 || buyerPercent > 0
+        ? listingPercent + buyerPercent
+        : null;
+  } else if (isListingTransaction) {
+    brain.canonicalFacts.commissionPercent = listingBrokerCommissionPercent;
+  } else if (isBuyerTransaction) {
+    brain.canonicalFacts.commissionPercent = buyerBrokerCommissionPercent;
+  } else {
+    /*
+     * Unknown transaction type: preserve generic commission
+     * evidence rather than guessing which side it belongs to.
+     */
+    brain.canonicalFacts.commissionPercent = normalizePercent(
+      findCanonicalEntry(
+        "commissionPercent",
+        "commission_percent",
+        "brokerCommissionPercent",
+        "commissionRate",
+        "commission.rate",
+      ),
+    );
+  }
+
   brain.canonicalFacts.effectiveDate = normalizeDate(
     findCanonicalEntry(
       "effectiveDate",
@@ -1819,29 +2718,77 @@ function aiExtractCanonicalFacts(brain, txn, firstDefined) {
     ),
   );
 
-  brain.canonicalFacts.sellerCredit = normalizeMoney(
-    findCanonicalEntry(
-      "sellerCredit",
-      "seller_credit",
-      "sellerCredits",
-      "seller_credits",
-      "sellerConcession",
-      "seller_concession",
-      "sellerConcessions",
-      "seller_concessions",
-    ),
+  const sellerCreditValue = findCanonicalEntry(
+    "sellerCredit",
+    "seller_credit",
+    "sellerCredits",
+    "seller_credits",
+    "sellerConcession",
+    "seller_concession",
+    "sellerConcessions",
+    "seller_concessions",
+    "sellerCreditToBuyer",
+    "seller_credit_to_buyer",
+    "creditToBuyer",
+    "credit_to_buyer",
+    "buyerCredit",
+    "buyer_credit",
+    "buyerClosingCostCredit",
+    "closingCostCredit",
   );
 
-  brain.canonicalFacts.inspectionDays = normalizeInteger(
-    findCanonicalEntry(
-      "inspectionDays",
-      "inspection_days",
-      "inspectionPeriodDays",
-      "inspection_period_days",
-      "dueDiligenceDays",
-      "due_diligence_days",
-    ),
+  if (
+    typeof sellerCreditValue === "string" &&
+    sellerCreditValue.includes("%")
+  ) {
+    const percentMatch = sellerCreditValue.match(/([\d.]+)\s*%/);
+    const percent = percentMatch ? Number(percentMatch[1]) : NaN;
+    const purchasePrice = Number(brain.canonicalFacts.purchasePrice);
+
+    brain.canonicalFacts.sellerCredit =
+      Number.isFinite(percent) &&
+      Number.isFinite(purchasePrice) &&
+      purchasePrice > 0
+        ? Math.round(((purchasePrice * percent) / 100) * 100) / 100
+        : sellerCreditValue;
+  } else {
+    brain.canonicalFacts.sellerCredit = normalizeMoney(sellerCreditValue);
+  }
+
+  const inspectionValue = findCanonicalEntry(
+    "inspectionDays",
+    "inspection_days",
+    "inspectionPeriodDays",
+    "inspection_period_days",
+    "dueDiligenceDays",
+    "due_diligence_days",
+    "inspectionContingencyDeadline",
+    "inspection_contingency_deadline",
+    "inspectionContingencyPeriod",
+    "inspection_contingency_period",
   );
+
+  brain.canonicalFacts.inspectionDays = normalizeInteger(inspectionValue);
+
+  const effectiveDate = String(brain.canonicalFacts.effectiveDate || "").trim();
+
+  if (
+    brain.canonicalFacts.inspectionDays !== null &&
+    /^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)
+  ) {
+    const [year, month, day] = effectiveDate.split("-").map(Number);
+    const deadline = new Date(Date.UTC(year, month - 1, day));
+
+    deadline.setUTCDate(
+      deadline.getUTCDate() + brain.canonicalFacts.inspectionDays,
+    );
+
+    brain.canonicalFacts.inspectionDeadline = deadline
+      .toISOString()
+      .slice(0, 10);
+  } else {
+    brain.canonicalFacts.inspectionDeadline = "";
+  }
 
   brain.canonicalFacts.optionDays = normalizeInteger(
     findCanonicalEntry(
@@ -1852,25 +2799,83 @@ function aiExtractCanonicalFacts(brain, txn, firstDefined) {
     ),
   );
 
-  brain.canonicalFacts.financingDeadline = normalizeDate(
-    findCanonicalEntry(
-      "financingDeadline",
-      "financing_deadline",
-      "loanDeadline",
-      "loan_deadline",
-      "financingContingencyDeadline",
-      "financing_contingency_deadline",
-    ),
+  const financingValue = findCanonicalEntry(
+    "financingDeadline",
+    "financing_deadline",
+    "loanDeadline",
+    "loan_deadline",
+    "financingContingencyDeadline",
+    "financing_contingency_deadline",
+    "financingDays",
+    "financing_days",
+    "loanContingencyPeriod",
+    "loan_contingency_period",
+    "financingContingencyPeriod",
+    "financing_contingency_period",
   );
 
-  brain.canonicalFacts.appraisalDeadline = normalizeDate(
-    findCanonicalEntry(
-      "appraisalDeadline",
-      "appraisal_deadline",
-      "appraisalContingencyDeadline",
-      "appraisal_contingency_deadline",
-    ),
+  if (
+    typeof financingValue === "string" &&
+    /\b\d+\s*days?\b/i.test(financingValue)
+  ) {
+    const financingDays = normalizeInteger(financingValue);
+    const effectiveDate = String(
+      brain.canonicalFacts.effectiveDate || "",
+    ).trim();
+
+    brain.canonicalFacts.financingDays = financingDays;
+
+    if (financingDays !== null && /^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) {
+      const [year, month, day] = effectiveDate.split("-").map(Number);
+      const deadline = new Date(Date.UTC(year, month - 1, day));
+
+      deadline.setUTCDate(deadline.getUTCDate() + financingDays);
+
+      brain.canonicalFacts.financingDeadline = deadline
+        .toISOString()
+        .slice(0, 10);
+    } else {
+      brain.canonicalFacts.financingDeadline = "";
+    }
+  } else {
+    brain.canonicalFacts.financingDeadline = normalizeDate(financingValue);
+  }
+
+  const appraisalValue = findCanonicalEntry(
+    "appraisalDeadline",
+    "appraisal_deadline",
+    "appraisalContingencyDeadline",
+    "appraisal_contingency_deadline",
+    "appraisalDays",
+    "appraisal_days",
+    "appraisalContingencyPeriod",
+    "appraisal_contingency_period",
   );
+
+  if (
+    typeof appraisalValue === "string" &&
+    /\b\d+\s*days?\b/i.test(appraisalValue)
+  ) {
+    const appraisalDays = normalizeInteger(appraisalValue);
+    const effectiveDate = String(
+      brain.canonicalFacts.effectiveDate || "",
+    ).trim();
+
+    brain.canonicalFacts.appraisalDays = appraisalDays;
+
+    if (appraisalDays !== null && /^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) {
+      const [year, month, day] = effectiveDate.split("-").map(Number);
+      const deadline = new Date(Date.UTC(year, month - 1, day));
+
+      deadline.setUTCDate(deadline.getUTCDate() + appraisalDays);
+
+      brain.canonicalFacts.appraisalDeadline = deadline
+        .toISOString()
+        .slice(0, 10);
+    } else {
+      brain.canonicalFacts.appraisalDeadline = "";
+    }
+  }
 
   return brain.canonicalFacts;
 }
@@ -2733,6 +3738,12 @@ function aiBuildTransactionBrain(txn = {}) {
 ----------------------------------------------------- */
 
   aiExtractCanonicalFacts(brain, txn, firstDefined);
+
+  /*
+   * Build the commission allocation summary only after
+   * purchase price and side-specific commission are established.
+   */
+  aiBuildCommissionAllocationSummary(brain, txn);
 
   brain.evidenceSummary = {
     documents: docs.length,

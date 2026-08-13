@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Sign In | RapportLink</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family:
+          Inter,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Arial,
+          sans-serif;
+      }
+
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 20px;
+
+        background:
+          radial-gradient(
+            circle at 18% 15%,
+            rgba(255, 255, 255, 0.08) 0%,
+            transparent 32%
+          ),
+          radial-gradient(
+            circle at 88% 72%,
+            rgba(0, 207, 112, 0.2) 0%,
+            transparent 36%
+          ),
+          linear-gradient(
+            115deg,
+            #011c31 0%,
+            #032c49 28%,
+            #07515a 52%,
+            #078a58 76%,
+            #00a143 100%
+          );
+      }
+
+      .rl-login-card {
+        width: 100%;
+        max-width: 430px;
+
+        background: #ffffff;
+
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 22px;
+
+        padding: 34px 38px 36px;
+
+        box-shadow:
+          0 34px 75px rgba(1, 28, 49, 0.3),
+          0 10px 26px rgba(1, 28, 49, 0.16),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+        text-align: center;
+      }
+
+      .rl-login-logo {
+        display: block;
+
+        width: 440px;
+        max-width: none;
+        height: auto;
+
+        margin: -92px auto -82px;
+
+        position: relative;
+        left: 50%;
+        transform: translateX(-50%);
+
+        background: transparent;
+        border: none;
+        box-shadow: none;
+      }
+
+      h1 {
+        margin: 0 0 7px;
+
+        color: #042c49;
+
+        font-size: 27px;
+        line-height: 1.2;
+        font-weight: 750;
+        letter-spacing: -0.5px;
+      }
+
+      .rl-login-subtitle {
+        margin: 0 0 27px;
+
+        color: #6b7280;
+
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .rl-login-field {
+        margin-bottom: 18px;
+        text-align: left;
+      }
+
+      .rl-login-field label {
+        display: block;
+
+        margin-bottom: 7px;
+
+        color: #334155;
+
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .rl-login-field input {
+        width: 100%;
+        height: 46px;
+
+        padding: 0 14px;
+
+        border: 1px solid #d8dee7;
+        border-radius: 10px;
+
+        background: #ffffff;
+        color: #0f172a;
+
+        font-size: 15px;
+
+        outline: none;
+
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      .rl-login-field input:focus {
+        border-color: #00a143;
+        box-shadow: 0 0 0 3px rgba(0, 161, 67, 0.1);
+      }
+
+      .rl-password-wrap {
+        position: relative;
+      }
+
+      .rl-password-wrap input {
+        padding-right: 48px;
+      }
+
+      .rl-password-toggle {
+        position: absolute;
+
+        right: 13px;
+        top: 50%;
+
+        transform: translateY(-50%);
+
+        border: 0;
+        background: transparent;
+
+        padding: 5px;
+
+        cursor: pointer;
+
+        font-size: 18px;
+        line-height: 1;
+
+        opacity: 0.7;
+      }
+
+      .rl-password-toggle:hover {
+        opacity: 1;
+      }
+
+      .rl-forgot-wrap {
+        margin-top: -6px;
+        margin-bottom: 18px;
+        text-align: right;
+      }
+
+      .rl-forgot-link {
+        color: #04783a;
+        font-size: 13px;
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      .rl-forgot-link:hover {
+        text-decoration: underline;
+      }
+
+      .rl-login-error {
+        margin: 2px 0 15px;
+
+        padding: 10px 12px;
+
+        border: 1px solid #fecaca;
+        border-radius: 9px;
+
+        background: #fef2f2;
+        color: #b91c1c;
+
+        font-size: 13px;
+        text-align: left;
+      }
+
+      #rlLoginButton {
+        width: 100%;
+        height: 47px;
+
+        border: 0;
+        border-radius: 10px;
+
+        background: #00a143;
+        color: #ffffff;
+
+        font-size: 15px;
+        font-weight: 700;
+
+        cursor: pointer;
+
+        transition:
+          transform 0.12s ease,
+          background 0.12s ease,
+          box-shadow 0.12s ease;
+      }
+
+      #rlLoginButton:hover {
+        background: #008d3b;
+        box-shadow: 0 7px 18px rgba(0, 161, 67, 0.2);
+      }
+
+      #rlLoginButton:active {
+        transform: translateY(1px);
+      }
+
+      #rlLoginButton:disabled {
+        opacity: 0.65;
+        cursor: wait;
+      }
+
+      @media (max-width: 520px) {
+        body {
+          padding: 20px 14px;
+        }
+
+        .rl-login-card {
+          padding: 30px 24px 32px;
+        }
+
+        .rl-login-logo {
+          width: 400px;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="rl-login-card">
+      <img
+        src="rapportlink-login-logo.png"
+        alt="RapportLink"
+        class="rl-login-logo"
+      />
+
+      <h1>Welcome back</h1>
+
+      <p class="rl-login-subtitle">Sign in to continue to RapportLink.</p>
+
+      <form id="rlLoginForm">
+        <div class="rl-login-field">
+          <label for="rlLoginEmail">Email</label>
+
+          <input type="email" id="rlLoginEmail" autocomplete="email" required />
+        </div>
+
+        <div class="rl-login-field">
+          <label for="rlLoginPassword">Password</label>
+
+          <div class="rl-password-wrap">
+            <input
+              type="password"
+              id="rlLoginPassword"
+              autocomplete="current-password"
+              required
+            />
+
+            <button
+              type="button"
+              id="rlTogglePassword"
+              class="rl-password-toggle"
+              aria-label="Show password"
+              title="Show password"
+            >
+              👁
+            </button>
+          </div>
+        </div>
+
+        <div class="rl-forgot-wrap">
+          <a href="/forgot-password" class="rl-forgot-link">
+            Forgot Password?
+          </a>
+        </div>
+
+        <div
+          id="rlLoginError"
+          class="rl-login-error"
+          style="display: none"
+        ></div>
+
+        <button type="submit" id="rlLoginButton">Sign In</button>
+      </form>
+    </main>
+
+    <script>
+      const loginForm = document.getElementById("rlLoginForm");
+
+      const loginButton = document.getElementById("rlLoginButton");
+
+      const loginError = document.getElementById("rlLoginError");
+
+      const passwordInput = document.getElementById("rlLoginPassword");
+
+      const passwordToggle = document.getElementById("rlTogglePassword");
+
+      passwordToggle.addEventListener("click", function () {
+        const isHidden = passwordInput.type === "password";
+
+        passwordInput.type = isHidden ? "text" : "password";
+
+        this.textContent = isHidden ? "🙈" : "👁";
+
+        this.setAttribute(
+          "aria-label",
+          isHidden ? "Hide password" : "Show password",
+        );
+
+        this.title = isHidden ? "Hide password" : "Show password";
+      });
+
+      loginForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        loginError.style.display = "none";
+
+        loginError.textContent = "";
+
+        loginButton.disabled = true;
+        loginButton.textContent = "Signing In...";
+
+        try {
+          const email = document.getElementById("rlLoginEmail").value.trim();
+
+          const password = passwordInput.value;
+
+          const response = await fetch("/api/auth/login", {
+            method: "POST",
+
+            credentials: "include",
+
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+
+            body: JSON.stringify({
+              email,
+              password,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.message || "Unable to log in.");
+          }
+
+          window.location.href = "/";
+        } catch (error) {
+          console.error("RapportLink login failed:", error);
+
+          loginError.textContent = error.message || "Unable to log in.";
+
+          loginError.style.display = "block";
+
+          loginButton.disabled = false;
+
+          loginButton.textContent = "Sign In";
+        }
+      });
+    </script>
+  </body>
+</html>

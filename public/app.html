@@ -498,7 +498,12 @@
 
 .contact-workspace-pill {
   background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  border: 5px solid #d5dadd;
+
+  outline: 1px solid rgba(112, 124, 133, 0.55);
+  outline-offset: -1px;
+
   color: white;
   border-radius: 999px;
   padding: 7px 11px;
@@ -1107,67 +1112,96 @@
         background: #eef2f7;
       }
 
-      /* APP TOP BAR / NAVBAR EVOLUTION */
-      .app-toolbar {
-        background: white;
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 14px;
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: 14px;
-        align-items: center;
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
-        margin-bottom: 16px;
-      }
-
       .global-search-wrap {
-        position: relative;
-      }
+  position: relative;
+}
+
+.global-search-button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+  transition: 0.18s ease;
+}
+
+.global-search-button:hover {
+  background: #f8fafc;
+  border-color: rgba(4, 44, 73, 0.18);
+  transform: translateY(-1px);
+}
+
+.global-search-popover {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: min(460px, calc(100vw - 40px));
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 10px;
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.18);
+  z-index: 9000;
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  pointer-events: none;
+
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    visibility 0.16s ease;
+}
+
+.global-search-wrap.open .global-search-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 
       .global-search-input {
-        padding-left: 42px;
-        height: 44px;
-        border-radius: 14px;
-      }
+  height: 46px;
+  border-radius: 13px;
+  padding: 10px 14px;
+}
 
-      .global-search-icon {
-        position: absolute;
-        left: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--muted);
-        font-size: 16px;
-      }
 
       .global-search-results {
-        position: absolute;
-        top: 52px;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.15);
-        z-index: 9000;
-        max-height: 420px;
-        overflow: auto;
-        display: none;
-      }
+  position: static;
+  margin-top: 8px;
+  background: white;
+  border: none;
+  border-radius: 12px;
+  box-shadow: none;
+  max-height: 420px;
+  overflow: auto;
+  display: none;
+}
 
       .global-search-results.open {
         display: block;
       }
 
       .global-result-row {
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--border);
-        cursor: pointer;
-      }
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: 10px;
+}
 
-      .global-result-row:hover {
-        background: #f9fafb;
-      }
+.global-result-row:hover {
+  background: #f8fafc;
+}
 
       .toolbar-actions {
         display: flex;
@@ -3589,369 +3623,3168 @@
           grid-template-columns: 1fr;
         }
       }
+
+ /* =====================================================
+   RAPPORTLINK LOGIN SCREEN
+   SINGLE AUTHORITATIVE DESIGN
+   ===================================================== */
+
+.rl-login-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 100vh;
+  padding: 32px 20px;
+
+  overflow-y: auto;
+
+  background:
+    radial-gradient(
+      circle at 13% 18%,
+      rgba(0, 161, 67, 0.14) 0%,
+      rgba(0, 161, 67, 0.06) 22%,
+      transparent 44%
+    ),
+    radial-gradient(
+      circle at 88% 72%,
+      rgba(4, 44, 73, 0.13) 0%,
+      rgba(4, 44, 73, 0.05) 26%,
+      transparent 48%
+    ),
+    linear-gradient(
+      135deg,
+      #fbfcfd 0%,
+      #f4f7f9 48%,
+      #edf2f6 100%
+    );
+}
+
+
+/* Main white login card */
+
+.rl-login-card {
+  width: 100%;
+  max-width: 560px;
+
+  padding: 58px 64px 54px;
+
+  background: rgba(255, 255, 255, 0.98);
+
+  border: 1px solid rgba(4, 44, 73, 0.08);
+  border-radius: 26px;
+
+  box-shadow:
+    0 34px 90px rgba(4, 44, 73, 0.14),
+    0 10px 30px rgba(4, 44, 73, 0.07);
+
+  text-align: center;
+}
+
+
+/* RapportLink logo
+   NO BACKGROUND
+   NO BOX
+   NO BORDER
+*/
+
+.rl-login-logo {
+  display: block;
+
+  width: 440px;
+  max-width: none;
+  height: auto;
+
+  margin: -92px auto -82px;
+
+  padding: 0;
+
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+
+/* Heading */
+
+.rl-login-card h1 {
+  margin: 0 0 10px;
+
+  color: #042c49;
+
+  font-size: 32px;
+  line-height: 1.15;
+  font-weight: 750;
+  letter-spacing: -0.7px;
+}
+
+
+/* Subtitle */
+
+.rl-login-subtitle {
+  margin: 0 0 38px;
+
+  color: #667786;
+
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+
+/* Form */
+
+#rlLoginForm {
+  width: 100%;
+}
+
+
+/* Field */
+
+.rl-login-field {
+  margin-bottom: 22px;
+
+  text-align: left;
+}
+
+
+.rl-login-field label {
+  display: block;
+
+  margin: 0 0 8px;
+
+  color: #142f43;
+
+  font-size: 14px;
+  font-weight: 650;
+}
+
+
+/* Inputs */
+
+.rl-login-field input {
+  width: 100%;
+  height: 58px;
+
+  padding: 0 18px;
+
+  border: 1px solid #d6dfe6;
+  border-radius: 11px;
+
+  background: #ffffff;
+
+  color: #042c49;
+
+  font-family: inherit;
+  font-size: 15px;
+
+  outline: none;
+
+  box-sizing: border-box;
+
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+
+.rl-login-field input:hover {
+  border-color: #bccbd5;
+}
+
+
+.rl-login-field input:focus {
+  border-color: #00a143;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 0 0 4px rgba(0, 161, 67, 0.10);
+}
+
+
+/* Error */
+
+.rl-login-error {
+  margin: -4px 0 18px;
+
+  padding: 12px 14px;
+
+  border: 1px solid rgba(185, 40, 40, 0.18);
+  border-radius: 9px;
+
+  background: rgba(185, 40, 40, 0.055);
+
+  color: #a12828;
+
+  font-size: 13px;
+  line-height: 1.4;
+
+  text-align: left;
+}
+
+
+/* Sign In button */
+
+#rlLoginButton {
+  width: 100%;
+  height: 58px;
+
+  margin-top: 5px;
+
+  border: none;
+  border-radius: 11px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #00b64b 0%,
+      #00a143 55%,
+      #008f3b 100%
+    );
+
+  color: #ffffff;
+
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 750;
+  letter-spacing: -0.1px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 9px 22px rgba(0, 161, 67, 0.20);
+
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    filter 0.16s ease;
+}
+
+
+#rlLoginButton:hover {
+  transform: translateY(-1px);
+
+  box-shadow:
+    0 13px 28px rgba(0, 161, 67, 0.25);
+
+  filter: brightness(1.02);
+}
+
+
+#rlLoginButton:active {
+  transform: translateY(0);
+}
+
+
+#rlLoginButton:disabled {
+  opacity: 0.65;
+
+  cursor: wait;
+
+  transform: none;
+  box-shadow: none;
+}
+
+
+/* Mobile */
+
+@media (max-width: 650px) {
+
+  .rl-login-screen {
+    padding: 20px 14px;
+  }
+
+  .rl-login-card {
+    max-width: 100%;
+
+    padding: 42px 26px 38px;
+
+    border-radius: 22px;
+  }
+
+  .rl-login-logo {
+    width: 300px;
+
+    margin-bottom: 34px;
+  }
+
+  .rl-login-card h1 {
+    font-size: 28px;
+  }
+
+  .rl-login-subtitle {
+    margin-bottom: 30px;
+  }
+} 
+
+.rl-login-error {
+  margin: 4px 0 14px;
+
+  padding: 10px 12px;
+
+  border: 1px solid rgba(190, 45, 45, 0.18);
+  border-radius: 8px;
+
+  background: rgba(190, 45, 45, 0.06);
+  color: #a52626;
+
+  font-size: 13px;
+  text-align: left;
+} 
+
     </style>
   </head>
 
   <body>
-    <div class="header" style="justify-content: left">
-      <img
-        src="rapportlink-logo.png"
-        alt="RapportLink"
-        style="height: 200px; width: auto"
-      />
-    </div>
 
-    <div class="container mt-4">
-      <ul class="nav nav-tabs">
-        <li class="nav-item">
-          <button
-            class="nav-link active"
-            id="tabDashboard"
-            onclick="showTab('dashboard')"
-          >
-            Dashboard
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabSnapshot"
-            onclick="showTab('snapshot')"
-          >
-            Snapshot
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabCalendar"
-            onclick="showTab('calendar')"
-          >
-            Calendar
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabCampaigns"
-            onclick="showTab('campaigns')"
-          >
-            Email Campaigns
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabEmailDesigner"
-            onclick="showTab('emailDesigner')"
-          >
-            Email Designer
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabTextCampaigns"
-            onclick="showTab('textCampaigns')"
-          >
-            Text Campaigns
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabContacts"
-            onclick="showTab('contacts')"
-          >
-            Contacts
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabPipeline"
-            onclick="showTab('pipeline')"
-          >
-            Pipeline
-          </button>
-        </li>
-        <li class="nav-item">
-          <button
-            class="nav-link"
-            id="tabTransactions"
-            onclick="showTab('transactions')"
-          >
-            Transactions
-          </button>
-        </li>
-        <li class="nav-item">
-          <button class="nav-link" id="tabTasks" onclick="showTab('tasks')">
-            Tasks
-          </button>
-        </li>
-      </ul>
+    <div
+  class="header"
+  style="
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  "
+>
+  <img
+    src="rapportlink-logo.png"
+    alt="RapportLink"
+    style="height: 200px; width: auto"
+  />
 
-      <div class="app-toolbar">
-        <div class="global-search-wrap">
-          <span class="global-search-icon">⌕</span>
+  <button
+    type="button"
+    id="rlLogoutButton"
+    style="
+      margin-right: 24px;
+      padding: 7px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    "
+  >
+    Log out
+  </button>
+</div>
+
+<script>
+  document
+    .getElementById("rlLogoutButton")
+    .addEventListener("click", async function () {
+      try {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("Logout failed.");
+        }
+
+        window.location.href = "/";
+      } catch (error) {
+        console.error("RapportLink logout failed:", error);
+        alert("Unable to log out. Please try again.");
+      }
+    });
+</script>
+
+<div class="container mt-4">
+  <ul class="nav nav-tabs">
+    <li class="nav-item">
+      <button
+        class="nav-link active"
+        id="tabDashboard"
+        onclick="showTab('dashboard')"
+      >
+        Dashboard
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabSnapshot"
+        onclick="showTab('snapshot')"
+      >
+        Snapshot
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabCalendar"
+        onclick="showTab('calendar')"
+      >
+        Calendar
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabCampaigns"
+        onclick="showTab('campaigns')"
+      >
+        Email Campaigns
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabEmailDesigner"
+        onclick="showTab('emailDesigner')"
+      >
+        Email Designer
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabTextCampaigns"
+        onclick="showTab('textCampaigns')"
+      >
+        Text Campaigns
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabContacts"
+        onclick="showTab('contacts')"
+      >
+        Contacts
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabPipeline"
+        onclick="showTab('pipeline')"
+      >
+        Pipeline
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabTransactions"
+        onclick="showTab('transactions')"
+      >
+        Transactions
+      </button>
+    </li>
+
+    <li class="nav-item">
+      <button
+        class="nav-link"
+        id="tabTasks"
+        onclick="showTab('tasks')"
+      >
+        Tasks
+      </button>
+    </li>
+  </ul>
+
+  <div class="app-toolbar">
+    <div class="toolbar-actions">
+
+      <div id="globalSearchWrap" class="global-search-wrap">
+        <button
+          type="button"
+          class="global-search-button"
+          title="Search RapportLink"
+          aria-label="Search RapportLink"
+          onclick="
+            const wrap = document.getElementById('globalSearchWrap');
+            wrap.classList.toggle('open');
+
+            if (wrap.classList.contains('open')) {
+              setTimeout(() => {
+                document.getElementById('globalSearchInput')?.focus();
+              }, 20);
+            }
+          "
+        >
+          ⌕
+        </button>
+
+        <div class="global-search-popover">
           <input
             id="globalSearchInput"
             class="form-control global-search-input"
-            placeholder="Search contacts, campaigns, tags, stages, phone numbers, or emails..."
+            placeholder="Search RapportLink..."
             oninput="handleGlobalSearch()"
             onfocus="handleGlobalSearch()"
           />
-          <div id="globalSearchResults" class="global-search-results"></div>
-        </div>
 
-        <div class="toolbar-actions">
-          <button class="btn btn-success" onclick="quickAddContact()">
-            + Quick Add
+          <div
+            id="globalSearchResults"
+            class="global-search-results"
+          ></div>
+        </div>
+      </div>
+
+      <div class="toolbar-actions">
+        <button
+          class="btn btn-success"
+          onclick="quickAddContact()"
+        >
+          + Quick Add
+        </button>
+
+        <div class="toolbar-menu-wrap">
+          <button
+            type="button"
+            class="icon-button"
+            onclick="return toggleNotificationMenu(event);"
+            title="Notifications"
+          >
+            🔔
+
+            <span
+              id="notificationBadge"
+              class="notification-dot"
+              style="display: none"
+            >
+              0
+            </span>
           </button>
 
-          <div class="toolbar-menu-wrap">
-            <button
-              type="button"
-              class="icon-button"
-              onclick="return toggleNotificationMenu(event);"
-              title="Notifications"
-            >
-              🔔
-              <span
-                id="notificationBadge"
-                class="notification-dot"
-                style="display: none"
-                >0</span
-              >
-            </button>
-            <div id="notificationMenu" class="toolbar-menu"></div>
-          </div>
+          <div
+            id="notificationMenu"
+            class="toolbar-menu"
+          ></div>
+        </div>
 
-          <div class="toolbar-menu-wrap">
-            <button
-              type="button"
-              class="icon-button"
-              onclick="return toggleSettingsMenu(event);"
-              title="Settings"
-            >
-              ⚙
-            </button>
+        <div class="toolbar-menu-wrap">
+          <button
+            type="button"
+            class="icon-button"
+            onclick="return toggleSettingsMenu(event);"
+            title="Settings"
+          >
+            ⚙
+          </button>
 
-            <div id="settingsMenu" class="toolbar-menu">
-              <div class="small-muted mb-2">Settings & Integrations</div>
+          <div
+            id="settingsMenu"
+            class="toolbar-menu"
+          >
+            <div class="small-muted mb-2">
+              Settings & Integrations
+            </div>
 
-              <div class="quick-add-grid">
-                <div class="quick-add-item">
-                  <b>Gmail Connection</b><br />
-                  <small id="gmailConnectionStatus"
-                    >Checking Gmail connection...</small
+            <div class="quick-add-grid">
+
+              <div class="quick-add-item">
+                <b>Gmail Connection</b><br />
+
+                <small id="gmailConnectionStatus">
+                  Checking Gmail connection...
+                </small>
+
+                <div class="mt-2">
+                  <button
+                    id="gmailConnectButton"
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    onclick="window.location.href = '/auth/google'"
                   >
-
-                  <div class="mt-2">
-                    <button
-                      id="gmailConnectButton"
-                      type="button"
-                      class="btn btn-sm btn-outline-primary"
-                      onclick="window.location.href = '/auth/google'"
-                    >
-                      Connect Gmail
-                    </button>
-                  </div>
-                </div>
-
-                <div class="quick-add-item">
-                  <b>Microsoft 365 / Outlook</b><br />
-                  <small>Connect Outlook and Microsoft email accounts.</small>
-
-                  <div class="mt-2">
-                    <button
-                      type="button"
-                      class="btn btn-sm btn-outline-secondary"
-                      disabled
-                    >
-                      Coming Soon
-                    </button>
-                  </div>
-                </div>
-
-                <div class="quick-add-item" onclick="showTab('settings')">
-                  <b>Platform Settings</b><br />
-                  <small>
-                    Configure email sending, AI preferences, automations,
-                    notifications, and future integrations.
-                  </small>
+                    Connect Gmail
+                  </button>
                 </div>
               </div>
+
+              <div class="quick-add-item">
+                <b>Microsoft 365 / Outlook</b><br />
+
+                <small>
+                  Connect Outlook and Microsoft email accounts.
+                </small>
+
+                <div class="mt-2">
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    disabled
+                  >
+                    Coming Soon
+                  </button>
+                </div>
+              </div>
+
+              <div
+                class="quick-add-item"
+                onclick="showTab('settings')"
+              >
+                <b>Platform Settings</b><br />
+
+                <small>
+                  Configure email sending, AI preferences,
+                  automations, notifications, and future integrations.
+                </small>
+              </div>
+
             </div>
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
-      <!-- DASHBOARD -->
-      <div id="dashboardTab" class="mt-4">
-        <div class="ai-dashboard-hero">
+  <!-- DASHBOARD -->
+  <div id="dashboardTab" class="rl-dashboard">
+
+    <style>
+
+/* =====================================================
+   RAPPORTLINK EXECUTIVE DASHBOARD
+   Premium Design System
+   Navy • Green • Silver
+   ===================================================== */
+
+#dashboardTab.rl-dashboard {
+  --rl-navy: #042c49;
+  --rl-navy-deep: #031f34;
+  --rl-green: #00a143;
+  --rl-silver: #c3c9cf;
+  --rl-silver-light: #e7eaed;
+  --rl-silver-dark: #8d969f;
+  --rl-bg: #f4f6f8;
+  --rl-text: #0f2536;
+  --rl-muted: #768491;
+  --rl-white: #ffffff;
+
+  max-width: 1500px;
+  margin: 34px auto 70px;
+  padding: 0 18px;
+
+  color: var(--rl-text);
+}
+
+
+/* =====================================================
+   MASTER SHELL
+   ===================================================== */
+
+#dashboardTab .rl-exec-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* =====================================================
+   PREMIUM CARD FOUNDATION
+   ===================================================== */
+
+#dashboardTab .rl-surface {
+  position: relative;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(4, 44, 73, 0.075);
+  border-radius: 24px;
+
+  box-shadow:
+    0 16px 40px rgba(4, 44, 73, 0.055),
+    0 2px 8px rgba(4, 44, 73, 0.025);
+
+  transition:
+    box-shadow 0.22s ease,
+    transform 0.22s ease,
+    border-color 0.22s ease;
+}
+
+#dashboardTab .rl-surface:hover {
+  border-color: rgba(4, 44, 73, 0.11);
+
+  box-shadow:
+    0 22px 52px rgba(4, 44, 73, 0.075),
+    0 4px 12px rgba(4, 44, 73, 0.035);
+}
+
+
+/* =====================================================
+   MAIN COMMAND ROW
+   ===================================================== */
+
+#dashboardTab .rl-command-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(330px, 0.65fr);
+  gap: 20px;
+}
+
+
+/* =====================================================
+   TODAY'S FOCUS
+   ===================================================== */
+
+#dashboardTab .rl-focus-panel {
+  min-height: 225px;
+
+  padding: 32px 36px 34px;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      circle at 96% 0%,
+      rgba(0, 161, 67, 0.035),
+      transparent 34%
+    ),
+    #ffffff;
+}
+
+#dashboardTab .rl-focus-panel::before {
+  content: "";
+
+  position: absolute;
+
+  left: 0;
+  top: 30px;
+  bottom: 30px;
+
+  width: 3px;
+
+  border-radius: 0 3px 3px 0;
+
+  background: linear-gradient(
+    180deg,
+    #00a143,
+    rgba(0, 161, 67, 0.35)
+  );
+
+  box-shadow:
+    0 0 16px rgba(0, 161, 67, 0.10);
+}
+
+#dashboardTab .rl-section-label {
+  margin-bottom: 22px;
+
+  color: #89959e;
+
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.20em;
+}
+
+#dashboardTab #rlDashboardFocus {
+  min-height: 125px;
+
+  display: flex;
+  align-items: center;
+}
+
+#dashboardTab #rlDashboardFocus .rl-focus-empty {
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns: 62px minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 24px;
+
+  padding: 0;
+}
+
+#dashboardTab #rlDashboardFocus .rl-focus-icon {
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(4, 44, 73, 0.08);
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #f4f7f8
+    );
+
+  color: #00a143;
+
+  font-size: 21px;
+  font-weight: 700;
+
+  box-shadow:
+    0 10px 24px rgba(4, 44, 73, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+#dashboardTab #rlDashboardFocus .rl-focus-title {
+  max-width: 900px;
+
+  color: #042c49;
+
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 590;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+}
+
+#dashboardTab #rlDashboardFocus .rl-focus-note {
+  max-width: 760px;
+
+  margin-top: 10px;
+
+  color: #71808c;
+
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 450;
+}
+
+
+/* =====================================================
+   BUSINESS SNAPSHOT
+   ===================================================== */
+
+#dashboardTab .rl-business-panel {
+  min-height: 225px;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      160deg,
+      #ffffff 0%,
+      #fbfcfd 100%
+    );
+}
+
+#dashboardTab .rl-business-head {
+  padding: 27px 29px 0;
+}
+
+#dashboardTab .rl-business-money {
+  padding: 12px 29px 25px;
+
+  border-bottom:
+    1px solid rgba(4, 44, 73, 0.07);
+}
+
+#dashboardTab #rlPendingGci {
+  display: block;
+
+  max-width: 100%;
+
+  overflow: visible;
+
+  color: #042c49;
+
+  font-size: clamp(35px, 3vw, 47px);
+  font-weight: 620;
+  line-height: 1;
+  letter-spacing: -0.055em;
+
+  white-space: nowrap;
+}
+
+#dashboardTab .rl-money-caption {
+  margin-top: 9px;
+
+  color: #8a969f;
+
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+#dashboardTab .rl-business-bottom {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  background:
+    rgba(247, 249, 250, 0.55);
+}
+
+#dashboardTab .rl-business-stat {
+  padding: 20px 29px 22px;
+}
+
+#dashboardTab .rl-business-stat + .rl-business-stat {
+  border-left:
+    1px solid rgba(4, 44, 73, 0.07);
+}
+
+#dashboardTab #rlPendingClosings,
+#dashboardTab #rlClosedCount {
+  color: #042c49;
+
+  font-size: 23px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+#dashboardTab .rl-business-stat span {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #89959e;
+
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+}
+
+
+/* =====================================================
+   SECTION HEADINGS
+   ===================================================== */
+
+#dashboardTab .rl-section-head {
+  padding: 22px 26px 16px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  gap: 20px;
+}
+
+#dashboardTab .rl-section-head h2 {
+  margin: 0;
+
+  color: var(--rl-navy);
+
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+#dashboardTab .rl-section-action {
+  padding: 0;
+
+  border: none;
+  background: none;
+
+  color: var(--rl-silver-dark);
+
+  font-size: 11px;
+  font-weight: 750;
+
+  cursor: pointer;
+}
+
+#dashboardTab .rl-section-action:hover {
+  color: var(--rl-green);
+}
+
+
+/* =====================================================
+   UPCOMING CLOSINGS
+   ===================================================== */
+
+#dashboardTab .rl-closings-panel {
+  overflow: hidden;
+}
+
+#dashboardTab #rlUpcomingClosings {
+  border-top:
+    1px solid var(--rl-silver-light);
+}
+
+#dashboardTab #rlUpcomingClosings .rl-closing-row {
+  display: grid;
+
+  grid-template-columns:
+    74px minmax(0, 1fr) auto;
+
+  gap: 18px;
+
+  align-items: center;
+
+  padding: 18px 26px;
+
+  border-bottom:
+    1px solid #eef1f3;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    padding-left 0.15s ease;
+}
+
+#dashboardTab #rlUpcomingClosings .rl-closing-row:last-child {
+  border-bottom: none;
+}
+
+#dashboardTab #rlUpcomingClosings .rl-closing-row:hover {
+  background: #fafbfc;
+
+  padding-left: 30px;
+}
+
+#dashboardTab #rlUpcomingClosings .rl-date-chip {
+  padding: 1px 18px 1px 0;
+
+  border-right:
+    1px solid var(--rl-silver-light);
+
+  border-radius: 0;
+
+  background: transparent;
+
+  text-align: left;
+
+  color: var(--rl-navy);
+}
+
+#dashboardTab #rlUpcomingClosings .rl-date-chip strong {
+  display: block;
+
+  font-size: 23px;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+
+#dashboardTab #rlUpcomingClosings .rl-date-chip span {
+  display: block;
+
+  margin-top: 5px;
+
+  color: var(--rl-silver-dark);
+
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+}
+
+#dashboardTab .rl-row-title {
+  color: var(--rl-navy);
+
+  font-size: 14px;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+#dashboardTab .rl-row-meta {
+  margin-top: 4px;
+
+  color: var(--rl-muted);
+
+  font-size: 11px;
+  font-weight: 550;
+}
+
+#dashboardTab .rl-row-value {
+  color: var(--rl-navy);
+
+  font-size: 14px;
+  font-weight: 750;
+
+  white-space: nowrap;
+}
+
+
+/* =====================================================
+   LOWER ROW
+   ===================================================== */
+
+#dashboardTab .rl-lower-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 0.9fr)
+    minmax(0, 1.1fr);
+
+  gap: 16px;
+}
+
+
+/* =====================================================
+   COMING UP
+   ===================================================== */
+
+#dashboardTab .rl-coming-panel {
+  overflow: hidden;
+}
+
+#dashboardTab #rlComingUp {
+  border-top:
+    1px solid var(--rl-silver-light);
+}
+
+#dashboardTab #rlComingUp .rl-upcoming-row {
+  display: grid;
+
+  grid-template-columns:
+    74px minmax(0, 1fr) 18px;
+
+  gap: 14px;
+
+  align-items: center;
+
+  padding: 14px 24px;
+
+  border-bottom:
+    1px solid #eef1f3;
+}
+
+#dashboardTab #rlComingUp .rl-upcoming-row:last-child {
+  border-bottom: none;
+}
+
+#dashboardTab #rlComingUp .rl-upcoming-row:hover {
+  background: #fafbfc;
+}
+
+/* =====================================================
+   TODAY'S MORTGAGE MARKET
+   Compact Ultra-Premium Financing Intelligence
+   ===================================================== */
+
+#dashboardTab .rl-mortgage-panel {
+  position: relative;
+  overflow: hidden;
+
+  padding: 26px 28px;
+
+  background:
+    radial-gradient(
+      circle at 96% 0%,
+      rgba(0, 161, 67, 0.10),
+      transparent 27%
+    ),
+    linear-gradient(
+      145deg,
+      #ffffff 0%,
+      #fbfcfd 58%,
+      #f4f7f8 100%
+    );
+
+  border: 1px solid rgba(4, 44, 73, 0.075);
+  border-radius: 24px;
+
+  box-shadow:
+    0 18px 42px rgba(4, 44, 73, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+
+/* HEADER */
+
+#dashboardTab .rl-mortgage-header {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+
+  margin-bottom: 18px;
+}
+
+#dashboardTab .rl-mortgage-heading {
+  margin: 4px 0 0;
+
+  color: var(--rl-navy);
+
+  font-size: 23px;
+  line-height: 1.1;
+  font-weight: 780;
+  letter-spacing: -0.035em;
+}
+
+#dashboardTab .rl-mortgage-asof {
+  margin-top: 4px;
+
+  color: #89959d;
+
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+#dashboardTab .rl-mortgage-atmosphere {
+  position: absolute;
+
+  width: 290px;
+  height: 290px;
+
+  right: -110px;
+  top: -155px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(0, 161, 67, 0.12) 0%,
+      rgba(0, 161, 67, 0.025) 44%,
+      transparent 72%
+    );
+
+  pointer-events: none;
+}
+
+
+/* =====================================================
+   COMPACT RATE STRIP
+   ===================================================== */
+
+#dashboardTab .rl-mortgage-grid {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(6, minmax(0, 1fr));
+
+  gap: 7px;
+
+  padding: 6px;
+
+  border: 1px solid rgba(4, 44, 73, 0.07);
+  border-radius: 17px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(245, 248, 249, 0.95),
+      rgba(255, 255, 255, 0.96)
+    );
+
+  box-shadow:
+    inset 0 1px 0 #ffffff;
+}
+
+
+/* RATE ITEMS */
+
+#dashboardTab .rl-mortgage-rate-card,
+#dashboardTab .rl-mortgage-rate-card:first-child {
+  appearance: none;
+
+  position: relative;
+
+  min-width: 0;
+  min-height: 92px;
+
+  padding: 14px 12px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  text-align: left;
+
+  border: 1px solid transparent;
+  border-radius: 12px;
+
+  background: transparent;
+
+  box-shadow: none;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+}
+
+#dashboardTab .rl-mortgage-rate-card + .rl-mortgage-rate-card {
+  border-left-color: rgba(4, 44, 73, 0.06);
+}
+
+#dashboardTab .rl-mortgage-rate-card:hover {
+  transform: translateY(-1px);
+
+  background: #ffffff;
+
+  border-color: rgba(4, 44, 73, 0.07);
+
+  box-shadow:
+    0 8px 20px rgba(4, 44, 73, 0.07);
+}
+
+
+
+
+#dashboardTab .rl-mortgage-rate-card:first-child::before,
+#dashboardTab .rl-mortgage-rate-card:first-child::after {
+  content: none;
+}
+
+/* LABELS */
+
+#dashboardTab .rl-mortgage-rate-label {
+  margin: 0;
+
+  color: #7b8790;
+
+  font-size: 8px;
+  line-height: 1.15;
+  font-weight: 850;
+
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+#dashboardTab .rl-mortgage-rate-card.selected
+.rl-mortgage-rate-label {
+  color: rgba(240, 244, 246, 0.72);
+}
+
+
+/* RATE VALUES */
+
+#dashboardTab .rl-mortgage-rate-value {
+  margin-top: 8px;
+
+  color: var(--rl-navy);
+
+  font-size: 23px;
+  line-height: 1;
+  font-weight: 790;
+
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+
+/* RATE MOVEMENT */
+
+#dashboardTab .rl-mortgage-rate-change {
+  display: inline-flex;
+  align-items: center;
+
+  width: fit-content;
+
+  margin-top: 8px;
+
+  padding: 3px 6px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 850;
+}
+
+#dashboardTab .rl-mortgage-rate-change.down {
+  color: #08783b;
+  background: rgba(0, 161, 67, 0.09);
+}
+
+#dashboardTab .rl-mortgage-rate-change.up {
+  color: #9b4e22;
+  background: rgba(190, 103, 46, 0.10);
+}
+
+#dashboardTab .rl-mortgage-rate-change.flat {
+  color: #6f7a83;
+  background: rgba(111, 122, 131, 0.09);
+}
+
+
+/* SELECTED RATE */
+
+#dashboardTab .rl-mortgage-rate-card.selected {
+  color: #ffffff;
+
+  background:
+    radial-gradient(
+      circle at 92% 0%,
+      rgba(0, 161, 67, 0.24),
+      transparent 38%
+    ),
+    linear-gradient(
+      142deg,
+      #03243c 0%,
+      #04334d 62%,
+      #07505c 100%
+    );
+
+  border-color: rgba(255, 255, 255, 0.10);
+
+  box-shadow:
+    0 10px 24px rgba(4, 44, 73, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.11);
+}
+
+#dashboardTab .rl-mortgage-rate-card.selected
+.rl-mortgage-rate-label {
+  color: rgba(240, 244, 246, 0.72);
+}
+
+#dashboardTab .rl-mortgage-rate-card.selected
+.rl-mortgage-rate-value {
+  color: #ffffff;
+}
+
+#dashboardTab .rl-mortgage-rate-card.selected
+.rl-mortgage-rate-change.down {
+  color: #8df1b4;
+  background: rgba(0, 161, 67, 0.17);
+}
+
+#dashboardTab .rl-mortgage-rate-card.selected
+.rl-mortgage-rate-change.up {
+  color: #ffd2b3;
+  background: rgba(190, 103, 46, 0.18);
+}
+
+#dashboardTab .rl-mortgage-rate-card.selected
+.rl-mortgage-rate-change.flat {
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+/* =====================================================
+   DEALPILOT MARKET READ
+   ===================================================== */
+
+#dashboardTab .rl-mortgage-insight {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+
+  grid-template-columns:
+    36px minmax(0, 1fr);
+
+  gap: 12px;
+
+  align-items: center;
+
+  margin-top: 10px;
+
+  padding: 12px 14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(248, 250, 251, 0.96)
+    );
+
+  border: 1px solid rgba(4, 44, 73, 0.06);
+  border-radius: 13px;
+}
+
+#dashboardTab .rl-mortgage-insight-mark {
+  width: 33px;
+  height: 33px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      145deg,
+      #042c49,
+      #07435d
+    );
+
+  color: #d8e0e5;
+
+  font-size: 11px;
+
+  box-shadow:
+    0 6px 14px rgba(4, 44, 73, 0.14);
+}
+
+#dashboardTab .rl-mortgage-insight-label {
+  color: var(--rl-green);
+
+  font-size: 7px;
+  font-weight: 850;
+
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+#dashboardTab .rl-mortgage-insight-title {
+  margin-top: 2px;
+
+  color: var(--rl-navy);
+
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 770;
+}
+
+#dashboardTab .rl-mortgage-insight-text {
+  margin-top: 2px;
+
+  color: var(--rl-muted);
+
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+
+/* =====================================================
+   PAYMENT QUICKCALC
+   ===================================================== */
+
+#dashboardTab .rl-payment-tool {
+  position: relative;
+  z-index: 2;
+
+  margin-top: 9px;
+
+  overflow: hidden;
+
+  background: rgba(255, 255, 255, 0.88);
+
+  border: 1px solid rgba(4, 44, 73, 0.065);
+  border-radius: 13px;
+}
+
+
+/* QUICKCALC HEADER */
+
+#dashboardTab .rl-payment-toggle {
+  appearance: none;
+
+  width: 100%;
+
+  display: grid;
+
+  grid-template-columns:
+    32px minmax(0, 1fr) 18px;
+
+  gap: 11px;
+
+  align-items: center;
+
+  padding: 10px 13px;
+
+  border: none;
+  background: transparent;
+
+  text-align: left;
+
+  cursor: pointer;
+}
+
+#dashboardTab .rl-payment-toggle:hover {
+  background: rgba(4, 44, 73, 0.018);
+}
+
+#dashboardTab .rl-payment-toggle-icon {
+  width: 30px;
+  height: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      145deg,
+      #042c49,
+      #073d56
+    );
+
+  color: #ffffff;
+
+  font-size: 11px;
+  font-weight: 850;
+
+  box-shadow:
+    0 5px 13px rgba(4, 44, 73, 0.13);
+}
+
+#dashboardTab .rl-payment-toggle-copy {
+  display: flex;
+  flex-direction: column;
+
+  gap: 1px;
+}
+
+#dashboardTab .rl-payment-toggle-copy strong {
+  color: var(--rl-navy);
+
+  font-size: 11px;
+  font-weight: 790;
+}
+
+#dashboardTab .rl-payment-toggle-copy small {
+  color: #87939b;
+
+  font-size: 8px;
+}
+
+#dashboardTab .rl-payment-toggle-arrow {
+  color: #8d989f;
+
+  font-size: 13px;
+
+  transition: transform 0.18s ease;
+}
+
+#dashboardTab .rl-payment-toggle[aria-expanded="true"]
+.rl-payment-toggle-arrow {
+  transform: rotate(90deg);
+}
+
+
+/* OPEN CALCULATOR */
+
+#dashboardTab .rl-payment-calculator {
+  padding: 14px;
+
+  border-top: 1px solid rgba(4, 44, 73, 0.055);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(247, 249, 250, 0.72),
+      #ffffff
+    );
+}
+
+
+/* THREE FIELDS — ONE LINE */
+
+#dashboardTab .rl-payment-fields {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.3fr)
+    minmax(0, 0.85fr)
+    minmax(0, 1fr);
+
+  gap: 9px;
+
+  align-items: end;
+}
+
+#dashboardTab .rl-payment-field {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+
+  gap: 5px;
+}
+
+#dashboardTab .rl-payment-field > span,
+#dashboardTab .rl-payment-rate-label {
+  color: #7a8790;
+
+  font-size: 7px;
+  font-weight: 850;
+
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+#dashboardTab .rl-payment-field input {
+  width: 100%;
+  height: 36px;
+
+  padding: 8px 10px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(4, 44, 73, 0.10);
+  border-radius: 9px;
+
+  outline: none;
+
+  color: var(--rl-navy);
+
+  font-size: 11px;
+  font-weight: 680;
+}
+
+#dashboardTab .rl-payment-field input::placeholder {
+  color: #a7b0b7;
+  opacity: 1;
+  font-weight: 500;
+}
+
+#dashboardTab .rl-payment-field input:focus {
+  border-color: rgba(0, 161, 67, 0.42);
+
+  box-shadow:
+    0 0 0 3px rgba(0, 161, 67, 0.055);
+}
+
+
+/* INLINE % / $ INPUTS */
+
+#dashboardTab .rl-payment-inline-input {
+  display: flex;
+  align-items: center;
+
+  min-width: 0;
+  height: 36px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(4, 44, 73, 0.10);
+  border-radius: 9px;
+
+  overflow: hidden;
+
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+#dashboardTab .rl-payment-inline-input:focus-within {
+  border-color: rgba(0, 161, 67, 0.42);
+
+  box-shadow:
+    0 0 0 3px rgba(0, 161, 67, 0.055);
+}
+
+#dashboardTab .rl-payment-inline-input input {
+  flex: 1;
+
+  min-width: 0;
+  height: 34px;
+
+  padding: 8px 9px;
+
+  border: none;
+  border-radius: 0;
+
+  box-shadow: none;
+
+  background: transparent;
+}
+
+#dashboardTab .rl-payment-inline-input input:focus {
+  border: none;
+  box-shadow: none;
+}
+
+#dashboardTab .rl-payment-inline-input span {
+  flex: 0 0 auto;
+
+  padding: 0 9px;
+
+  color: #80909a;
+
+  font-size: 10px;
+  font-weight: 800;
+}
+
+
+/* SMALL HELPER NOTE */
+
+#dashboardTab .rl-payment-choice-note {
+  margin-top: 6px;
+
+  color: #8e9aa2;
+
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+
+/* RATE SELECTOR */
+
+#dashboardTab .rl-payment-rate-section {
+  margin-top: 10px;
+}
+
+#dashboardTab .rl-payment-rate-label {
+  margin-bottom: 5px;
+}
+
+#dashboardTab .rl-payment-rate-choices {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: 5px;
+}
+
+#dashboardTab .rl-payment-rate-choice {
+  appearance: none;
+
+  padding: 5px 7px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(4, 44, 73, 0.085);
+  border-radius: 999px;
+
+  color: var(--rl-navy);
+
+  font-size: 8px;
+  font-weight: 760;
+
+  cursor: pointer;
+}
+
+#dashboardTab .rl-payment-rate-choice:hover {
+  border-color: rgba(0, 161, 67, 0.28);
+}
+
+#dashboardTab .rl-payment-rate-choice.active {
+  color: #08783b;
+
+  background: rgba(0, 161, 67, 0.075);
+
+  border-color: rgba(0, 161, 67, 0.24);
+}
+
+
+/* RESULT */
+
+#dashboardTab .rl-payment-result {
+  display: grid;
+
+  grid-template-columns:
+    minmax(155px, 0.48fr)
+    minmax(0, 1.52fr);
+
+  gap: 15px;
+
+  align-items: center;
+
+  margin-top: 10px;
+
+  padding: 11px 13px;
+
+  border-radius: 11px;
+
+  background:
+    radial-gradient(
+      circle at 96% 0%,
+      rgba(0, 161, 67, 0.16),
+      transparent 32%
+    ),
+    linear-gradient(
+      135deg,
+      #03243c,
+      #063a55
+    );
+
+  box-shadow:
+    0 8px 20px rgba(4, 44, 73, 0.13);
+}
+
+#dashboardTab .rl-payment-result-copy {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+#dashboardTab .rl-payment-result-copy span {
+  color: rgba(231, 235, 238, 0.64);
+
+  font-size: 7px;
+  font-weight: 850;
+
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+
+#dashboardTab .rl-payment-result-copy strong {
+  color: #ffffff;
+
+  font-size: 25px;
+  line-height: 1;
+  font-weight: 780;
+
+  letter-spacing: -0.04em;
+}
+
+#dashboardTab .rl-payment-details {
+  max-width: none;
+
+  color: rgba(231, 235, 238, 0.68);
+
+  font-size: 8px;
+  line-height: 1.4;
+
+  text-align: right;
+}
+
+#dashboardTab .rl-payment-footnote {
+  margin-top: 6px;
+
+  color: #98a3ab;
+
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+
+/* DISCLAIMER */
+
+#dashboardTab .rl-mortgage-disclaimer {
+  position: relative;
+  z-index: 2;
+
+  margin-top: 8px;
+
+  color: #a0a9b0;
+
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 1050px) {
+
+  #dashboardTab .rl-mortgage-grid {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  #dashboardTab .rl-payment-fields {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+
+  #dashboardTab .rl-mortgage-panel {
+    padding: 22px 20px;
+  }
+
+  #dashboardTab .rl-mortgage-header {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  #dashboardTab .rl-mortgage-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  #dashboardTab .rl-payment-fields {
+    grid-template-columns: 1fr;
+  }
+
+  #dashboardTab .rl-payment-result {
+    grid-template-columns: 1fr;
+  }
+
+  #dashboardTab .rl-payment-details {
+    text-align: left;
+  }
+}
+
+/* =====================================================
+   TODAY'S EDGE
+   ===================================================== */
+
+#dashboardTab .rl-edge-panel {
+  padding: 24px 27px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff 0%,
+      #fbfcfd 100%
+    );
+}
+
+#dashboardTab .rl-edge-panel::after {
+  content: "";
+
+  position: absolute;
+
+  right: 24px;
+  top: 24px;
+
+  width: 34px;
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    var(--rl-silver),
+    var(--rl-green)
+  );
+}
+
+#dashboardTab #rlTodaysEdge {
+  display: grid;
+
+  grid-template-columns:
+    45px minmax(0, 1fr);
+
+  gap: 18px;
+
+  align-items: flex-start;
+
+  margin-top: 17px;
+}
+
+#dashboardTab #rlTodaysEdge .rl-edge-mark {
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--rl-navy);
+
+  color: var(--rl-silver);
+
+  border-radius: 50%;
+
+  font-size: 15px;
+
+  box-shadow:
+    0 7px 18px rgba(4, 44, 73, 0.14);
+}
+
+#dashboardTab #rlTodaysEdge .rl-edge-title {
+  color: var(--rl-navy);
+
+  font-size: 17px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+#dashboardTab #rlTodaysEdge .rl-edge-text {
+  max-width: 730px;
+
+  margin-top: 7px;
+
+  color: var(--rl-muted);
+
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+#dashboardTab #rlTodaysEdge .rl-card-link {
+  margin-top: 10px !important;
+
+  padding: 0;
+
+  border: none;
+  background: none;
+
+  color: var(--rl-green);
+
+  font-size: 11px;
+  font-weight: 750;
+}
+
+
+/* =====================================================
+   EMPTY STATES
+   ===================================================== */
+
+#dashboardTab .rl-dashboard-empty {
+  padding: 25px 26px;
+
+  color: #97a2ab;
+
+  font-size: 12px;
+  font-weight: 550;
+}
+
+
+/* =====================================================
+   HIDDEN LEGACY OUTPUT TARGETS
+   ===================================================== */
+
+#dashboardTab .rl-dashboard-legacy-data {
+  display: none !important;
+}
+
+/* =====================================================
+   DEALPILOT SIGNATURE HERO
+   CINEMATIC ULTRA-PREMIUM
+   ===================================================== */
+
+#dashboardTab .rl-exec-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  min-height: 255px;
+  padding: 46px 52px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 255px;
+  align-items: center;
+  gap: 54px;
+
+  background:
+  radial-gradient(
+    circle at 84% 18%,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.05) 20%,
+    transparent 42%
+  ),
+  radial-gradient(
+    circle at 88% 76%,
+    rgba(0, 207, 112, 0.18) 0%,
+    transparent 34%
+  ),
+  linear-gradient(
+    116deg,
+    #011c31 0%,
+    #032c49 34%,
+    #07515a 63%,
+    #078a58 83%,
+    #00a143 116%
+  );
+
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 30px;
+
+  box-shadow:
+    0 34px 75px rgba(4, 44, 73, 0.24),
+    0 10px 26px rgba(4, 44, 73, 0.11),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.10);
+
+}
+
+
+/* MOVING SILVER LIGHT SWEEP */
+
+#dashboardTab .rl-exec-hero::after {
+  content: "";
+
+  position: absolute;
+  z-index: 1;
+
+  top: -35%;
+  left: -28%;
+
+  width: 24%;
+  height: 175%;
+
+  transform:
+    rotate(18deg)
+    translateX(-260%);
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.02) 18%,
+      rgba(220, 226, 231, 0.24) 42%,
+      rgba(255, 255, 255, 0.48) 50%,
+      rgba(190, 201, 210, 0.22) 58%,
+      rgba(255, 255, 255, 0.02) 82%,
+      transparent 100%
+    );
+
+  filter: blur(2px);
+
+  pointer-events: none;
+
+}
+
+
+/* METALLIC SIGNATURE LINE */
+
+#dashboardTab .rl-exec-hero::before {
+  content: "";
+
+  position: absolute;
+  z-index: 3;
+
+  left: 52px;
+  bottom: 0;
+
+  width: 225px;
+  height: 3px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #7d8993 0%,
+      #d7dde2 23%,
+      #ffffff 42%,
+      #aeb9c1 58%,
+      #75d09e 74%,
+      #00c95c 100%
+    );
+
+  background-size: 180% 100%;
+
+  box-shadow:
+    0 0 16px rgba(255, 255, 255, 0.18),
+    0 0 20px rgba(0, 161, 67, 0.20);
+
+}
+
+
+/* SUBTLE TECH TEXTURE */
+
+#dashboardTab .rl-exec-hero-copy::after {
+  content: "";
+
+  position: absolute;
+  z-index: -1;
+
+  width: 460px;
+  height: 220px;
+
+  left: -65px;
+  top: -44px;
+
+  opacity: 0.09;
+
+  background-image:
+    linear-gradient(
+      rgba(255, 255, 255, 0.09) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.07) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    34px 34px;
+
+  mask-image:
+    radial-gradient(
+      ellipse at center,
+      #000 0%,
+      transparent 72%
+    );
+
+  pointer-events: none;
+}
+
+
+/* =====================================================
+   LEFT SIDE
+   ===================================================== */
+
+#dashboardTab .rl-exec-hero-copy {
+  position: relative;
+  z-index: 3;
+
+  min-width: 0;
+}
+
+
+/* DEALPILOT */
+
+#dashboardTab .rl-exec-kicker {
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 15px;
+
+  color: rgba(226, 233, 238, 0.78);
+
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 850;
+
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+#dashboardTab .rl-exec-kicker::before {
+  content: "";
+
+  width: 28px;
+  height: 1px;
+
+  margin-right: 10px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #8e9ba5,
+      #ffffff
+    );
+
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.18);
+}
+
+
+/* GREETING */
+
+#dashboardTab #rlDashboardGreeting {
+  max-width: 660px;
+
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: clamp(48px, 4.35vw, 66px);
+  line-height: 0.97;
+  font-weight: 760;
+
+  letter-spacing: -0.055em;
+
+  text-shadow:
+    0 2px 1px rgba(0, 0, 0, 0.07),
+    0 10px 32px rgba(0, 0, 0, 0.16);
+}
+
+
+/* STATUS */
+
+#dashboardTab .rl-exec-condition {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-top: 22px;
+
+  color: rgba(255, 255, 255, 0.95);
+
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 680;
+
+  letter-spacing: -0.012em;
+}
+
+
+/* STATUS LIGHT */
+
+#dashboardTab .rl-exec-dot {
+  position: relative;
+  flex: 0 0 auto;
+
+  width: 9px;
+  height: 9px;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 35% 35%,
+      #c7f9dc,
+      #57de91 38%,
+      #16be67 72%
+    );
+
+  box-shadow:
+    0 0 0 5px rgba(74, 222, 128, 0.10),
+    0 0 16px rgba(74, 222, 128, 0.62),
+    0 0 32px rgba(0, 196, 92, 0.28);
+
+}
+
+
+/* META */
+
+#dashboardTab #rlDashboardMeta {
+  margin-top: 10px;
+
+  color: rgba(225, 233, 238, 0.60);
+
+  font-size: 12px;
+  line-height: 1.35;
+  font-weight: 620;
+
+  letter-spacing: 0.01em;
+}
+
+
+/* =====================================================
+   RIGHT SIDE — INTEGRATED INTELLIGENCE SIGNATURE
+   ===================================================== */
+
+#dashboardTab .rl-exec-brandmark {
+  position: relative;
+  z-index: 3;
+
+  display: grid;
+
+  grid-template-columns:
+    3px minmax(0, 1fr);
+
+  align-items: center;
+
+  gap: 22px;
+
+  min-height: 104px;
+
+  padding: 18px 0 18px 26px;
+
+  border: none;
+  border-radius: 0;
+
+  background: transparent;
+
+  box-shadow: none;
+
+  backdrop-filter: none;
+}
+
+
+/* LUMINOUS SPINE */
+
+#dashboardTab .rl-exec-brandline {
+  position: relative;
+
+  width: 3px;
+  height: 74px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #ffffff 0%,
+      #cad3da 30%,
+      #89d7aa 66%,
+      #00d267 100%
+    );
+
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.20),
+    0 0 20px rgba(0, 210, 103, 0.24);
+
+}
+
+
+/* INTELLIGENCE COPY */
+
+#dashboardTab .rl-exec-brandtext {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+#dashboardTab .rl-exec-brandtext strong {
+  position: relative;
+
+  color: #ffffff;
+
+  font-size: 18px;
+  line-height: 1.1;
+  font-weight: 800;
+
+  letter-spacing: -0.026em;
+
+  text-shadow:
+    0 4px 18px rgba(0, 0, 0, 0.12);
+}
+
+#dashboardTab .rl-exec-brandtext strong::after {
+  content: "";
+
+  display: block;
+
+  width: 54px;
+  height: 1px;
+
+  margin-top: 8px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #d6dde2,
+      #ffffff,
+      #00c969
+    );
+
+  opacity: 0.86;
+
+}
+
+#dashboardTab .rl-exec-brandtext span {
+  color: rgba(222, 231, 236, 0.65);
+
+  font-size: 9px;
+  line-height: 1.3;
+  font-weight: 780;
+
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ACCESSIBILITY */
+
+@media (prefers-reduced-motion: reduce) {
+  #dashboardTab .rl-exec-hero,
+  #dashboardTab .rl-exec-hero::before,
+  #dashboardTab .rl-exec-hero::after,
+  #dashboardTab .rl-exec-dot,
+  #dashboardTab .rl-exec-brandline,
+  #dashboardTab .rl-exec-brandtext strong::after {
+    animation: none !important;
+  }
+}
+
+/* =====================================================
+   RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 1050px) {
+  #dashboardTab .rl-command-row,
+  #dashboardTab .rl-lower-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  #dashboardTab .rl-exec-hero {
+    grid-template-columns: 1fr;
+
+    gap: 28px;
+
+    min-height: auto;
+
+    padding: 38px 34px;
+  }
+
+  #dashboardTab .rl-exec-brandmark {
+    width: fit-content;
+
+    padding: 12px 0 12px 20px;
+  }
+}
+
+@media (max-width: 700px) {
+  #dashboardTab.rl-dashboard {
+    margin-top: 14px;
+
+    padding: 0 10px;
+  }
+
+  #dashboardTab .rl-exec-hero {
+    padding: 34px 28px;
+
+    border-radius: 25px;
+  }
+
+  #dashboardTab .rl-exec-hero::before {
+    left: 28px;
+
+    width: 150px;
+  }
+
+  #dashboardTab #rlDashboardGreeting {
+    font-size: 40px;
+  }
+
+  #dashboardTab .rl-focus-panel {
+    padding: 27px 26px;
+  }
+
+  #dashboardTab #rlDashboardFocus .rl-focus-empty {
+    grid-template-columns: 1fr;
+
+    gap: 17px;
+  }
+
+  #dashboardTab .rl-business-head,
+  #dashboardTab .rl-business-money,
+  #dashboardTab .rl-business-stat {
+    padding-left: 25px;
+    padding-right: 25px;
+  }
+
+  #dashboardTab #rlUpcomingClosings .rl-closing-row {
+    grid-template-columns:
+      60px minmax(0, 1fr);
+  }
+
+  #dashboardTab #rlUpcomingClosings .rl-row-value {
+    grid-column: 2;
+  }
+
+  #dashboardTab #rlPendingGci {
+    font-size: 35px;
+  }
+}
+
+</style>
+
+<div class="rl-exec-shell">
+
+  <!-- ==========================================
+       DEALPILOT HERO
+       ========================================== -->
+
+  <section class="rl-exec-hero">
+   
+  <div class="rl-exec-hero-copy">
+
+      <div class="rl-exec-kicker">
+        DealPilot
+      </div>
+
+      <h1 id="rlDashboardGreeting">
+        Good morning.
+      </h1>
+
+      <div class="rl-exec-condition">
+
+        <span
+          id="rlDashboardStatusDot"
+          class="rl-exec-dot"
+        ></span>
+
+        <span id="rlDashboardStatus">
+          Reviewing your business...
+        </span>
+
+      </div>
+
+      <div id="rlDashboardMeta"></div>
+
+    </div>
+
+
+    <div class="rl-exec-brandmark">
+
+      <div class="rl-exec-brandline"></div>
+
+      <div class="rl-exec-brandtext">
+
+        <strong>
+          Daily Briefing
+        </strong>
+
+        <span>
+          RapportLink Intelligence
+        </span>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==========================================
+       COMMAND ROW
+       ========================================== -->
+
+  <div class="rl-command-row">
+
+
+    <!-- TODAY'S FOCUS -->
+
+    <section class="rl-surface rl-focus-panel">
+
+      <div class="rl-section-label">
+        Today's Focus
+      </div>
+
+      <div id="rlDashboardFocus">
+
+        <div class="rl-focus-empty">
+
+          <div class="rl-focus-icon">
+            ✓
+          </div>
+
           <div>
-            <div class="ai-eyebrow">RapportLink AI Command Center</div>
-            <h3 class="mb-2">Today's Game Plan</h3>
-            <div id="aiExecutiveSummary" class="ai-summary-text">
-              Loading your daily briefing...
+
+            <div class="rl-focus-title">
+              Everything looks good.
             </div>
-            <div id="aiGeneratedBriefing" class="ai-briefing-panel"></div>
+
+            <div class="rl-focus-note">
+              No urgent issues require your attention.
+            </div>
+
           </div>
-          <div class="ai-hero-actions">
-            <button class="btn btn-light" onclick="showTab('contacts')">
-              View Contacts
-            </button>
-            <button class="btn btn-outline-light" onclick="showTab('tasks')">
-              View Tasks
-            </button>
-          </div>
+
         </div>
 
-        <div class="ai-command-grid mt-3">
-          <div class="ai-command-card ai-command-card-large">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Priority Engine</div>
-                <h5>Today's Priorities</h5>
-              </div>
-              <span class="ai-soft-badge">AI Suggested</span>
-            </div>
-            <div id="aiTodayPriorities" class="ai-priority-list"></div>
-          </div>
-
-          <div class="ai-command-card">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Lead Intelligence</div>
-                <h5>Hot Leads</h5>
-              </div>
-              <span id="aiHotLeadCount" class="ai-number-badge">0</span>
-            </div>
-            <div id="aiHotLeads" class="ai-lead-list"></div>
-          </div>
-
-          <div class="ai-command-card ai-command-card-large">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Best Opportunity</div>
-                <h5>Highest Probability Contact</h5>
-              </div>
-              <span class="ai-soft-badge">Opportunity Score</span>
-            </div>
-            <div id="aiBestOpportunity"></div>
-          </div>
-
-          <div class="ai-command-card">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Lead Scoring</div>
-                <h5>Heat Map</h5>
-              </div>
-              <span class="ai-soft-badge">Auto Scored</span>
-            </div>
-            <div class="ai-score-strip">
-              <div class="ai-score-cell">
-                <b id="aiHeatHotCount">0</b><span>Hot</span>
-              </div>
-              <div class="ai-score-cell">
-                <b id="aiHeatWarmCount">0</b><span>Warm</span>
-              </div>
-              <div class="ai-score-cell">
-                <b id="aiHeatColdCount">0</b><span>Cold</span>
-              </div>
-            </div>
-            <div class="small-muted mt-3">
-              Scores update from opens, clicks, task urgency, recency, text
-              activity, and pipeline stage.
-            </div>
-          </div>
-
-          <div class="ai-command-card">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Commission Forecast</div>
-                <h5>Pipeline Outlook</h5>
-              </div>
-              <span class="ai-soft-badge">AI Estimate</span>
-            </div>
-            <div class="ai-forecast-grid">
-              <div>
-                <b id="aiForecastActive">0</b><span>Active Pipeline</span>
-              </div>
-              <div>
-                <b id="aiForecastPending">0</b><span>Pending / Contract</span>
-              </div>
-              <div><b id="aiForecastGCI">$0</b><span>Forecasted GCI</span></div>
-              <div><b id="aiForecastHot">0</b><span>Hot Leads</span></div>
-            </div>
-            <div id="aiForecastNote" class="small-muted mt-3"></div>
-          </div>
-
-          <div class="ai-command-card ai-command-card-large">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Recommended Actions</div>
-                <h5>What To Do Next</h5>
-              </div>
-              <button
-                class="btn btn-sm btn-outline-primary"
-                onclick="showTab('tasks')"
-              >
-                Tasks
-              </button>
-            </div>
-            <div id="aiRecommendedActions" class="ai-action-list"></div>
-          </div>
-
-          <div class="ai-command-card ai-command-card-large">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">AI Follow-Up Coach</div>
-                <h5>Suggested Messages</h5>
-              </div>
-              <span class="ai-soft-badge">Copy Ready</span>
-            </div>
-            <div id="aiFollowUpScripts"></div>
-          </div>
-
-          <div class="ai-command-card">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Hidden Opportunities</div>
-                <h5>Cooling Contacts</h5>
-              </div>
-              <span id="aiQuietCount" class="ai-number-badge">0</span>
-            </div>
-            <div id="aiQuietOpportunities"></div>
-          </div>
-
-          <div class="ai-command-card">
-            <div class="ai-card-header">
-              <div>
-                <div class="ai-card-kicker">Marketing Pulse</div>
-                <h5>Performance Signal</h5>
-              </div>
-              <button
-                class="btn btn-sm btn-outline-primary"
-                onclick="showTab('snapshot')"
-              >
-                Details
-              </button>
-            </div>
-            <div class="ai-pulse-meter">
-              <div class="ai-pulse-row">
-                <span>Open Rate</span><b id="aiPulseOpenRate">0%</b>
-              </div>
-              <div class="ai-meter"><div id="aiPulseOpenBar"></div></div>
-              <div class="ai-pulse-row mt-2">
-                <span>Click Rate</span><b id="aiPulseClickRate">0%</b>
-              </div>
-              <div class="ai-meter"><div id="aiPulseClickBar"></div></div>
-            </div>
-          </div>
-        </div>
       </div>
+
+    </section>
+
+
+    <!-- BUSINESS SNAPSHOT -->
+
+    <section class="rl-surface rl-business-panel">
+
+      <div class="rl-business-head">
+
+        <div class="rl-section-label">
+          Business Snapshot
+        </div>
+
+      </div>
+
+      <div class="rl-business-money">
+
+        <div id="rlPendingGci">
+          $0
+        </div>
+
+        <div class="rl-money-caption">
+          Expected Net Commission
+        </div>
+
+      </div>
+
+      <div class="rl-business-bottom">
+
+        <div class="rl-business-stat">
+
+          <div id="rlPendingClosings">
+            0
+          </div>
+
+          <span>
+            Pending
+          </span>
+
+        </div>
+
+
+        <div class="rl-business-stat">
+
+          <div id="rlClosedCount">
+            0
+          </div>
+
+          <span>
+            Closed This Month
+          </span>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+
+  <!-- ==========================================
+       UPCOMING CLOSINGS
+       ========================================== -->
+
+  <section class="rl-surface rl-closings-panel">
+
+    <div class="rl-section-head">
+
+      <h2>
+        Upcoming Closings
+      </h2>
+
+      <button
+        type="button"
+        class="rl-section-action"
+        onclick="showTab('transactions')"
+      >
+        View transactions →
+      </button>
+
+    </div>
+
+    <div id="rlUpcomingClosings">
+
+      <div class="rl-dashboard-empty">
+        No upcoming closing dates are currently established.
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- ==========================================
+       LOWER INTELLIGENCE ROW
+       ========================================== -->
+
+  <div class="rl-lower-row">
+
+
+    <!-- COMING UP -->
+
+    <section class="rl-surface rl-coming-panel">
+
+      <div class="rl-section-head">
+
+        <h2>
+          Coming Up
+        </h2>
+
+        <button
+          type="button"
+          class="rl-section-action"
+          onclick="showTab('calendar')"
+        >
+          Calendar →
+        </button>
+
+      </div>
+
+      <div id="rlComingUp">
+
+        <div class="rl-dashboard-empty">
+          Nothing urgent is currently scheduled.
+        </div>
+
+      </div>
+
+    </section>
+
+   <!-- TODAY'S MORTGAGE MARKET -->
+
+<section class="rl-surface rl-mortgage-panel">
+
+  <div class="rl-mortgage-atmosphere"></div>
+
+  <div class="rl-mortgage-header">
+
+    <div>
+      <div class="rl-section-label">
+        Today's Mortgage Market
+      </div>
+
+      <h2 class="rl-mortgage-heading">
+        National Rate Snapshot
+      </h2>
+    </div>
+
+    <div
+      id="rlMortgageAsOf"
+      class="rl-mortgage-asof"
+    >
+      Updating...
+    </div>
+
+  </div>
+
+
+  <!-- LIVE RATE MARKET -->
+
+  <div
+    id="rlMortgageRates"
+    class="rl-mortgage-grid"
+  >
+    <div class="rl-dashboard-empty">
+      Loading today's mortgage market...
+    </div>
+  </div>
+
+
+  <!-- DEALPILOT MARKET INTELLIGENCE -->
+
+  <div
+    id="rlMortgageInsight"
+    class="rl-mortgage-insight"
+  >
+    <div class="rl-mortgage-insight-mark">
+      ✦
+    </div>
+
+    <div>
+      <div class="rl-mortgage-insight-label">
+        DealPilot Market Read
+      </div>
+
+      <div class="rl-mortgage-insight-text">
+        DealPilot is reviewing today's financing environment.
+      </div>
+    </div>
+  </div>
+
+
+  <!-- PAYMENT QUICKCALC -->
+
+  <div class="rl-payment-tool">
+
+    <button
+      type="button"
+      id="rlPaymentToggle"
+      class="rl-payment-toggle"
+      aria-expanded="false"
+      onclick="rlTogglePaymentCalculator()"
+    >
+      <span class="rl-payment-toggle-icon">$</span>
+
+      <span class="rl-payment-toggle-copy">
+        <strong>Payment QuickCalc</strong>
+        <small>Answer a buyer's payment question in seconds.</small>
+      </span>
+
+      <span
+        id="rlPaymentToggleArrow"
+        class="rl-payment-toggle-arrow"
+      >
+        →
+      </span>
+    </button>
+
+
+    <div
+      id="rlPaymentCalculator"
+      class="rl-payment-calculator"
+      hidden
+    >
+
+     <div class="rl-payment-fields">
+
+  <label class="rl-payment-field">
+    <span>Purchase Price</span>
+
+    <input
+      id="rlPaymentPrice"
+      type="text"
+      inputmode="decimal"
+      placeholder="Enter Purchase Price"
+      autocomplete="off"
+    >
+  </label>
+
+
+  <label class="rl-payment-field">
+    <span>Down Payment %</span>
+
+    <div class="rl-payment-inline-input rl-payment-percent-input">
+      <input
+        id="rlPaymentDownPercent"
+        type="text"
+        inputmode="decimal"
+        placeholder="Enter Percentage"
+        autocomplete="off"
+        aria-label="Down payment percentage"
+      >
+
+      <span>%</span>
+    </div>
+  </label>
+
+
+  <label class="rl-payment-field">
+    <span>Down Payment $</span>
+
+    <div class="rl-payment-inline-input rl-payment-dollar-input">
+      <span>$</span>
+
+      <input
+        id="rlPaymentDownDollars"
+        type="text"
+        inputmode="decimal"
+        placeholder="Enter Amount"
+        autocomplete="off"
+        aria-label="Down payment dollar amount"
+      >
+    </div>
+  </label>
+
+</div>
+
+<div class="rl-payment-choice-note">
+  Enter either the percentage or dollar amount — the other calculates automatically.
+</div> 
+      <div class="rl-payment-rate-section">
+
+        <div class="rl-payment-rate-label">
+          Use today's rate
+        </div>
+
+        <div
+          id="rlPaymentRateChoices"
+          class="rl-payment-rate-choices"
+        >
+          Select a rate above.
+        </div>
+
+      </div>
+
+
+      <div class="rl-payment-result">
+
+        <div class="rl-payment-result-copy">
+
+          <span>
+            Estimated Principal &amp; Interest
+          </span>
+
+          <strong id="rlPaymentMonthly">
+            —
+          </strong>
+
+        </div>
+
+        <div
+          id="rlPaymentDetails"
+          class="rl-payment-details"
+        >
+          Enter a purchase price, down payment and select a rate.
+        </div>
+
+      </div>
+
+
+      <div class="rl-payment-footnote">
+        Estimated principal &amp; interest only. Taxes, insurance,
+        HOA dues and mortgage insurance are not included.
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <div
+    id="rlMortgageDisclaimer"
+    class="rl-mortgage-disclaimer"
+  >
+    National market indicators only. Actual borrower rates vary by lender,
+    borrower profile, loan characteristics, occupancy, points and other factors.
+  </div>
+
+</section> 
+
+
+
+    <!-- TODAY'S EDGE -->
+
+    <section class="rl-surface rl-edge-panel">
+
+      <div class="rl-section-label">
+        Today's Edge
+      </div>
+
+      <div id="rlTodaysEdge">
+
+        <div class="rl-edge-mark">
+          ✦
+        </div>
+
+        <div>
+
+          <div class="rl-edge-title">
+            Looking for your best opportunity...
+          </div>
+
+          <div class="rl-edge-text">
+            DealPilot is reviewing your business activity.
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+</div>
+
+  <!-- ==========================================
+       EXISTING DASHBOARD.JS TARGETS
+
+       DO NOT REMOVE.
+       They keep the current intelligence engine alive
+       without displaying the old Dashboard.
+       ========================================== -->
+
+  <div
+    class="rl-dashboard-legacy-data"
+    aria-hidden="true"
+  >
+
+    <div id="aiExecutiveSummary"></div>
+
+    <div id="aiGeneratedBriefing"></div>
+
+    <div id="aiTodayPriorities"></div>
+
+    <span id="aiHotLeadCount">0</span>
+
+    <div id="aiHotLeads"></div>
+
+    <div id="aiBestOpportunity"></div>
+
+    <b id="aiHeatHotCount">0</b>
+
+    <b id="aiHeatWarmCount">0</b>
+
+    <b id="aiHeatColdCount">0</b>
+
+    <b id="aiForecastActive">0</b>
+
+    <b id="aiForecastPending">0</b>
+
+    <b id="aiForecastGCI">$0</b>
+
+    <b id="aiForecastHot">0</b>
+
+    <div id="aiForecastNote"></div>
+
+    <div id="aiRecommendedActions"></div>
+
+    <div id="aiFollowUpScripts"></div>
+
+    <span id="aiQuietCount">0</span>
+
+    <div id="aiQuietOpportunities"></div>
+
+    <b id="aiPulseOpenRate">0%</b>
+
+    <b id="aiPulseClickRate">0%</b>
+
+    <div id="aiPulseOpenBar"></div>
+
+    <div id="aiPulseClickBar"></div>
+
+  </div>
+
+</div>
 
       <!-- SNAPSHOT -->
       <div id="snapshotTab" class="mt-4" style="display: none">
@@ -5278,7 +8111,7 @@
         </div>
 
         <div>
-          <label class="form-label small fw-bold">Expected GCI</label>
+          <label class="form-label small fw-bold">GCI</label>
           <input id="txnGci" type="number" class="form-control" placeholder="Auto or manual" />
         </div>
 
@@ -5718,7 +8551,7 @@
       </li>
       <li>
         <button type="button" onclick="showContactProfileTab('profile')">
-          Profile
+          Personal &amp; Family
         </button>
       </li>
       <li>
@@ -6538,6 +9371,7 @@
 
     <script src="js/navigation.js"></script>
 
+    <script src="js/dealpilot-growth.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/calendar.js"></script>
 
@@ -6575,5 +9409,136 @@
     <script src="js/ai-dealpilot.js"></script>
 
     <script src="js/app.js"></script>
+
+   <script>
+  /* =====================================================
+     RAPPORTLINK AUTHENTICATION
+     ===================================================== */
+
+  let rlCurrentUser = null;
+
+  function rlShowLogin() {
+    const loginScreen = document.getElementById("rlLoginScreen");
+
+    if (loginScreen) {
+      loginScreen.style.display = "flex";
+    }
+  }
+
+  function rlHideLogin() {
+    const loginScreen = document.getElementById("rlLoginScreen");
+
+    if (loginScreen) {
+      loginScreen.style.display = "none";
+    }
+  }
+
+  async function rlCheckAuthentication() {
+    try {
+      const response = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        rlCurrentUser = null;
+        rlShowLogin();
+        return false;
+      }
+
+      const data = await response.json();
+
+      rlCurrentUser = data.user || data;
+
+      console.log("RapportLink authenticated user:", rlCurrentUser);
+
+      rlHideLogin();
+
+      return true;
+    } catch (error) {
+      console.error("RapportLink authentication check failed:", error);
+
+      rlCurrentUser = null;
+      rlShowLogin();
+
+      return false;
+    }
+  }
+
+  async function rlHandleLogin(event) {
+    event.preventDefault();
+
+    const emailInput = document.getElementById("rlLoginEmail");
+    const passwordInput = document.getElementById("rlLoginPassword");
+    const errorBox = document.getElementById("rlLoginError");
+    const loginButton = document.getElementById("rlLoginButton");
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    errorBox.style.display = "none";
+    errorBox.textContent = "";
+
+    loginButton.disabled = true;
+    loginButton.textContent = "Signing In...";
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+          data.message ||
+          "Email or password is incorrect."
+        );
+      }
+
+      rlCurrentUser = data.user || data;
+
+      console.log("RapportLink login successful:", rlCurrentUser);
+
+      passwordInput.value = "";
+
+      rlHideLogin();
+    } catch (error) {
+      console.error("RapportLink login failed:", error);
+
+      errorBox.textContent =
+        error.message || "Unable to sign in. Please try again.";
+
+      errorBox.style.display = "block";
+    } finally {
+      loginButton.disabled = false;
+      loginButton.textContent = "Sign In";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const loginForm = document.getElementById("rlLoginForm");
+
+    if (loginForm) {
+      loginForm.addEventListener("submit", rlHandleLogin);
+    }
+
+    rlCheckAuthentication();
+  });
+</script> 
+
   </body>
 </html>

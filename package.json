@@ -5,15 +5,19 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "tsx server.js",
+    "dev": "tsx server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "bcrypt": "^6.0.0",
     "body-parser": "^2.2.2",
+    "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -21,7 +25,14 @@
     "googleapis": "^144.0.0",
     "multer": "^2.1.1",
     "openai": "^6.47.0",
+    "pg": "^8.23.0",
     "sib-api-v3-sdk": "^8.5.0",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "prisma": "^7.9.1",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
   }
 }

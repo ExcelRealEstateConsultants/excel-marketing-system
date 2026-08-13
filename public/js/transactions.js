@@ -353,7 +353,7 @@ function txnClearPartyLink(party) {
   if (select) select.value = "";
 }
 /* ================= TRANSACTION CENTER ================= */
-const TXN_STORAGE_KEY = "excelMarketingTransactionsV1";
+const TXN_STORAGE_KEY = "excelMarketingTransactionsV1_TEST";
 const TXN_DOC_STORAGE_NOTICE = "Browser storage version";
 const TXN_WORKFLOWS = {
   "Buyer Purchase": [
@@ -589,6 +589,7 @@ const TXN_REQUIRED_DOC_RULES = [
 ];
 let txnCache = [];
 let txnWorkingDocs = [];
+let txnCacheInitialized = false;
 
 function txnSafe(value) {
   return String(value ?? "").replace(
@@ -606,10 +607,14 @@ function txnSafe(value) {
 
 function txnMoney(value) {
   const num = Number(value || 0);
+
+  const hasCents = Math.abs(num % 1) > 0.000001;
+
   return num.toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: hasCents ? 2 : 0,
+    maximumFractionDigits: 2,
   });
 }
 
@@ -629,83 +634,259 @@ function txnDaysUntil(value) {
   return Math.ceil((d - today) / 86400000);
 }
 
-function txnLoad() {
+/* =========================================================
+   TRANSACTION AI SNAPSHOT CACHE
+   =========================================================
+
+   Normal page startup must not rebuild every transaction
+   from every stored document.
+
+   A transaction is rebuilt only when its relevant source
+   information has changed.
+   ========================================================= */
+
+const TXN_AI_SNAPSHOT_KEY = `${TXN_STORAGE_KEY}_AI_SNAPSHOTS_V1`;
+
+function txnBuildAISourceFingerprint(txn = {}) {
+  const documents = Array.isArray(txn.documents) ? txn.documents : [];
+
+  const documentVersions = documents.map((doc) => {
+    const analysis =
+      doc?.aiAnalysis && typeof doc.aiAnalysis === "object"
+        ? doc.aiAnalysis
+        : {};
+
+    return {
+      id: String(doc?.id || ""),
+      uploadedAt: String(doc?.uploadedAt || ""),
+      lastAnalyzed: String(
+        doc?.lastAnalyzed ||
+          analysis?.reviewedAt ||
+          analysis?.lastAnalyzed ||
+          "",
+      ),
+      engineVersion: String(
+        doc?.engineVersion || analysis?.engineVersion || "",
+      ),
+      schemaVersion: String(analysis?.schemaVersion || ""),
+      analysisStatus: String(doc?.analysisStatus || ""),
+    };
+  });
+
+  const relevantTransactionData = {
+    id: String(txn.id || ""),
+
+    /*
+     * Force AI snapshot invalidation whenever the
+     * Transaction Brain engine changes.
+     *
+     * This prevents older cached Brain conclusions
+     * from being restored after Brain logic changes.
+     */
+    aiBrainVersion: Number(window.AI_TRANSACTION_BRAIN_VERSION || 0),
+
+    side: String(txn.side || ""),
+
+    price: txn.price ?? null,
+    purchasePrice: txn.purchasePrice ?? null,
+    commissionPercent: txn.commissionPercent ?? null,
+    gci: txn.gci ?? null,
+
+    contractDate: String(txn.contractDate || ""),
+    closeDate: String(txn.closeDate || ""),
+    closingDate: String(txn.closingDate || ""),
+    actualClosingDate: String(txn.actualClosingDate || ""),
+
+    checklist:
+      txn.checklist && typeof txn.checklist === "object" ? txn.checklist : {},
+
+    documents: documentVersions,
+  };
+
+  return JSON.stringify(relevantTransactionData);
+}
+
+function txnLoadAISnapshots() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(TXN_STORAGE_KEY) || "[]");
+    const parsed = JSON.parse(
+      localStorage.getItem(TXN_AI_SNAPSHOT_KEY) || "{}",
+    );
+
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : {};
+  } catch (error) {
+    console.error("Unable to load Transaction AI snapshots:", error);
+    return {};
+  }
+}
+
+function txnSaveAISnapshots(snapshots = {}) {
+  try {
+    localStorage.setItem(TXN_AI_SNAPSHOT_KEY, JSON.stringify(snapshots));
+
+    return true;
+  } catch (error) {
+    console.error("Unable to save Transaction AI snapshots:", error);
+    return false;
+  }
+}
+
+function txnCreateAISnapshot(txn = {}) {
+  const brain =
+    txn.transactionBrain && typeof txn.transactionBrain === "object"
+      ? txn.transactionBrain
+      : {};
+
+  return {
+    transactionId: String(txn.id || ""),
+    fingerprint: txnBuildAISourceFingerprint(txn),
+
+    transactionBrain: {
+      transactionState:
+        brain.decision?.state || brain.transactionState || "Unknown",
+
+      decision:
+        brain.decision && typeof brain.decision === "object"
+          ? {
+              state:
+                brain.decision.state || brain.transactionState || "Unknown",
+
+              confidence: brain.decision.confidence ?? brain.confidence ?? null,
+
+              health: brain.decision.health ?? brain.health ?? null,
+
+              reason: brain.decision.reason || brain.decision.summary || "",
+            }
+          : null,
+
+      canonicalFacts:
+        brain.canonicalFacts && typeof brain.canonicalFacts === "object"
+          ? brain.canonicalFacts
+          : {},
+
+      health:
+        brain.health ?? brain.transactionHealth ?? brain.healthScore ?? null,
+
+      confidence:
+        brain.confidence ??
+        brain.closingConfidence ??
+        brain.closingProbability ??
+        null,
+
+      completion:
+        brain.completion ?? brain.progress ?? txn.checklistCompleted ?? null,
+
+      risk:
+        brain.risk && typeof brain.risk === "object"
+          ? brain.risk
+          : brain.risk || null,
+
+      priorities: Array.isArray(brain.priorities) ? brain.priorities : [],
+
+      alerts: Array.isArray(brain.alerts) ? brain.alerts : [],
+
+      recommendations: Array.isArray(brain.recommendations)
+        ? brain.recommendations
+        : [],
+    },
+
+    checklistCompleted: txn.checklistCompleted ?? null,
+    savedAt: new Date().toISOString(),
+  };
+}
+
+async function txnHydrateStoredDocumentAnalyses() {
+  if (typeof repoHydrateDocument !== "function") {
+    return;
+  }
+
+  const parsed = JSON.parse(localStorage.getItem(TXN_STORAGE_KEY) || "[]");
+
+  if (!Array.isArray(parsed)) {
+    return;
+  }
+
+  for (const txn of parsed) {
+    if (!Array.isArray(txn.documents)) {
+      txn.documents = [];
+      continue;
+    }
+
+    txn.documents = await Promise.all(
+      txn.documents.map(async (doc) => {
+        if (!doc || typeof doc !== "object" || !doc.id) {
+          return doc;
+        }
+
+        try {
+          /*
+           * If this document already contains a valid AI analysis,
+           * do not hit the repository again.
+           */
+          if (
+            doc.aiAnalysis &&
+            typeof doc.aiAnalysis === "object" &&
+            Object.keys(doc.aiAnalysis).length > 0
+          ) {
+            return doc;
+          }
+
+          return await repoHydrateDocument(doc);
+        } catch (error) {
+          console.error(
+            `Unable to hydrate stored analysis for ${doc.name || doc.id}:`,
+            error,
+          );
+
+          return doc;
+        }
+      }),
+    );
+  }
+
+  /*
+   * Supply the hydrated transactions to txnLoad().
+   * Do not write the large repository analyses back into localStorage.
+   */
+  window.txnHydratedStartupTransactions = parsed;
+}
+
+function txnLoad() {
+  if (txnCacheInitialized) {
+    return txnCache;
+  }
+
+  try {
+    const parsed = Array.isArray(window.txnHydratedStartupTransactions)
+      ? window.txnHydratedStartupTransactions
+      : JSON.parse(localStorage.getItem(TXN_STORAGE_KEY) || "[]");
+
+    delete window.txnHydratedStartupTransactions;
+    const snapshots = txnLoadAISnapshots();
+    let snapshotsChanged = false;
 
     txnCache = Array.isArray(parsed)
       ? parsed.map((savedTxn) => {
           const txn = { ...savedTxn };
 
-          const documents = Array.isArray(txn.documents) ? txn.documents : [];
+          txn.documents = Array.isArray(txn.documents) ? txn.documents : [];
 
-          const hasCurrentDocumentEvidence = documents.some((doc) => {
-            if (!doc || typeof doc !== "object") {
-              return false;
-            }
-
-            const analysis =
-              doc.aiAnalysis && typeof doc.aiAnalysis === "object"
-                ? doc.aiAnalysis
-                : null;
-
-            const evidence = Array.isArray(analysis?.evidence)
-              ? analysis.evidence
-              : [];
-
-            const facts =
-              analysis?.facts && typeof analysis.facts === "object"
-                ? Object.keys(analysis.facts)
-                : [];
-
-            return evidence.length > 0 || facts.length > 0;
-          });
+          txn.checklist =
+            txn.checklist && typeof txn.checklist === "object"
+              ? txn.checklist
+              : typeof txnDefaultChecklist === "function"
+                ? txnDefaultChecklist(txn, {})
+                : {};
 
           /*
-           * Legacy cleanup:
-           *
-           * If a transaction no longer has document evidence,
-           * remove values that older AI code may have copied
-           * from deleted documents into the saved transaction.
+           * Legacy Transaction Intelligence must never return.
            */
-          if (!hasCurrentDocumentEvidence) {
-            /*
-             * IMPORTANT:
-             *
-             * No document evidence does NOT mean the transaction
-             * facts are invalid.
-             *
-             * Transaction data entered by the user must remain.
-             * The AI Brain determines confidence from evidence.
-             * It must never erase transaction facts because
-             * documents have not been uploaded.
-             */
-
-            txn.checklist =
-              txn.checklist && typeof txn.checklist === "object"
-                ? txn.checklist
-                : typeof txnDefaultChecklist === "function"
-                  ? txnDefaultChecklist(txn, {})
-                  : {};
-
-            /*
-             * Preserve:
-             * - price
-             * - GCI
-             * - dates
-             * - commission
-             * - parties
-             * - transaction details
-             *
-             * Missing documents are handled by AI reasoning,
-             * not by deleting transaction information.
-             */
-          }
+          delete txn.aiTransactionIntelligence;
 
           /*
-           * Remove previously generated automation tasks
-           * because they may be based on the cleared dates
-           * or deleted document conclusions.
+           * Preserve manual automation tasks during startup.
+           * AI automation is rebuilt when the transaction changes.
            */
           txn.automationTasks = Array.isArray(txn.automationTasks)
             ? txn.automationTasks.filter(
@@ -713,51 +894,57 @@ function txnLoad() {
               )
             : [];
 
+          const transactionId = String(txn.id || "");
+          const currentFingerprint = txnBuildAISourceFingerprint(txn);
+          const savedSnapshot = snapshots[transactionId];
+
+          const snapshotIsCurrent =
+            savedSnapshot &&
+            savedSnapshot.fingerprint === currentFingerprint &&
+            savedSnapshot.transactionBrain &&
+            typeof savedSnapshot.transactionBrain === "object" &&
+            Number(savedSnapshot.transactionBrain.engineVersion || 0) ===
+              Number(AI_TRANSACTION_BRAIN_VERSION || 0);
+
           /*
-           * Remove all previously saved AI conclusions.
-           *
-           * These must be rebuilt from the transaction's
-           * current evidence every time transactions load.
+           * Nothing relevant changed:
+           * restore the previously completed intelligence immediately.
+           */
+          if (snapshotIsCurrent) {
+            txn.transactionBrain = savedSnapshot.transactionBrain;
+
+            txn.aiCoordinator =
+              savedSnapshot.aiCoordinator &&
+              typeof savedSnapshot.aiCoordinator === "object"
+                ? savedSnapshot.aiCoordinator
+                : null;
+
+            txn.checklistCompleted = savedSnapshot.checklistCompleted ?? null;
+
+            txn.aiTransactionState =
+              txn.transactionBrain?.decision?.state ||
+              txn.transactionBrain?.transactionState ||
+              "Unknown";
+
+            txn.derivedStatus = txn.aiTransactionState;
+
+            return txn;
+          }
+
+          /*
+           * Something changed, or no snapshot exists:
+           * rebuild only this transaction.
            */
           delete txn.transactionBrain;
           delete txn.aiCoordinator;
-          delete txn.aiTransactionIntelligence;
           delete txn.aiTransactionState;
           delete txn.derivedStatus;
 
-          delete txn.health;
-          delete txn.transactionHealth;
-          delete txn.healthScore;
-
-          delete txn.confidence;
-          delete txn.closingConfidence;
-          delete txn.closingProbability;
-
-          delete txn.completion;
-          delete txn.progress;
-          delete txn.checklistCompleted;
-
-          delete txn.alerts;
-          delete txn.priorities;
-          delete txn.recommendations;
-          delete txn.missingItems;
-          delete txn.missingDocuments;
-          delete txn.missingFields;
-          delete txn.reasoning;
-
-          /*
-           * Rebuild workflow automation from the cleaned
-           * transaction data.
-           */
           let refreshedTxn =
             typeof txnApplyAutomation === "function"
               ? txnApplyAutomation(txn)
               : txn;
 
-          /*
-           * Rebuild the Transaction Brain and Coordinator
-           * from the current transaction information.
-           */
           if (typeof aiRefreshTransaction === "function") {
             try {
               refreshedTxn = aiRefreshTransaction(refreshedTxn) || refreshedTxn;
@@ -771,14 +958,28 @@ function txnLoad() {
             }
           }
 
+          if (
+            transactionId &&
+            refreshedTxn.transactionBrain &&
+            typeof refreshedTxn.transactionBrain === "object"
+          ) {
+            snapshots[transactionId] = txnCreateAISnapshot(refreshedTxn);
+            snapshotsChanged = true;
+          }
+
           return refreshedTxn;
         })
       : [];
+
+    if (snapshotsChanged) {
+      txnSaveAISnapshots(snapshots);
+    }
   } catch (error) {
     console.error("Unable to load transactions:", error);
     txnCache = [];
   }
 
+  txnCacheInitialized = true;
   return txnCache;
 }
 
@@ -815,9 +1016,49 @@ function txnSaveAll() {
 
         doc.documentAnalysis,
         doc.documentAnalysis?.analysis,
-      ];
+      ].filter(isObject);
 
-      return candidates.find(isObject) || null;
+      const scoreAnalysis = (analysis) => {
+        let score = Object.keys(analysis).length;
+
+        if (analysis.documentType) score += 25;
+        if (Array.isArray(analysis.documentTypes)) score += 20;
+        if (analysis.execution && isObject(analysis.execution)) score += 50;
+        if (analysis.classification && isObject(analysis.classification))
+          score += 50;
+        if (analysis.facts && isObject(analysis.facts)) score += 75;
+        if (Array.isArray(analysis.evidence)) score += 100;
+        if (Array.isArray(analysis.evidence?.items)) score += 100;
+        if (Array.isArray(analysis.transactionEvents)) score += 125;
+        if (analysis.semanticEffects && isObject(analysis.semanticEffects)) {
+          score += 150;
+        }
+
+        if (
+          analysis.universalAnalysis &&
+          isObject(analysis.universalAnalysis)
+        ) {
+          score += 200;
+        }
+
+        return score;
+      };
+
+      return (
+        candidates
+          .map((candidate, index) => ({
+            candidate,
+            index,
+            score: scoreAnalysis(candidate),
+          }))
+          .sort((left, right) => {
+            if (right.score !== left.score) {
+              return right.score - left.score;
+            }
+
+            return left.index - right.index;
+          })[0]?.candidate || null
+      );
     };
 
     const storageSafeTransactions = txnCache.map((sourceTxn) => {
@@ -921,7 +1162,13 @@ function txnSaveAll() {
                  * aiAnalyzeTransaction() will restore compatibility
                  * aliases when the transaction loads.
                  */
-                aiAnalysis: authoritativeAnalysis,
+                aiAnalysis:
+                  doc.analysisStoredInRepository === true
+                    ? null
+                    : authoritativeAnalysis,
+
+                analysisStoredInRepository:
+                  doc.analysisStoredInRepository === true,
 
                 engineVersion: Number(doc.engineVersion || 0),
 
@@ -945,16 +1192,25 @@ function txnSaveAll() {
          * Document reviews may be retained for display and audit,
          * but must remain plain JSON data.
          */
-        aiDocumentReviews: Array.isArray(txn.aiDocumentReviews)
-          ? txn.aiDocumentReviews
-          : [],
-
+        aiDocumentReviews: [],
         /*
          * Generated checklist percentage will be recalculated.
          */
         checklistCompleted: undefined,
       };
     });
+
+    console.log(
+      "Largest transaction before save",
+      storageSafeTransactions
+        .map((txn) => ({
+          address: txn.address,
+          brain: new Blob([JSON.stringify(txn.transactionBrain || {})]).size,
+          coordinator: new Blob([JSON.stringify(txn.aiCoordinator || {})]).size,
+          total: new Blob([JSON.stringify(txn)]).size,
+        }))
+        .sort((a, b) => b.total - a.total),
+    );
 
     localStorage.setItem(
       TXN_STORAGE_KEY,
@@ -1022,15 +1278,29 @@ function txnDocKeywordFound(txn = {}, keyword = "") {
 
 function txnBuildAutomationTasks(txn = {}) {
   if (txn.automationEnabled === false) return [];
+
   const checklist = txnDefaultChecklist(txn.checklist || {});
+
   const existingAuto = Array.isArray(txn.automationTasks)
     ? txn.automationTasks
     : [];
+
   const existingDoneMap = {};
+
   existingAuto.forEach((task) => {
     existingDoneMap[String(task.id)] = !!task.done;
   });
+
   const tasks = [];
+
+  const automationState =
+    txn.transactionBrain?.transactionState ||
+    txn.aiCoordinator?.transactionState ||
+    "";
+
+  if (automationState === "Cancelled" || automationState === "Closed") {
+    return [];
+  }
 
   const canonicalFacts =
     txn?.transactionBrain?.canonicalFacts &&
@@ -1038,23 +1308,44 @@ function txnBuildAutomationTasks(txn = {}) {
       ? txn.transactionBrain.canonicalFacts
       : {};
 
+  /*
+  --------------------------------------------------------
+  AUTHORITATIVE TRANSACTION DATES
+
+  All AI automation must use Transaction Brain dates.
+  Legacy transaction fields must not override Brain dates.
+  --------------------------------------------------------
+  */
+
   const authoritativeDates = {
     contractDate: canonicalFacts.effectiveDate || "",
+
     emdDue:
       canonicalFacts.earnestMoneyDeadline || canonicalFacts.emdDeadline || "",
+
     inspectionDate:
       canonicalFacts.inspectionDeadline || canonicalFacts.inspectionDate || "",
+
     appraisalDate:
       canonicalFacts.appraisalDeadline || canonicalFacts.appraisalDate || "",
+
     loanDate:
       canonicalFacts.financingDeadline || canonicalFacts.loanDeadline || "",
+
     walkthroughDate:
       canonicalFacts.walkthroughDate ||
       canonicalFacts.finalWalkthroughDate ||
       "",
+
     closeDate:
       canonicalFacts.actualClosingDate || canonicalFacts.closingDate || "",
   };
+
+  /*
+  --------------------------------------------------------
+  WORKFLOW / TRANSACTION TASKS
+  --------------------------------------------------------
+  */
 
   TXN_AUTOMATION_RULES.forEach((rule) => {
     if (rule.checklist && checklist[rule.checklist]) {
@@ -1066,8 +1357,11 @@ function txnBuildAutomationTasks(txn = {}) {
     }
 
     /*
-     * Automation dates must come from the authoritative
-     * Transaction Brain, not legacy transaction fields.
+     * Use the authoritative Brain date associated with
+     * this automation rule.
+     *
+     * Legacy txn fields are allowed only as compatibility
+     * fallback when no Brain date exists for that field.
      */
 
     const sourceDate = authoritativeDates[rule.field] || txn[rule.field] || "";
@@ -1091,6 +1385,18 @@ function txnBuildAutomationTasks(txn = {}) {
     });
   });
 
+  /*
+  --------------------------------------------------------
+  REQUIRED DOCUMENT WATCH
+
+  Document-watch tasks must use the deadline logically
+  associated with the document.
+
+  Never put every missing document on the effective date
+  or closing date merely because another date is absent.
+  --------------------------------------------------------
+  */
+
   const transactionState =
     txn.transactionBrain?.transactionState ||
     txn.aiCoordinator?.transactionState ||
@@ -1105,14 +1411,71 @@ function txnBuildAutomationTasks(txn = {}) {
         return;
       }
 
-      /*
-       * Use authoritative Brain dates when available.
-       * Do not invent due dates if the Brain has not
-       * established one yet.
-       */
+      const title = String(rule.title || "")
+        .trim()
+        .toLowerCase();
 
-      const due =
-        authoritativeDates.contractDate || authoritativeDates.closeDate || "";
+      let due = "";
+
+      /*
+       * Inspection documents belong to the inspection
+       * contingency deadline.
+       */
+      if (title.includes("inspection")) {
+        due = authoritativeDates.inspectionDate || "";
+      } else if (title.includes("appraisal")) {
+        /*
+         * Appraisal documents belong to the appraisal
+         * contingency deadline.
+         */
+        due = authoritativeDates.appraisalDate || "";
+      } else if (
+        /*
+         * Financing / loan documents belong to the
+         * financing contingency deadline.
+         */
+        title.includes("loan") ||
+        title.includes("financing") ||
+        title.includes("lender")
+      ) {
+        due = authoritativeDates.loanDate || "";
+      } else if (
+        /*
+         * Closing / settlement documents belong to
+         * the authoritative closing date.
+         */
+        title.includes("closing statement") ||
+        title.includes("settlement statement") ||
+        title.includes("closing disclosure") ||
+        title.includes("hud") ||
+        title.includes("alta")
+      ) {
+        due = authoritativeDates.closeDate || "";
+      } else if (title.includes("earnest") || title.includes("deposit")) {
+        /*
+         * Earnest-money documents belong to the EMD
+         * deadline only when the Brain has established one.
+         */
+        due = authoritativeDates.emdDue || "";
+      } else if (
+        /*
+         * Final-walkthrough documents/tasks belong to the
+         * walkthrough date only when established.
+         */
+        title.includes("walkthrough") ||
+        title.includes("walk-through") ||
+        title.includes("final walk")
+      ) {
+        due = authoritativeDates.walkthroughDate || "";
+      }
+
+      /*
+       * Do not invent a date for an unmatched required
+       * document.
+       */
+      if (!due) {
+        return;
+      }
 
       const id = txnAutomationId(txn.id || "new", rule.title, due);
 
@@ -1128,10 +1491,22 @@ function txnBuildAutomationTasks(txn = {}) {
     });
   }
 
+  /*
+  --------------------------------------------------------
+  SORT
+  --------------------------------------------------------
+  */
+
   return tasks.sort((a, b) => {
-    const priorityWeight = { High: 3, Normal: 2, Low: 1 };
+    const priorityWeight = {
+      High: 3,
+      Normal: 2,
+      Low: 1,
+    };
+
     const da = a.due || "9999-12-31";
     const db = b.due || "9999-12-31";
+
     return (
       da.localeCompare(db) ||
       (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0)
@@ -1553,11 +1928,34 @@ function txnProgress(txn = {}) {
 }
 
 function txnGci(txn = {}) {
+  const brainFacts =
+    txn?.transactionBrain?.canonicalFacts &&
+    typeof txn.transactionBrain.canonicalFacts === "object"
+      ? txn.transactionBrain.canonicalFacts
+      : {};
+
+  const brainPrice = Number(brainFacts.purchasePrice);
+  const brainPct = Number(brainFacts.commissionPercent);
+
+  if (
+    Number.isFinite(brainPrice) &&
+    brainPrice > 0 &&
+    Number.isFinite(brainPct) &&
+    brainPct > 0
+  ) {
+    return brainPrice * (brainPct / 100);
+  }
+
   const manual = Number(txn.gci || 0);
-  if (manual > 0) return manual;
+
+  if (manual > 0) {
+    return manual;
+  }
+
   const price = Number(txn.price || 0);
   const pct = Number(txn.commissionPercent || 0);
-  return Math.round(price * (pct / 100));
+
+  return price * (pct / 100);
 }
 
 function txnStatusClass(status = "") {
@@ -1946,7 +2344,23 @@ function renderContactTransactions() {
     .join("");
 }
 
-function txnInit() {
+async function txnInit() {
+  /*
+   * Repository-backed document analyses must be restored
+   * before transactions are loaded and the Transaction Brain
+   * is rebuilt.
+   */
+  if (typeof txnHydrateStoredDocumentAnalyses === "function") {
+    try {
+      await txnHydrateStoredDocumentAnalyses();
+    } catch (error) {
+      console.error(
+        "Stored document analysis hydration failed during startup:",
+        error,
+      );
+    }
+  }
+
   txnLoad();
   txnRenderPartySelectors();
   txnRenderChecklistEditor({});
@@ -1963,12 +2377,7 @@ function txnRenderAll() {
 
 function txnSummaryStats() {
   const normalizedStatus = (txn = {}) =>
-    String(
-      txn?.transactionBrain?.transactionState ||
-        txn?.aiCoordinator?.transactionState ||
-        txn?.aiTransactionIntelligence?.transactionState ||
-        "Unknown",
-    )
+    String(txn?.transactionBrain?.transactionState || "Unknown")
       .trim()
       .toLowerCase();
 
@@ -2294,12 +2703,6 @@ function txnCardHtml(txn) {
       ? txn.aiCoordinator
       : {};
 
-  const intelligence =
-    txn?.aiTransactionIntelligence &&
-    typeof txn.aiTransactionIntelligence === "object"
-      ? txn.aiTransactionIntelligence
-      : {};
-
   const effectiveStatus =
     typeof aiTransactionState === "function"
       ? aiTransactionState(txn)
@@ -2371,8 +2774,6 @@ function txnCardHtml(txn) {
     coordinator?.transactionCompletion,
     coordinator?.completionPercentage,
     coordinator?.completion,
-    intelligence?.transactionCompletion,
-    intelligence?.completionPercentage,
   );
 
   const storedProgress =
@@ -2406,8 +2807,6 @@ function txnCardHtml(txn) {
     coordinator?.finalGci,
     coordinator?.expectedGci,
     coordinator?.gci,
-    intelligence?.finalGci,
-    intelligence?.expectedGci,
   );
 
   if (
@@ -2505,14 +2904,13 @@ function txnCardHtml(txn) {
           } past close`;
   }
 
-  const gciLabel = isClosed ? "Final GCI" : "Expected GCI";
+  const gciLabel = isClosed ? "Final GCI" : "GCI";
 
   const riskLevel = String(
     brain?.riskLevel ||
       brain?.risk?.level ||
       brain?.decision?.riskLevel ||
       coordinator?.riskLevel ||
-      intelligence?.riskLevel ||
       "",
   ).trim();
 
@@ -2536,6 +2934,13 @@ function txnCardHtml(txn) {
 
   const gciDisplay =
     authoritativeGci !== null ? txnMoney(authoritativeGci) : "Not established";
+
+  const expectedNetCommission = Number(brain?.commission?.userGrossCommission);
+
+  const expectedNetCommissionDisplay =
+    Number.isFinite(expectedNetCommission) && expectedNetCommission >= 0
+      ? txnMoney(expectedNetCommission)
+      : "Not established";
 
   const closingDateDisplay = authoritativeClosingDate
     ? txnDate(authoritativeClosingDate) || "Not established"
@@ -2590,6 +2995,13 @@ function txnCardHtml(txn) {
           <div class="small-muted">${gciLabel}</div>
           <b>${gciDisplay}</b>
         </div>
+
+        <div>
+          <div class="small-muted">
+          ${isClosed ? "Final Net Commission" : "Expected Net Commission"}
+        </div>
+        <b>${expectedNetCommissionDisplay}</b>
+      </div>
 
         <div>
           <div class="small-muted">AI Status</div>
@@ -2753,8 +3165,15 @@ function txnRenderList() {
     });
   }
 
-  if (statusFilter) {
-    list = list.filter((txn) => txn.status === statusFilter);
+  if (
+    statusFilter &&
+    String(statusFilter).trim() !== "" &&
+    String(statusFilter) !== "All Statuses"
+  ) {
+    list = list.filter(
+      (txn) =>
+        normalizedStatus(txn) === String(statusFilter).trim().toLowerCase(),
+    );
   }
 
   if (sideFilter) {
@@ -3176,6 +3595,22 @@ async function txnHandleDocumentUpload(event) {
           schemaVersion: analysis.schemaVersion || "",
           status: "Complete",
         });
+
+        doc.analysisStoredInRepository = true;
+
+        /*
+         * Keep the current analysis attached in memory so the
+         * Transaction Brain can rebuild immediately without
+         * requiring asynchronous repository hydration.
+         *
+         * txnSaveAll() will still strip repository-backed analysis
+         * before writing the transaction to localStorage.
+         */
+        doc.aiAnalysis = analysis;
+
+        doc.ai = null;
+        doc.universalAnalysis = null;
+        doc.analysis = null;
 
         console.log("DOCUMENT SAVED TO REPOSITORY", {
           documentId: doc.id,

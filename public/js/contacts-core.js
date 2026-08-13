@@ -40,31 +40,53 @@ function showContactProfileTab(tabName) {
     "ai",
   ];
 
+  /*
+   * Show only the selected Contact Workspace panel.
+   */
   tabs.forEach((name) => {
     const panel = document.getElementById(
       "contactTab" + name.charAt(0).toUpperCase() + name.slice(1),
     );
-    if (panel) panel.style.display = name === tabName ? "block" : "none";
+
+    if (panel) {
+      panel.style.display = name === tabName ? "block" : "none";
+    }
   });
 
-  document.querySelectorAll("#contactProfileTabs .nav-link").forEach((btn) => {
+  /*
+   * Remove the active state from every Contact Workspace tab button.
+   */
+  const buttons = Array.from(
+    document.querySelectorAll("#contactProfileTabs button"),
+  );
+
+  buttons.forEach((btn) => {
     btn.classList.remove("active");
   });
 
-  const buttons = Array.from(
-    document.querySelectorAll("#contactProfileTabs .nav-link"),
-  );
-  const activeButton = buttons.find(
-    (btn) => (btn.innerText || "").toLowerCase() === tabName,
-  );
-  if (activeButton) activeButton.classList.add("active");
+  /*
+   * Activate the button whose onclick points to the selected tab.
+   *
+   * We intentionally match the internal tab name rather than the
+   * visible label so labels can be renamed without breaking navigation.
+   */
+  const activeButton = buttons.find((btn) => {
+    const onclick = btn.getAttribute("onclick") || "";
+    return onclick.includes(`showContactProfileTab('${tabName}')`);
+  });
+
+  if (activeButton) {
+    activeButton.classList.add("active");
+  }
 
   if (tabName === "communications") {
     loadContactEmailHistory();
     loadSmsHistory();
   }
 
-  if (tabName === "ai") renderContactAIProfilePanel();
+  if (tabName === "ai") {
+    renderContactAIProfilePanel();
+  }
 }
 
 function setContactFieldValue(id, value) {
@@ -144,9 +166,6 @@ function openContact(id) {
 
   const mainTabs = document.querySelector(".nav-tabs");
   if (mainTabs) mainTabs.style.display = "none";
-
-  const appToolbar = document.querySelector(".app-toolbar");
-  if (appToolbar) appToolbar.style.display = "none";
 
   const contactsAddressBookView = document.getElementById(
     "contactsAddressBookView",
@@ -1327,6 +1346,7 @@ async function loadContacts() {
   const data = await res.json();
 
   contactsCache = normalizeContactsForPipeline(data);
+  window.contactsCache = contactsCache;
   data.splice(0, data.length, ...contactsCache);
   populateContactFilterControls();
   renderSavedContactFilters();

@@ -112,7 +112,11 @@ function renderTransactionWorkspaceHeader(txn) {
 
   let gci = null;
 
-  if (hasPurchasePrice && typeof txnGci === "function") {
+  const userCommission = Number(brain?.commission?.userGrossCommission);
+
+  if (Number.isFinite(userCommission) && userCommission >= 0) {
+    gci = userCommission;
+  } else if (hasPurchasePrice && typeof txnGci === "function") {
     const calculatedGci = Number(
       txnGci({
         ...txn,
@@ -158,7 +162,7 @@ function renderTransactionWorkspaceHeader(txn) {
           •
           ${purchasePriceDisplay}
           •
-          ${isClosed ? "Final GCI" : "Expected GCI"}
+          ${isClosed ? "Final GCI" : "Expected Net Commission"}
           ${gciDisplay}
         </div>
       </div>
@@ -263,13 +267,17 @@ function renderTransactionWorkspaceKPIs(txn, data = {}) {
   const hasClosingDate = Boolean(authoritativeClosingDate);
 
   /*
-   * Expected GCI may use the transaction's commission configuration,
+   * Expected Net Commission may use the transaction's commission configuration,
    * but its purchase price must be the authoritative Brain price.
    */
 
   let authoritativeGci = null;
 
-  if (hasPurchasePrice && typeof txnGci === "function") {
+  const userCommission = Number(brain?.commission?.userGrossCommission);
+
+  if (Number.isFinite(userCommission) && userCommission >= 0) {
+    authoritativeGci = userCommission;
+  } else if (hasPurchasePrice && typeof txnGci === "function") {
     const gciValue = Number(
       txnGci({
         ...txn,
@@ -333,7 +341,7 @@ function renderTransactionWorkspaceKPIs(txn, data = {}) {
     timingLabel = "Active Deadlines";
   }
 
-  const gciLabel = isClosed ? "Final GCI" : "Expected GCI";
+  const gciLabel = isClosed ? "Final GCI" : "Expected Net Commission";
 
   const progressText = validPercent(authoritativeCompletion)
     ? `${Math.round(authoritativeCompletion)}%`
@@ -451,7 +459,767 @@ function renderTransactionWorkspaceOverview(txn, data = {}) {
             `
       }
     </div>
+
+    ${
+      typeof renderTransactionWorkspaceCommissionBreakdown === "function"
+        ? renderTransactionWorkspaceCommissionBreakdown(txn)
+        : ""
+    }
   `;
+}
+
+function renderTransactionWorkspaceCommissionBreakdown(txn) {
+  const commission =
+    txn?.transactionBrain?.commission &&
+    typeof txn.transactionBrain.commission === "object"
+      ? txn.transactionBrain.commission
+      : null;
+
+  if (!commission) {
+    return "";
+  }
+
+  const money = (value) => {
+    const number = Number(value || 0);
+
+    return number.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const percent = (value) => {
+    const number = Number(value);
+
+    return Number.isFinite(number) ? `${number}%` : "—";
+  };
+
+  const allocations = Array.isArray(commission.allocations)
+    ? commission.allocations
+    : [];
+
+  const allocationRows = allocations.length
+    ? allocations
+        .map(
+          (item) => `
+            <div style="
+              display:grid;
+              grid-template-columns:minmax(0,1fr) auto;
+              gap:16px;
+              padding:12px 0;
+              border-top:1px solid #e5e7eb;
+              align-items:center;
+            ">
+              <div>
+                <div style="
+                  font-weight:700;
+                  color:#042C49;
+                ">
+                  ${txnSafe(
+                    item.recipientName ||
+                      item.recipientType ||
+                      "Commission Allocation",
+                  )}
+                </div>
+
+                <div style="
+                  margin-top:3px;
+                  font-size:13px;
+                  color:#6b7280;
+                ">
+                  ${txnSafe(txnCommissionAllocationDescription(item))}
+                </div>
+              </div>
+
+              <div style="
+                font-weight:800;
+                color:#b42318;
+                white-space:nowrap;
+              ">
+                -${money(item.amount)}
+              </div>
+            </div>
+          `,
+        )
+        .join("")
+    : `
+        <div style="
+          padding:16px 0 4px;
+          color:#6b7280;
+          font-size:14px;
+        ">
+          No commission splits, referral fees, or other allocations have been added.
+        </div>
+      `;
+
+  return `
+    <div class="section" style="margin-top:20px;">
+      <div class="modern-card" style="padding:24px;">
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+          gap:20px;
+          flex-wrap:wrap;
+        ">
+          <div>
+            <div style="
+              font-size:12px;
+              font-weight:800;
+              letter-spacing:.12em;
+              text-transform:uppercase;
+              color:#00a143;
+            ">
+              Commission Intelligence
+            </div>
+
+            <div style="
+              margin-top:4px;
+              font-size:22px;
+              font-weight:900;
+              color:#042C49;
+            ">
+              Commission Breakdown
+            </div>
+
+            <div style="
+              margin-top:6px;
+              font-size:14px;
+              color:#6b7280;
+            ">
+              Gross commission, splits, referral fees, and the amount attributable to you.
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-sm"
+            style="
+              background:#042C49;
+              color:#fff;
+              border:none;
+              font-weight:700;
+              padding:9px 14px;
+              border-radius:9px;
+            "
+            onclick="txnWorkspaceShowCommissionAllocationForm('${txn.id}')"
+          >
+            + Add Allocation
+          </button>
+        </div>
+
+        <div style="
+          display:grid;
+          grid-template-columns:repeat(3,minmax(0,1fr));
+          gap:14px;
+          margin-top:22px;
+        ">
+          <div style="
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:16px;
+            background:#f8fafc;
+          ">
+            <div style="
+              font-size:12px;
+              color:#6b7280;
+              font-weight:700;
+              text-transform:uppercase;
+              letter-spacing:.06em;
+            ">
+              Listing Side
+            </div>
+
+            <div style="
+              font-size:21px;
+              font-weight:900;
+              color:#042C49;
+              margin-top:5px;
+            ">
+              ${money(commission.listingSideGross)}
+            </div>
+
+            <div style="
+              font-size:13px;
+              color:#6b7280;
+              margin-top:3px;
+            ">
+              ${percent(commission.listingSidePercent)}
+            </div>
+          </div>
+
+          <div style="
+            border:1px solid #e5e7eb;
+            border-radius:12px;
+            padding:16px;
+            background:#f8fafc;
+          ">
+            <div style="
+              font-size:12px;
+              color:#6b7280;
+              font-weight:700;
+              text-transform:uppercase;
+              letter-spacing:.06em;
+            ">
+              Gross Commission
+            </div>
+
+            <div style="
+              font-size:21px;
+              font-weight:900;
+              color:#042C49;
+              margin-top:5px;
+            ">
+              ${money(commission.representedGrossCommission)}
+            </div>
+
+            <div style="
+              font-size:13px;
+              color:#6b7280;
+              margin-top:3px;
+            ">
+              Represented side
+            </div>
+          </div>
+
+          <div style="
+            border:1px solid rgba(0,161,67,.25);
+            border-radius:12px;
+            padding:16px;
+            background:rgba(0,161,67,.05);
+          ">
+            <div style="
+              font-size:12px;
+              color:#00a143;
+              font-weight:800;
+              text-transform:uppercase;
+              letter-spacing:.06em;
+            ">
+              Expected Net Commission
+            </div>
+
+            <div style="
+              font-size:23px;
+              font-weight:900;
+              color:#042C49;
+              margin-top:5px;
+            ">
+              ${money(commission.userGrossCommission)}
+            </div>
+
+            <div style="
+              font-size:13px;
+              color:#6b7280;
+              margin-top:3px;
+            ">
+              After confirmed allocations
+            </div>
+          </div>
+        </div>
+
+        <div style="
+          margin-top:22px;
+          font-size:14px;
+          font-weight:800;
+          color:#042C49;
+        ">
+          Allocations & Deductions
+        </div>
+
+        ${allocationRows}
+
+        <div style="
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-top:14px;
+          padding-top:16px;
+          border-top:2px solid #e5e7eb;
+        ">
+          <div style="font-weight:800;color:#042C49;">
+            Total Deductions
+          </div>
+
+          <div style="font-weight:900;color:#b42318;">
+            ${money(commission.totalDeductions)}
+          </div>
+        </div>
+
+        <div
+          id="txnCommissionAllocationForm"
+          style="display:none;margin-top:22px;"
+        ></div>
+      </div>
+    </div>
+  `;
+}
+
+function txnCommissionAllocationDescription(item = {}) {
+  const type = String(item.calculationType || "");
+
+  if (
+    type === "percent_of_sales_price" ||
+    type === "percentage_of_sales_price"
+  ) {
+    return `${item.value}% of sales price`;
+  }
+
+  if (
+    type === "percent_of_side_commission" ||
+    type === "percentage_of_side_commission"
+  ) {
+    return `${item.value}% of ${item.side || "represented"}-side commission`;
+  }
+
+  if (
+    type === "percent_of_gross_commission" ||
+    type === "percentage_of_gross_commission"
+  ) {
+    return `${item.value}% of gross commission`;
+  }
+
+  if (
+    type === "percent_of_remaining_commission" ||
+    type === "percentage_of_remaining_commission"
+  ) {
+    return `${item.value}% of remaining commission`;
+  }
+
+  if (
+    type === "flat_fee" ||
+    type === "flat_amount" ||
+    type === "fixed_fee" ||
+    type === "fixed_amount"
+  ) {
+    return "Flat dollar amount";
+  }
+
+  return "Commission allocation";
+}
+
+function txnWorkspaceShowCommissionAllocationForm(txnId) {
+  const container = document.getElementById("txnCommissionAllocationForm");
+
+  if (!container) {
+    return;
+  }
+
+  container.style.display = "block";
+
+  container.innerHTML = `
+    <div style="
+      border:1px solid #dbe3ea;
+      border-radius:14px;
+      padding:20px;
+      background:#f8fafc;
+    ">
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:16px;
+        margin-bottom:18px;
+      ">
+        <div>
+          <div style="
+            font-size:18px;
+            font-weight:900;
+            color:#042C49;
+          ">
+            Add Commission Allocation
+          </div>
+
+          <div style="
+            margin-top:4px;
+            font-size:13px;
+            color:#6b7280;
+          ">
+            Add a referral fee, agent split, brokerage split, or other deduction.
+          </div>
+        </div>
+
+        <button
+          type="button"
+          class="btn btn-sm btn-outline-secondary"
+          onclick="txnWorkspaceHideCommissionAllocationForm()"
+        >
+          Cancel
+        </button>
+      </div>
+
+      <div style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:14px;
+      ">
+        <div>
+          <label style="
+            font-size:12px;
+            font-weight:800;
+            color:#374151;
+            margin-bottom:5px;
+          ">
+            Recipient / Payee
+          </label>
+
+          <input
+            id="txnCommissionRecipient"
+            class="form-control"
+            placeholder="Referral company, agent, brokerage..."
+          >
+        </div>
+
+        <div>
+          <label style="
+            font-size:12px;
+            font-weight:800;
+            color:#374151;
+            margin-bottom:5px;
+          ">
+            Role
+          </label>
+
+          <select
+            id="txnCommissionRecipientType"
+            class="form-control"
+          >
+            <option value="referral_company">Referral Company</option>
+            <option value="referral_agent">Referral Agent</option>
+            <option value="co_listing_agent">Co-Listing Agent</option>
+            <option value="co_buyer_agent">Co-Buyer Agent</option>
+            <option value="team">Team Split</option>
+            <option value="brokerage">Brokerage</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="
+            font-size:12px;
+            font-weight:800;
+            color:#374151;
+            margin-bottom:5px;
+          ">
+            Calculation
+          </label>
+
+          <select
+            id="txnCommissionCalculationType"
+            class="form-control"
+          >
+            <option value="percent_of_gross_commission">
+              % of Gross Commission
+            </option>
+
+            <option value="percent_of_remaining_commission">
+              % of Remaining Commission
+            </option>
+
+            <option value="percent_of_side_commission">
+              % of Commission Side
+            </option>
+
+            <option value="percent_of_sales_price">
+              % of Sales Price
+            </option>
+
+            <option value="flat_fee">
+              Flat Dollar Amount
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label style="
+            font-size:12px;
+            font-weight:800;
+            color:#374151;
+            margin-bottom:5px;
+          ">
+            Value
+          </label>
+
+          <input
+            id="txnCommissionAllocationValue"
+            type="number"
+            step="0.01"
+            min="0"
+            class="form-control"
+            placeholder="25 or 495"
+          >
+        </div>
+
+        <div>
+          <label style="
+            font-size:12px;
+            font-weight:800;
+            color:#374151;
+            margin-bottom:5px;
+          ">
+            Applies To
+          </label>
+
+          <select
+            id="txnCommissionAllocationSide"
+            class="form-control"
+          >
+            <option value="represented">
+              Represented Side
+            </option>
+
+            <option value="listing">
+              Listing / Seller Side
+            </option>
+
+            <option value="buyer">
+              Buyer Side
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label style="
+            font-size:12px;
+            font-weight:800;
+            color:#374151;
+            margin-bottom:5px;
+          ">
+            Source
+          </label>
+
+          <select
+            id="txnCommissionAllocationSource"
+            class="form-control"
+          >
+            <option value="manual">Manual Entry</option>
+            <option value="user_profile">User Profile Rule</option>
+            <option value="document">Transaction Document</option>
+            <option value="ai_confirmed">AI Confirmed</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="
+        margin-top:18px;
+        display:flex;
+        justify-content:flex-end;
+      ">
+        <button
+          type="button"
+          class="btn"
+          style="
+            background:#00a143;
+            color:#fff;
+            border:none;
+            font-weight:800;
+            padding:10px 18px;
+            border-radius:9px;
+          "
+          onclick="txnWorkspaceSaveCommissionAllocation('${txnId}')"
+        >
+          Save Allocation
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function txnWorkspaceHideCommissionAllocationForm() {
+  const container = document.getElementById("txnCommissionAllocationForm");
+
+  if (!container) {
+    return;
+  }
+
+  container.style.display = "none";
+  container.innerHTML = "";
+}
+
+function txnWorkspaceSaveCommissionAllocation(txnId) {
+  const txn = Array.isArray(txnCache)
+    ? txnCache.find((transaction) => String(transaction.id) === String(txnId))
+    : null;
+
+  if (!txn) {
+    alert("Transaction could not be found.");
+    return;
+  }
+
+  const recipientInput = document.getElementById("txnCommissionRecipient");
+
+  const recipientTypeInput = document.getElementById(
+    "txnCommissionRecipientType",
+  );
+
+  const calculationTypeInput = document.getElementById(
+    "txnCommissionCalculationType",
+  );
+
+  const valueInput = document.getElementById("txnCommissionAllocationValue");
+
+  const sideInput = document.getElementById("txnCommissionAllocationSide");
+
+  const sourceInput = document.getElementById("txnCommissionAllocationSource");
+
+  const recipientName = String(recipientInput?.value || "").trim();
+
+  const recipientType = String(recipientTypeInput?.value || "other").trim();
+
+  const calculationType = String(calculationTypeInput?.value || "").trim();
+
+  const value = Number(valueInput?.value);
+
+  const side = String(sideInput?.value || "represented").trim();
+
+  const source = String(sourceInput?.value || "manual").trim();
+
+  /*
+   * Basic validation.
+   */
+  if (!recipientName) {
+    alert("Enter the recipient or payee.");
+    recipientInput?.focus();
+    return;
+  }
+
+  if (!calculationType) {
+    alert("Select how this allocation is calculated.");
+    calculationTypeInput?.focus();
+    return;
+  }
+
+  if (!Number.isFinite(value) || value < 0) {
+    alert("Enter a valid allocation value.");
+    valueInput?.focus();
+    return;
+  }
+
+  /*
+   * Percentage rules cannot reasonably exceed 100%.
+   */
+  if (calculationType.includes("percent") && value > 100) {
+    alert("Percentage allocations cannot exceed 100%.");
+    valueInput?.focus();
+    return;
+  }
+
+  if (!Array.isArray(txn.commissionAllocations)) {
+    txn.commissionAllocations = [];
+  }
+
+  const allocation = {
+    id:
+      "commission-allocation-" +
+      Date.now() +
+      "-" +
+      Math.random().toString(36).slice(2, 8),
+
+    recipientName,
+    recipientType,
+
+    calculationType,
+    value,
+
+    side,
+
+    treatment: "deduction",
+
+    priority: txn.commissionAllocations.length,
+
+    source,
+
+    /*
+     * Manual entries are authoritative immediately.
+     *
+     * Later, AI-generated proposals can use confirmed:false
+     * until the user approves them.
+     */
+    confirmed: true,
+
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  txn.commissionAllocations.push(allocation);
+  txn.updatedAt = new Date().toISOString();
+
+  /*
+   * Rebuild the Brain.
+   *
+   * This does NOT reanalyze transaction documents.
+   * It simply recalculates the Commission Allocation Engine
+   * using the newly confirmed rule.
+   */
+  if (typeof aiRefreshTransaction === "function") {
+    try {
+      aiRefreshTransaction(txn);
+    } catch (error) {
+      console.error(
+        "Transaction Brain refresh failed after commission allocation:",
+        error,
+      );
+    }
+  }
+
+  /*
+   * Persist the transaction.
+   */
+  if (typeof txnSaveAll === "function") {
+    try {
+      txnSaveAll();
+    } catch (error) {
+      console.error("Commission allocation save failed:", error);
+    }
+  }
+
+  /*
+   * Immediately refresh ONLY the Commission Breakdown.
+   *
+   * Do not rebuild the entire Transactions UI, Dashboard,
+   * or Transaction Workspace just to display new commission math.
+   */
+  const commissionSection = document
+    .getElementById("txnCommissionAllocationForm")
+    ?.closest(".section");
+
+  if (
+    commissionSection &&
+    typeof renderTransactionWorkspaceCommissionBreakdown === "function"
+  ) {
+    commissionSection.outerHTML =
+      renderTransactionWorkspaceCommissionBreakdown(txn);
+  }
+
+  /*
+   * Allow the rest of RapportLink to refresh after the user's
+   * commission update is already visible.
+   */
+  setTimeout(() => {
+    if (typeof txnRenderAll === "function") {
+      try {
+        txnRenderAll();
+      } catch (error) {
+        console.error(
+          "Deferred transaction render failed after commission allocation:",
+          error,
+        );
+      }
+    }
+
+    if (typeof loadDashboard === "function") {
+      try {
+        loadDashboard();
+      } catch (error) {
+        console.error(
+          "Deferred Dashboard refresh failed after commission allocation:",
+          error,
+        );
+      }
+    }
+  }, 0);
 }
 
 function renderTransactionWorkspacePeople(txn) {
@@ -1039,13 +1807,18 @@ function renderTransactionWorkspaceSide(txn) {
 }
 
 function txnWorkspaceToggleChecklist(txnId, item, checked) {
-  if (typeof txnLoad === "function") {
-    txnLoad();
-  }
+  /*
+  --------------------------------------------------------
+  Immediate checklist update
 
-  const txn = txnCache.find(
-    (transaction) => String(transaction.id) === String(txnId),
-  );
+  The browser must be allowed to paint the checkbox change
+  before RapportLink performs heavier transaction work.
+  --------------------------------------------------------
+  */
+
+  const txn = Array.isArray(txnCache)
+    ? txnCache.find((transaction) => String(transaction.id) === String(txnId))
+    : null;
 
   if (!txn) {
     console.error("Checklist update failed: transaction not found.");
@@ -1057,69 +1830,122 @@ function txnWorkspaceToggleChecklist(txnId, item, checked) {
   }
 
   /*
-   * Save the user's checklist selection.
+   * Apply the user's selection immediately in memory.
    */
   txn.checklist[item] = checked === true;
   txn.updatedAt = new Date().toISOString();
 
   /*
-   * Rebuild the Transaction Brain so checklist completion,
-   * health, and Coordinator recommendations reflect the
-   * newly updated checklist.
+   * Allow the browser to paint the checkbox first.
    *
-   * This does not reanalyze documents or call OpenAI.
+   * Heavy Transaction Brain / save / render work runs
+   * immediately afterward without blocking the visual click.
    */
-  if (typeof aiRefreshTransaction === "function") {
-    try {
-      aiRefreshTransaction(txn);
-    } catch (error) {
-      console.error(
-        "Transaction Brain refresh failed after checklist update:",
-        error,
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      /*
+       * Rebuild the Transaction Brain so checklist completion,
+       * health, and Coordinator recommendations stay current.
+       *
+       * This does not reanalyze documents or call OpenAI.
+       */
+      if (typeof aiRefreshTransaction === "function") {
+        try {
+          aiRefreshTransaction(txn);
+        } catch (error) {
+          console.error(
+            "Transaction Brain refresh failed after checklist update:",
+            error,
+          );
+        }
+      }
+
+      if (typeof txnApplyAutomation === "function") {
+        try {
+          txnApplyAutomation(txn);
+        } catch (error) {
+          console.error(
+            "Transaction automation failed after checklist update:",
+            error,
+          );
+        }
+      }
+
+      /*
+       * Persist the transaction changes.
+       */
+      if (typeof txnSaveAll === "function") {
+        try {
+          txnSaveAll();
+        } catch (error) {
+          console.error("Checklist save failed:", error);
+        }
+      }
+
+      /*
+       * Refresh transaction displays after the save.
+       */
+      if (typeof txnRenderAll === "function") {
+        try {
+          txnRenderAll();
+        } catch (error) {
+          console.error(
+            "Transaction render failed after checklist update:",
+            error,
+          );
+        }
+      }
+
+      /*
+       * Keep Dashboard and Calendar synchronized without
+       * delaying the user's checkbox interaction.
+       */
+      if (typeof loadDashboard === "function") {
+        try {
+          loadDashboard();
+        } catch (error) {
+          console.error(
+            "Dashboard refresh failed after checklist update:",
+            error,
+          );
+        }
+      }
+
+      if (typeof loadCalendar === "function") {
+        try {
+          loadCalendar();
+        } catch (error) {
+          console.error(
+            "Calendar refresh failed after checklist update:",
+            error,
+          );
+        }
+      }
+
+      /*
+       * Refresh only the Checklist workspace content.
+       */
+      const checklistContainer = document.getElementById(
+        "txnWorkspaceTabContent",
       );
-    }
-  }
 
-  if (typeof txnApplyAutomation === "function") {
-    txnApplyAutomation(txn);
-  }
+      if (checklistContainer) {
+        checklistContainer.innerHTML = renderTransactionWorkspaceChecklist(
+          txn,
+          txn.checklist || {},
+        );
 
-  if (typeof txnSaveAll === "function") {
-    txnSaveAll();
-  }
+        return;
+      }
 
-  if (typeof txnRenderAll === "function") {
-    txnRenderAll();
-  }
-
-  if (typeof loadDashboard === "function") {
-    loadDashboard();
-  }
-
-  if (typeof loadCalendar === "function") {
-    loadCalendar();
-  }
-
-  /*
-   * Refresh only the Checklist tab instead of reopening
-   * the entire Transaction Workspace.
-   */
-  const checklistContainer = document.getElementById("txnWorkspaceTabContent");
-
-  if (checklistContainer) {
-    checklistContainer.innerHTML = renderTransactionWorkspaceChecklist(
-      txn,
-      txn.checklist || {},
-    );
-
-    return;
-  }
-
-  /*
-   * Fallback only if the workspace tab container
-   * cannot be found.
-   */
-  txnOpenPanel(txnId);
+      /*
+       * Fallback only if the workspace container disappeared.
+       */
+      if (typeof txnOpenPanel === "function") {
+        txnOpenPanel(txnId);
+      }
+    }, 0);
+  });
 }
 
 window.txnRunAITransactionCoordinator = function (txnId) {

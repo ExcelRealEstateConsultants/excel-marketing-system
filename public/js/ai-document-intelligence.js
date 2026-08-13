@@ -183,20 +183,6 @@ function aiRefreshTransaction(txn = {}) {
   --------------------------------------------------------
   */
 
-  console.group("REFRESH TXN");
-
-  console.log("documents:", txn.documents);
-  console.log("aiDocumentReviews:", txn.aiDocumentReviews);
-  console.log("price:", txn.price);
-  console.log("purchasePrice:", txn.purchasePrice);
-  console.log("expectedGCI:", txn.expectedGCI);
-  console.log("closeDate:", txn.closeDate);
-  console.log("closingDate:", txn.closingDate);
-  console.log("transactionBrain:", txn.transactionBrain);
-  console.log("aiCoordinator:", txn.aiCoordinator);
-
-  console.groupEnd();
-
   /*
 --------------------------------------------------------
 Legacy transaction normalization
@@ -367,12 +353,18 @@ Do NOT overwrite existing canonical values.
     );
   });
 
+  const authoritativeState = String(
+    brain?.decision?.state || brain?.transactionState || "",
+  ).trim();
+
   txn.checklistCompleted =
-    checklistItems.length > 0
-      ? Math.round(
-          (completedChecklistItems.length / checklistItems.length) * 100,
-        )
-      : null;
+    authoritativeState === "Closed"
+      ? 100
+      : checklistItems.length > 0
+        ? Math.round(
+            (completedChecklistItems.length / checklistItems.length) * 100,
+          )
+        : null;
 
   brain.transactionCompletion = txn.checklistCompleted;
   brain.completion = txn.checklistCompleted;

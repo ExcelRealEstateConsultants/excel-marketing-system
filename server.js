@@ -14,26 +14,102 @@ const {
 } = require("./public/js/ai-universal-document-engine");
 
 const session = require("express-session");
+const pgSession = require("connect-pg-simple")(session);
+const authRoutes = require("./routes/auth");
 
 const app = express();
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "rapportlink-secret",
+    store: new pgSession({
+      conString: process.env.DATABASE_URL,
+      createTableIfMissing: true,
+    }),
+
+    secret: process.env.SESSION_SECRET,
+
     resave: false,
     saveUninitialized: false,
+
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
   }),
 );
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "75mb" }));
+
+app.use("/api/auth", authRoutes);
+
 app.use(express.static("public"));
 
-/* ================= ROOT ROUTE FOR GODADDY ================= */
+/* ================= RAPPORTLINK AUTH GATE ================= */
+
+function requireRapportLinkAuth(req, res, next) {
+  if (!req.session?.userId) {
+    return res.redirect("/");
+  }
+
+  next();
+}
+
+/*
+Serve public assets, but do not automatically expose app.html
+or login.html as ordinary static pages.
+*/
+/* ================= PROTECT RAPPORTLINK APP ================= */
+
+app.get("/app.html", requireRapportLinkAuth, (req, res) => {
+  return res.sendFile(path.join(__dirname, "public", "app.html"));
+});
+
+/* ================= PUBLIC STATIC FILES ================= */
+
+app.use(
+  express.static("public", {
+    index: false,
+
+    setHeaders: (res, filePath) => {
+      if (
+        filePath.endsWith("app.html") ||
+        filePath.endsWith("login.html") ||
+        filePath.endsWith("password-forgot.html") ||
+        filePath.endsWith("password-reset.html")
+      ) {
+        res.setHeader("Cache-Control", "no-store");
+      }
+    },
+  }),
+);
+
+/* ================= RAPPORTLINK ENTRY ROUTE ================= */
+
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "app.html"));
+  const isAuthenticated = Boolean(req.session?.userId);
+
+  return res.sendFile(
+    path.join(__dirname, "public", isAuthenticated ? "app.html" : "login.html"),
+  );
+});
+
+/* ================= FORGOT PASSWORD PAGE ================= */
+
+app.get("/forgot-password", (req, res) => {
+  return res.sendFile(path.join(__dirname, "public", "password-forgot.html"));
+});
+
+/* ================= RESET PASSWORD PAGE ================= */
+
+app.get("/reset-password", (req, res) => {
+  return res.sendFile(path.join(__dirname, "public", "password-reset.html"));
 });
 
 /* ================= HEALTH CHECK ================= */
+
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
@@ -1682,6 +1758,266 @@ app.get("/api/dashboard-stats", (req, res) => {
     recentActivity: recentActivity.slice(0, 10),
     topLinks,
   });
+});
+
+/* ================= MORTGAGE MARKET ================= */
+
+/*
+RapportLink Mortgage Market
+
+Daily national mortgage-rate indices supplied through FRED
+using Optimal Blue Mortgage Market Indices.
+
+These are market indicators, not borrower-specific quotes.
+*/
+
+const mortgageRateCache = {
+  data: null,
+  fetchedAt: 0,
+};
+
+const MORTGAGE_RATE_CACHE_MS = 60 * 60 * 1000;
+
+const MORTGAGE_RATE_SERIES = [
+  {
+    id: "OBMMIC30YF",
+    key: "conventional30",
+    label: "30-Year Fixed",
+    shortLabel: "30 Yr Fixed",
+  },
+  {
+    id: "OBMMIC15YF",
+    key: "conventional15",
+    label: "15-Year Fixed",
+    shortLabel: "15 Yr Fixed",
+  },
+  {
+    id: "OBMMIFHA30YF",
+    key: "fha30",
+    label: "30-Year FHA",
+    shortLabel: "FHA",
+  },
+  {
+    id: "OBMMIVA30YF",
+    key: "va30",
+    label: "30-Year VA",
+    shortLabel: "VA",
+  },
+  {
+    id: "OBMMIJUMBO30YF",
+    key: "jumbo30",
+    label: "30-Year Jumbo",
+    shortLabel: "Jumbo",
+  },
+  {
+    id: "OBMMIUSDA30YF",
+    key: "usda30",
+    label: "30-Year USDA",
+    shortLabel: "USDA",
+  },
+];
+
+async function getFredMortgageRate(series) {
+  const url =
+    "https://fred.stlouisfed.org/graph/fredgraph.csv?id=" +
+    encodeURIComponent(series.id);
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "RapportLink/1.0",
+      Accept: "text/csv",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `FRED mortgage-rate request failed for ${series.id}: ${response.status}`,
+    );
+  }
+
+  const csv = await response.text();
+
+  const rows = csv
+    .split(/\r?\n/)
+    .slice(1)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const commaIndex = line.indexOf(",");
+
+      if (commaIndex === -1) return null;
+
+      const date = line.slice(0, commaIndex).trim();
+      const rawValue = line.slice(commaIndex + 1).trim();
+      const rate = Number(rawValue);
+
+      if (!date || !Number.isFinite(rate)) {
+        return null;
+      }
+
+      return {
+        date,
+        rate,
+      };
+    })
+    .filter(Boolean);
+
+  if (!rows.length) {
+    throw new Error(`No usable mortgage-rate data returned for ${series.id}.`);
+  }
+
+  const latest = rows[rows.length - 1];
+  const previous = rows.length > 1 ? rows[rows.length - 2] : null;
+
+  const change = previous
+    ? Number((latest.rate - previous.rate).toFixed(3))
+    : 0;
+
+  return {
+    key: series.key,
+    seriesId: series.id,
+    label: series.label,
+    shortLabel: series.shortLabel,
+    rate: Number(latest.rate.toFixed(3)),
+    previousRate: previous ? Number(previous.rate.toFixed(3)) : null,
+    change,
+    direction: change < 0 ? "down" : change > 0 ? "up" : "flat",
+    date: latest.date,
+  };
+}
+
+function buildMortgageMarketRead(rates = []) {
+  const conventional30 = rates.find((item) => item.key === "conventional30");
+
+  if (!conventional30) {
+    return {
+      tone: "neutral",
+      headline: "Mortgage market data is updating.",
+      insight:
+        "DealPilot will use rate movement to identify buyer and seller outreach opportunities.",
+    };
+  }
+
+  const change = Number(conventional30.change || 0);
+
+  if (change <= -0.075) {
+    return {
+      tone: "positive",
+      headline: "Rates improved meaningfully.",
+      insight:
+        "This creates a natural reason to reconnect with buyers who paused their search and homeowners considering a move.",
+    };
+  }
+
+  if (change < 0) {
+    return {
+      tone: "positive",
+      headline: "Rates moved slightly lower.",
+      insight:
+        "Consider checking in with active and dormant buyers while financing conditions are moving in their favor.",
+    };
+  }
+
+  if (change >= 0.075) {
+    return {
+      tone: "watch",
+      headline: "Rates moved noticeably higher.",
+      insight:
+        "Buyer purchasing power may be tighter. Review active buyers and consider proactive lender conversations before showings or offers.",
+    };
+  }
+
+  if (change > 0) {
+    return {
+      tone: "watch",
+      headline: "Rates edged higher.",
+      insight:
+        "A quick financing check-in with active buyers can prevent surprises and create a useful reason for personal outreach.",
+    };
+  }
+
+  return {
+    tone: "neutral",
+    headline: "Mortgage rates are holding relatively steady.",
+    insight:
+      "Stable financing conditions give you an opportunity to focus conversations on inventory, affordability and the right property rather than rate volatility.",
+  };
+}
+
+app.get("/api/mortgage-rates", async (req, res) => {
+  try {
+    const now = Date.now();
+
+    if (
+      mortgageRateCache.data &&
+      now - mortgageRateCache.fetchedAt < MORTGAGE_RATE_CACHE_MS
+    ) {
+      return res.json({
+        ...mortgageRateCache.data,
+        cached: true,
+      });
+    }
+
+    const results = await Promise.allSettled(
+      MORTGAGE_RATE_SERIES.map((series) => getFredMortgageRate(series)),
+    );
+
+    const rates = results
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    if (!rates.length) {
+      throw new Error("No mortgage market rates are currently available.");
+    }
+
+    const latestDate = rates
+      .map((item) => item.date)
+      .filter(Boolean)
+      .sort()
+      .reverse()[0];
+
+    const payload = {
+      success: true,
+      source: "Optimal Blue via FRED",
+      sourceLabel: "National mortgage market indices",
+      asOf: latestDate || "",
+      retrievedAt: new Date().toISOString(),
+      rates,
+      marketRead: buildMortgageMarketRead(rates),
+      disclaimer:
+        "National market indicators only. Actual borrower rates vary by lender, credit profile, loan characteristics, occupancy, points and other factors.",
+    };
+
+    mortgageRateCache.data = payload;
+    mortgageRateCache.fetchedAt = now;
+
+    res.json({
+      ...payload,
+      cached: false,
+    });
+  } catch (error) {
+    console.error("Mortgage rate API error:", error);
+
+    if (mortgageRateCache.data) {
+      return res.json({
+        ...mortgageRateCache.data,
+        cached: true,
+        stale: true,
+      });
+    }
+
+    res.status(503).json({
+      success: false,
+      rates: [],
+      marketRead: {
+        tone: "neutral",
+        headline: "Mortgage market data is temporarily unavailable.",
+        insight:
+          "DealPilot will resume market guidance when the rate feed becomes available.",
+      },
+      error: error.message || "Mortgage market data unavailable.",
+    });
+  }
 });
 
 /* ================= CAMPAIGNS ================= */

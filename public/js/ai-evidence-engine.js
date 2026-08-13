@@ -2234,6 +2234,18 @@ function compareTrustedEvidence(firstRecord, secondRecord) {
       "replaces",
       "replacement",
       "supersedes",
+
+      /*
+       * Counter offers are change instruments.
+       *
+       * When accepted/executed, they can modify terms from the
+       * original offer just like an amendment or addendum.
+       */
+      "counter offer",
+      "counteroffer",
+      "counter-offer",
+      "counter proposal",
+      "counterproposal",
     ];
 
     return amendmentTerms.some((term) =>
